@@ -11,7 +11,7 @@ import { useI18n } from "../hooks/use-i18n";
 export function UserMenu() {
   const [open, setOpen] = useState(false);
   const { theme, setTheme } = useTheme();
-  const { direction, language, setLanguage } = useUiStore();
+  const { language, setLanguage } = useUiStore();
   const { t } = useI18n();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -48,18 +48,33 @@ export function UserMenu() {
           <Button
             variant="ghost"
             className="w-full justify-start"
-            onClick={() => {
-              setLanguage(language === "ar" ? "en" : "ar");
-              setOpen(false);
-            }}
+            disabled
           >
             <Languages className="size-4" />
-            {t("menu.language")}: {language === "ar" ? t("menu.arabic") : t("menu.english")}
+            {t("menu.language")}
           </Button>
-          <Button variant="ghost" className="w-full justify-start" disabled>
-            <Languages className="size-4" />
-            {t("menu.direction")}: {direction.toUpperCase()}
-          </Button>
+          <div className="grid grid-cols-2 gap-2 px-1 pb-1">
+            <Button
+              variant={language === "ar" ? "default" : "outline"}
+              className="w-full"
+              onClick={() => {
+                setLanguage("ar");
+                setOpen(false);
+              }}
+            >
+              {t("menu.arabic")}
+            </Button>
+            <Button
+              variant={language === "en" ? "default" : "outline"}
+              className="w-full"
+              onClick={() => {
+                setLanguage("en");
+                setOpen(false);
+              }}
+            >
+              {t("menu.english")}
+            </Button>
+          </div>
           <Button
             variant="ghost"
             className="w-full justify-start text-red-600 hover:bg-red-50 hover:text-red-700"
