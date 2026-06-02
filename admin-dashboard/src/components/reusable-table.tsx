@@ -8,7 +8,7 @@ type Props<T extends Record<string, unknown>> = {
   columns: Array<Column<T>>;
   data: T[];
 };
-
+//hello
 
 export function ReusableTable<T extends Record<string, unknown>>({ title, columns, data }: Props<T>) {
   return (
