@@ -20,6 +20,10 @@ import { PlaceholderPage } from "../pages/placeholder-page";
 import { LoginPage } from "../modules/auth/login-page";
 import { ForgotPasswordPage } from "../modules/auth/forgot-password-page";
 import { ProtectedRoute } from "./protected-route";
+import { CompanyProtectedRoute } from "./company-protected-route";
+import { CompanyLayout } from "../layouts/company-layout";
+import { CompanyApplicationsPage } from "../modules/companies/company-applications-page";
+import { CompanyProductsPage } from "../modules/company-portal/company-products-page";
 
 const placeholderRoutes = [
   { path: "order-tracking", title: "Order Tracking", description: "Track order states and shipment progress." },
@@ -74,17 +78,9 @@ export const router = createBrowserRouter([
           { index: true, element: <DashboardPage /> },
           { path: "users", element: <UsersPage /> },
           { path: "companies", element: <CompanyManagementPage /> },
-          {
-            path: "company-applications",
-            element: (
-              <PlaceholderPage
-                title="Company Applications"
-                description="Review applications queue with dedicated workflow screen."
-              />
-            ),
-          },
-          { path: "products", element: <ProductManagementPage /> },
+          { path: "company-applications", element: <CompanyApplicationsPage /> },
           { path: "pending-products", element: <ProductManagementPage pendingOnly /> },
+          { path: "products", element: <ProductManagementPage /> },
           { path: "orders", element: <OrdersPage /> },
           { path: "categories", element: <CategoriesPage /> },
           { path: "banners", element: <BannersPage /> },
@@ -102,6 +98,16 @@ export const router = createBrowserRouter([
             element: <PlaceholderPage title={route.title} description={route.description} />,
           })),
         ],
+      },
+    ],
+  },
+  {
+    element: <CompanyProtectedRoute />,
+    children: [
+      {
+        path: "/company",
+        element: <CompanyLayout />,
+        children: [{ path: "products", element: <CompanyProductsPage /> }],
       },
     ],
   },

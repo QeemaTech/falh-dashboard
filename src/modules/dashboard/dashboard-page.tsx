@@ -295,17 +295,17 @@ export function DashboardPage() {
       <Card>
         <h3 className="mb-4 text-sm font-semibold text-(--app-text-primary)">Quick Actions</h3>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Link to="/settings">
+          <Link to="/categories">
             <Button className="w-full">Add Category</Button>
           </Link>
-          <Link to="/settings">
+          <Link to="/banners">
             <Button className="w-full">Add Banner</Button>
           </Link>
-          <Link to="/users">
-            <Button className="w-full">Add Company</Button>
+          <Link to="/company-applications">
+            <Button className="w-full">Review Company Applications</Button>
           </Link>
           <Link to="/products">
-            <Button className="w-full">Add Product</Button>
+            <Button className="w-full">Manage Products</Button>
           </Link>
         </div>
       </Card>

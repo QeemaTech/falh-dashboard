@@ -27,7 +27,9 @@ const sections = [
     items: [
       { to: "/users", labelKey: "nav.users", icon: Users },
       { to: "/companies", labelKey: "nav.companies", icon: Building2 },
+      { to: "/company-applications", labelKey: "nav.companyApplications", icon: Building2 },
       { to: "/products", labelKey: "nav.products", icon: Boxes },
+      { to: "/pending-products", labelKey: "nav.pendingProducts", icon: Boxes },
       { to: "/categories", labelKey: "nav.categories", icon: Leaf },
       { to: "/orders", labelKey: "nav.orders", icon: ShoppingCart },
     ],

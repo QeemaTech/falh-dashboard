@@ -13,6 +13,7 @@ type AuthContextValue = {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  isCompany: boolean;
   login: (payload: LoginPayload) => Promise<void>;
   logout: () => void;
 };
@@ -27,6 +28,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       user,
       isAuthenticated: Boolean(user),
       isAdmin: user?.role === "ADMIN",
+      isCompany: user?.role === "COMPANY",
       async login(payload) {
         const result = await loginApi(payload);
         saveAuthSession(

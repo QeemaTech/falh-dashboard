@@ -7,6 +7,7 @@ import { ChevronRight, Eye, Leaf, Loader2 } from "lucide-react";
 import { Input } from "../../components/ui/input";
 import { Button } from "../../components/ui/button";
 import { useAuth } from "../../store/auth-store";
+import { getStoredUser } from "../../services/auth-storage";
 
 const schema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -21,7 +22,8 @@ export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const redirectTo = (location.state as { from?: string } | undefined)?.from || "/";
+  const defaultRedirect = "/";
+  const redirectTo = (location.state as { from?: string } | undefined)?.from || defaultRedirect;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -32,7 +34,10 @@ export function LoginPage() {
     setServerError(null);
     try {
       await login(values as FormValues);
-      navigate(redirectTo, { replace: true });
+      const stored = getStoredUser();
+      const target =
+        stored?.role === "COMPANY" ? "/company/products" : redirectTo === "/company/products" ? "/" : redirectTo;
+      navigate(target, { replace: true });
     } catch (error) {
       const message =
         error && typeof error === "object" && "response" in error

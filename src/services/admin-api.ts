@@ -44,6 +44,9 @@ export type AdminProduct = {
   description?: string;
   status: string;
   price?: number;
+  quantity?: number;
+  unit?: string;
+  target?: string;
   city?: string;
   createdAt: string;
   category?: { id: string; nameAr?: string; nameEn?: string };
@@ -67,7 +70,10 @@ export async function fetchAdminOrders(params: {
   sortOrder?: "asc" | "desc";
 }) {
   const { data } = await http.get<ApiResponse<AdminOrder[]>>("/admin/orders", { params });
-  return { items: data.data, meta: data.meta };
+  return {
+    items: data.data,
+    meta: data.meta as { page?: number; limit?: number; total?: number; totalPages?: number },
+  };
 }
 
 export async function fetchRecentProducts() {
@@ -86,7 +92,10 @@ export async function fetchAdminProducts(params: {
   sortOrder?: "asc" | "desc";
 }) {
   const { data } = await http.get<ApiResponse<AdminProduct[]>>("/admin/products", { params });
-  return { items: data.data, meta: data.meta };
+  return {
+    items: data.data,
+    meta: data.meta as { page?: number; limit?: number; total?: number; totalPages?: number },
+  };
 }
 
 export async function reviewProductApi(
@@ -99,6 +108,69 @@ export async function reviewProductApi(
 
 export async function deleteProductApi(productId: string) {
   await http.delete(`/admin/products/${productId}`);
+}
+
+export type ProductFormPayload = {
+  title: string;
+  description: string;
+  categoryId: string;
+  quantity: number;
+  unit: string;
+  price: number;
+  city?: string;
+  target?: "LOCAL" | "EXPORT";
+  images?: string[];
+  companyId?: string;
+  publishActive?: boolean;
+  dynamicFields?: Array<{ fieldId: string; value: string; fileUrl?: string }>;
+};
+
+export async function createAdminProductApi(payload: ProductFormPayload) {
+  const { data } = await http.post<ApiResponse<AdminProduct>>("/admin/products", payload);
+  return data.data;
+}
+
+export async function updateAdminProductApi(productId: string, payload: Partial<ProductFormPayload> & { submitForReview?: boolean }) {
+  const { data } = await http.patch<ApiResponse<AdminProduct>>(`/admin/products/${productId}`, payload);
+  return data.data;
+}
+
+export async function bulkReviewProductsApi(payload: {
+  productIds: string[];
+  action: "APPROVE" | "REJECT";
+  adminNote?: string;
+}) {
+  const { data } = await http.patch<ApiResponse<{ results: AdminProduct[]; errors: Array<{ productId: string; message: string }> }>>(
+    "/admin/products/bulk-review",
+    payload
+  );
+  return data.data;
+}
+
+export type CompanyApplication = {
+  id: string;
+  companyName: string;
+  applicantName: string;
+  phone: string;
+  email?: string;
+  city: string;
+  description?: string;
+  status: string;
+  createdAt: string;
+  adminNote?: string;
+};
+
+export async function fetchCompanyApplications(params: {
+  page: number;
+  limit: number;
+  search?: string;
+  status?: string;
+}) {
+  const { data } = await http.get<ApiResponse<CompanyApplication[]>>("/admin/companies/applications", { params });
+  return {
+    items: data.data,
+    meta: data.meta as { page?: number; limit?: number; total?: number; totalPages?: number },
+  };
 }
 
 export async function fetchServiceProvidersCount() {
@@ -125,7 +197,10 @@ export async function fetchAdminServiceProviders(params: {
   sortOrder?: "asc" | "desc";
 }) {
   const { data } = await http.get<ApiResponse<AdminServiceProvider[]>>("/admin/service-providers", { params });
-  return { items: data.data, meta: data.meta };
+  return {
+    items: data.data,
+    meta: data.meta as { page?: number; limit?: number; total?: number; totalPages?: number },
+  };
 }
 
 export type AdminCompany = {
@@ -151,7 +226,10 @@ export async function fetchAdminCompanies(params: {
   sortOrder?: "asc" | "desc";
 }) {
   const { data } = await http.get<ApiResponse<AdminCompany[]>>("/admin/companies", { params });
-  return { items: data.data, meta: data.meta };
+  return {
+    items: data.data,
+    meta: data.meta as { page?: number; limit?: number; total?: number; totalPages?: number },
+  };
 }
 
 export async function reviewCompanyApplicationApi(
@@ -250,7 +328,10 @@ export async function fetchAdminCropPrices(params?: {
   const { data } = await http.get<ApiResponse<AdminCropPrice[]>>("/admin/crop-prices", {
     params: { page: 1, limit: 100, sortBy: "recordedAt", sortOrder: "desc", ...(params || {}) },
   });
-  return { items: data.data, meta: data.meta };
+  return {
+    items: data.data,
+    meta: data.meta as { page?: number; limit?: number; total?: number; totalPages?: number },
+  };
 }
 
 export type WeatherSettings = {
@@ -282,7 +363,10 @@ export async function fetchUserNotifications(userId: string, params?: { page?: n
   const { data } = await http.get<ApiResponse<AdminNotification[]>>(`/admin/notifications/users/${userId}`, {
     params: { page: 1, limit: 50, ...(params || {}) },
   });
-  return { items: data.data, meta: data.meta };
+  return {
+    items: data.data,
+    meta: data.meta as { page?: number; limit?: number; total?: number; totalPages?: number },
+  };
 }
 
 export async function fetchCategoryDynamicFields(categoryId: string, includeInactive = true) {

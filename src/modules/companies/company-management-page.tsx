@@ -202,6 +202,7 @@ export function CompanyManagementPage() {
             <div className="space-y-2 text-sm">
               <p><span className="font-medium">Name:</span> {selectedCompany.name}</p>
               <p><span className="font-medium">Products Count:</span> {selectedCompany.productsCount}</p>
+              <p><span className="font-medium">Product Limit:</span> {selectedCompany.maxProducts}</p>
               <p><span className="font-medium">Revenue:</span> EGP {Number(selectedCompany.revenue || 0).toLocaleString()}</p>
               <p><span className="font-medium">Status:</span> {selectedCompany.status}</p>
               <p><span className="font-medium">Rating:</span> {Number(selectedCompany.rating || 0).toFixed(1)}</p>

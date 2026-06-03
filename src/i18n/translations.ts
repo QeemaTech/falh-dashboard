@@ -38,7 +38,9 @@ const en = {
   "nav.dashboard": "Dashboard",
   "nav.users": "Users",
   "nav.companies": "Companies",
+  "nav.companyApplications": "Company Applications",
   "nav.products": "Products",
+  "nav.pendingProducts": "Pending Products",
   "nav.categories": "Categories",
   "nav.orders": "Orders",
   "nav.banners": "Banners",
@@ -52,7 +54,7 @@ const en = {
 };
 
 const ar: typeof en = {
-  "brand.name": "إدارة فلح",
+  "brand.name": "إدارة فالح",
   "brand.tagline": "لوحة تحكم احترافية",
   "common.home": "الرئيسية",
   "common.notifications": "الإشعارات",
@@ -89,7 +91,9 @@ const ar: typeof en = {
   "nav.dashboard": "لوحة القيادة",
   "nav.users": "المستخدمون",
   "nav.companies": "الشركات",
+  "nav.companyApplications": "طلبات الشركات",
   "nav.products": "المنتجات",
+  "nav.pendingProducts": "منتجات قيد المراجعة",
   "nav.categories": "التصنيفات",
   "nav.orders": "الطلبات",
   "nav.banners": "البانرات",
