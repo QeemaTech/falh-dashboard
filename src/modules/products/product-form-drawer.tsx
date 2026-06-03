@@ -12,6 +12,7 @@ import {
   type ProductFormPayload,
 } from "../../services/admin-api";
 import { createCompanyProductApi, fetchProductCategories, updateCompanyProductApi } from "../../services/products-api";
+import { getApiErrorMessage } from "../../utils/api-error";
 
 type Props = {
   open: boolean;
@@ -91,6 +92,19 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      if (!title.trim() || title.trim().length < 2) throw new Error("Title must be at least 2 characters");
+      if (!description.trim() || description.trim().length < 5) {
+        throw new Error("Description must be at least 5 characters");
+      }
+      if (!categoryId) throw new Error("Category is required");
+      if (!unit.trim()) throw new Error("Unit is required");
+      if (Number.isNaN(Number(quantity)) || Number(quantity) < 0) {
+        throw new Error("Quantity must be a valid non-negative number");
+      }
+      if (Number.isNaN(Number(price)) || Number(price) < 0) {
+        throw new Error("Price must be a valid non-negative number");
+      }
+
       const payload: ProductFormPayload = {
         title,
         description,
@@ -135,7 +149,7 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
       onSuccess();
       onClose();
     },
-    onError: (err: Error) => setError(err.message),
+    onError: (err: unknown) => setError(getApiErrorMessage(err, "Failed to save product")),
   });
 
   const companyCategories = categories;
@@ -162,11 +176,11 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
       <div className="space-y-3 text-sm">
         {error ? <p className="text-red-500">{error}</p> : null}
         <div>
-          <label className="font-medium">Title</label>
+          <label className="font-medium">Title (min 2 characters)</label>
           <Input value={title} onChange={(e) => setTitle(e.target.value)} />
         </div>
         <div>
-          <label className="font-medium">Description</label>
+          <label className="font-medium">Description (min 5 characters)</label>
           <Input value={description} onChange={(e) => setDescription(e.target.value)} />
         </div>
         <div>

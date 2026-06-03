@@ -149,10 +149,10 @@ export function ProductManagementPage({ pendingOnly = false }: Props) {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4 overflow-x-hidden">
       <Card className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="relative w-72">
+          <div className="relative w-full max-w-xs min-w-0 sm:max-w-sm">
             <Search className="pointer-events-none absolute inset-s-3 top-3 size-4 text-neutral-400" />
             <Input
               placeholder="Search products..."
@@ -225,7 +225,7 @@ export function ProductManagementPage({ pendingOnly = false }: Props) {
 
       {!isLoading && !isError && products.length > 0 ? (
         <>
-          <AppTable containerClassName="min-w-[1100px]">
+          <AppTable>
             <AppTableHead>
               <tr>
                 <AppTableHeaderCell>

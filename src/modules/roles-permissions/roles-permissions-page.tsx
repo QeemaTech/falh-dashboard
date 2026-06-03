@@ -98,7 +98,7 @@ export function RolesPermissionsPage() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4 overflow-x-hidden">
       <Card className="flex items-center justify-between bg-linear-to-r from-[#23673A] to-[#2f8f52] text-white">
         <div>
           <h2 className="text-xl font-semibold">Roles & Permissions</h2>
@@ -158,7 +158,7 @@ export function RolesPermissionsPage() {
               </div>
 
               <div className="overflow-auto rounded-2xl border border-(--app-border)">
-                <table className="w-full min-w-[760px] text-sm">
+                <table className="w-full text-sm">
                   <thead className="bg-(--app-surface-alt)">
                     <tr>
                       <th className="px-4 py-3 text-start text-xs font-semibold uppercase tracking-wide text-(--app-text-muted)">

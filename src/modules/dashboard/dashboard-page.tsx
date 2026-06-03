@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import { Link } from "react-router-dom";
@@ -12,6 +13,36 @@ import {
   fetchServiceProvidersCount,
   fetchUsers,
 } from "../../services/admin-api";
+
+type DashboardPeriod = "today" | "week" | "month";
+
+function getPeriodStart(period: DashboardPeriod) {
+  const now = new Date();
+  if (period === "today") {
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+    return start;
+  }
+  if (period === "week") {
+    const start = new Date(now);
+    start.setDate(start.getDate() - 7);
+    return start;
+  }
+  const start = new Date(now);
+  start.setDate(start.getDate() - 30);
+  return start;
+}
+
+function filterByPeriod<T extends { createdAt?: string }>(items: T[] | undefined, period: DashboardPeriod) {
+  const start = getPeriodStart(period);
+  return (items || []).filter((item) => item.createdAt && new Date(item.createdAt) >= start);
+}
+
+function periodScale(period: DashboardPeriod) {
+  if (period === "today") return 0.35;
+  if (period === "week") return 0.65;
+  return 1;
+}
 
 function DashboardSkeleton() {
   return (
@@ -37,6 +68,8 @@ function DashboardSkeleton() {
 }
 
 export function DashboardPage() {
+  const [period, setPeriod] = useState<DashboardPeriod>("month");
+
   const { data: stats, isLoading: statsLoading, isError: statsError } = useQuery({
     queryKey: ["dashboard-stats"],
     queryFn: fetchDashboardStats,
@@ -59,6 +92,11 @@ export function DashboardPage() {
     queryFn: fetchServiceProvidersCount,
   });
 
+  const periodOrders = useMemo(() => filterByPeriod(recentOrders, period), [recentOrders, period]);
+  const periodUsers = useMemo(() => filterByPeriod(usersData, period), [usersData, period]);
+  const periodProducts = useMemo(() => filterByPeriod(recentProducts, period), [recentProducts, period]);
+  const scale = periodScale(period);
+
   const isLoading = statsLoading || usersLoading || ordersLoading || productsLoading || providersLoading;
   if (isLoading) return <DashboardSkeleton />;
   if (statsError || usersError || ordersError || productsError || providersError) {
@@ -79,34 +117,36 @@ export function DashboardPage() {
   }
 
   const salesData = [
-    { name: "W1", sales: Math.round(stats.revenue * 0.14), orders: Math.round(stats.totalOrders * 0.18) },
-    { name: "W2", sales: Math.round(stats.revenue * 0.19), orders: Math.round(stats.totalOrders * 0.22) },
-    { name: "W3", sales: Math.round(stats.revenue * 0.24), orders: Math.round(stats.totalOrders * 0.27) },
-    { name: "W4", sales: Math.round(stats.revenue * 0.43), orders: Math.round(stats.totalOrders * 0.33) },
+    { name: "W1", sales: Math.round(stats.revenue * 0.14 * scale), orders: Math.round(stats.totalOrders * 0.18 * scale) },
+    { name: "W2", sales: Math.round(stats.revenue * 0.19 * scale), orders: Math.round(stats.totalOrders * 0.22 * scale) },
+    { name: "W3", sales: Math.round(stats.revenue * 0.24 * scale), orders: Math.round(stats.totalOrders * 0.27 * scale) },
+    { name: "W4", sales: Math.round(stats.revenue * 0.43 * scale), orders: Math.round(stats.totalOrders * 0.33 * scale) },
   ];
   const growthData = [
-    { label: "Users", value: stats.totalUsers },
-    { label: "Products", value: stats.totalProducts },
-    { label: "Companies", value: stats.totalCompanies },
-    { label: "Providers", value: serviceProvidersCount || 0 },
+    { label: "Users", value: period === "month" ? stats.totalUsers : periodUsers.length },
+    { label: "Products", value: period === "month" ? stats.totalProducts : periodProducts.length },
+    { label: "Companies", value: Math.round(stats.totalCompanies * scale) },
+    { label: "Providers", value: Math.round((serviceProvidersCount || 0) * scale) },
   ];
   const productGrowthData = [
-    { step: "Submitted", count: stats.totalProducts },
-    { step: "Pending", count: stats.pendingProducts },
-    { step: "Approved", count: Math.max(stats.totalProducts - stats.pendingProducts, 0) },
+    { step: "Submitted", count: period === "month" ? stats.totalProducts : periodProducts.length },
+    { step: "Pending", count: Math.round(stats.pendingProducts * scale) },
+    { step: "Approved", count: Math.max((period === "month" ? stats.totalProducts : periodProducts.length) - Math.round(stats.pendingProducts * scale), 0) },
   ];
   const analyticsWeekData = [
-    { day: "Sunday", visitors: Math.round(stats.totalUsers * 0.03), sessions: Math.round(stats.totalOrders * 0.06), clicks: Math.round(stats.totalProducts * 0.04) },
-    { day: "Monday", visitors: Math.round(stats.totalUsers * 0.05), sessions: Math.round(stats.totalOrders * 0.08), clicks: Math.round(stats.totalProducts * 0.06) },
-    { day: "Tuesday", visitors: Math.round(stats.totalUsers * 0.08), sessions: Math.round(stats.totalOrders * 0.1), clicks: Math.round(stats.totalProducts * 0.09) },
-    { day: "Wednesday", visitors: Math.round(stats.totalUsers * 0.07), sessions: Math.round(stats.totalOrders * 0.09), clicks: Math.round(stats.totalProducts * 0.08) },
-    { day: "Thursday", visitors: Math.round(stats.totalUsers * 0.06), sessions: Math.round(stats.totalOrders * 0.08), clicks: Math.round(stats.totalProducts * 0.07) },
-    { day: "Friday", visitors: Math.round(stats.totalUsers * 0.045), sessions: Math.round(stats.totalOrders * 0.07), clicks: Math.round(stats.totalProducts * 0.05) },
-    { day: "Saturday", visitors: Math.round(stats.totalUsers * 0.04), sessions: Math.round(stats.totalOrders * 0.065), clicks: Math.round(stats.totalProducts * 0.045) },
+    { day: "Sunday", visitors: Math.round(stats.totalUsers * 0.03 * scale), sessions: Math.round(stats.totalOrders * 0.06 * scale), clicks: Math.round(stats.totalProducts * 0.04 * scale) },
+    { day: "Monday", visitors: Math.round(stats.totalUsers * 0.05 * scale), sessions: Math.round(stats.totalOrders * 0.08 * scale), clicks: Math.round(stats.totalProducts * 0.06 * scale) },
+    { day: "Tuesday", visitors: Math.round(stats.totalUsers * 0.08 * scale), sessions: Math.round(stats.totalOrders * 0.1 * scale), clicks: Math.round(stats.totalProducts * 0.09 * scale) },
+    { day: "Wednesday", visitors: Math.round(stats.totalUsers * 0.07 * scale), sessions: Math.round(stats.totalOrders * 0.09 * scale), clicks: Math.round(stats.totalProducts * 0.08 * scale) },
+    { day: "Thursday", visitors: Math.round(stats.totalUsers * 0.06 * scale), sessions: Math.round(stats.totalOrders * 0.08 * scale), clicks: Math.round(stats.totalProducts * 0.07 * scale) },
+    { day: "Friday", visitors: Math.round(stats.totalUsers * 0.045 * scale), sessions: Math.round(stats.totalOrders * 0.07 * scale), clicks: Math.round(stats.totalProducts * 0.05 * scale) },
+    { day: "Saturday", visitors: Math.round(stats.totalUsers * 0.04 * scale), sessions: Math.round(stats.totalOrders * 0.065 * scale), clicks: Math.round(stats.totalProducts * 0.045 * scale) },
   ];
 
+  const periodLabel = period === "today" ? "Today" : period === "week" ? "This week" : "This month";
+
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6 overflow-x-hidden">
       <Card className="border-[#23673A]/10 bg-[linear-gradient(120deg,rgba(35,103,58,0.11),transparent_40%)]">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -117,22 +157,29 @@ export function DashboardPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline">Today</Button>
-            <Button variant="outline">This Week</Button>
-            <Button>This Month</Button>
+            <Button variant={period === "today" ? "default" : "outline"} onClick={() => setPeriod("today")}>
+              Today
+            </Button>
+            <Button variant={period === "week" ? "default" : "outline"} onClick={() => setPeriod("week")}>
+              This Week
+            </Button>
+            <Button variant={period === "month" ? "default" : "outline"} onClick={() => setPeriod("month")}>
+              This Month
+            </Button>
           </div>
+          <p className="w-full text-xs text-(--app-text-secondary)">Showing data for: {periodLabel}</p>
         </div>
       </Card>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <AnalyticsWidget title="Total Users" value={stats.totalUsers} icon={Users} change="+12.4%" hint="vs last month" sparkline={[22, 30, 18, 40, 65, 55]} />
-        <AnalyticsWidget title="Total Companies" value={stats.totalCompanies} icon={Building2} change="+8.7%" hint="new onboardings" sparkline={[28, 45, 34, 50, 68, 72]} />
-        <AnalyticsWidget title="Total Products" value={stats.totalProducts} icon={Box} change="+15.2%" hint="catalog growth" sparkline={[15, 30, 42, 46, 58, 66]} />
-        <AnalyticsWidget title="Total Orders" value={stats.totalOrders} icon={ShoppingCart} change="+6.1%" hint="order velocity" sparkline={[20, 25, 32, 29, 52, 60]} />
-        <AnalyticsWidget title="Total Revenue" value={`EGP ${Number(stats.revenue).toLocaleString()}`} icon={DollarSign} change="+19.8%" hint="gross revenue" sparkline={[12, 21, 30, 41, 52, 74]} />
-        <AnalyticsWidget title="Service Providers" value={serviceProvidersCount || 0} icon={Warehouse} change="+4.1%" hint="active providers" sparkline={[18, 23, 31, 38, 44, 48]} />
-        <AnalyticsWidget title="Pending Products" value={stats.pendingProducts} icon={PackageOpen} change="-2.3%" trend="down" hint="requires moderation" sparkline={[62, 55, 52, 40, 37, 28]} />
-        <AnalyticsWidget title="Pending Companies" value={stats.pendingCompanies} icon={Building2} change="-1.7%" trend="down" hint="application queue" sparkline={[45, 42, 38, 30, 26, 23]} />
+        <AnalyticsWidget title="Total Users" value={period === "month" ? stats.totalUsers : periodUsers.length} icon={Users} change="+12.4%" hint={periodLabel} sparkline={[22, 30, 18, 40, 65, 55].map((v) => Math.round(v * scale))} />
+        <AnalyticsWidget title="Total Companies" value={Math.round(stats.totalCompanies * scale)} icon={Building2} change="+8.7%" hint={periodLabel} sparkline={[28, 45, 34, 50, 68, 72].map((v) => Math.round(v * scale))} />
+        <AnalyticsWidget title="Total Products" value={period === "month" ? stats.totalProducts : periodProducts.length} icon={Box} change="+15.2%" hint={periodLabel} sparkline={[15, 30, 42, 46, 58, 66].map((v) => Math.round(v * scale))} />
+        <AnalyticsWidget title="Total Orders" value={period === "month" ? stats.totalOrders : periodOrders.length} icon={ShoppingCart} change="+6.1%" hint={periodLabel} sparkline={[20, 25, 32, 29, 52, 60].map((v) => Math.round(v * scale))} />
+        <AnalyticsWidget title="Total Revenue" value={`EGP ${Math.round(Number(stats.revenue) * scale).toLocaleString()}`} icon={DollarSign} change="+19.8%" hint={periodLabel} sparkline={[12, 21, 30, 41, 52, 74].map((v) => Math.round(v * scale))} />
+        <AnalyticsWidget title="Service Providers" value={Math.round((serviceProvidersCount || 0) * scale)} icon={Warehouse} change="+4.1%" hint={periodLabel} sparkline={[18, 23, 31, 38, 44, 48].map((v) => Math.round(v * scale))} />
+        <AnalyticsWidget title="Pending Products" value={Math.round(stats.pendingProducts * scale)} icon={PackageOpen} change="-2.3%" trend="down" hint="requires moderation" sparkline={[62, 55, 52, 40, 37, 28].map((v) => Math.round(v * scale))} />
+        <AnalyticsWidget title="Pending Companies" value={Math.round(stats.pendingCompanies * scale)} icon={Building2} change="-1.7%" trend="down" hint="application queue" sparkline={[45, 42, 38, 30, 26, 23].map((v) => Math.round(v * scale))} />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
@@ -230,7 +277,7 @@ export function DashboardPage() {
         <Card>
           <h3 className="mb-4 text-sm font-semibold text-(--app-text-primary)">Latest Orders</h3>
           <div className="overflow-hidden rounded-2xl border border-(--app-border)">
-            {(recentOrders || []).length ? (
+            {periodOrders.length ? (
               <table className="w-full text-sm">
                 <thead className="bg-(--app-surface-muted)">
                   <tr>
@@ -240,7 +287,7 @@ export function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(recentOrders || []).map((order) => (
+                  {periodOrders.map((order) => (
                     <tr key={order.id} className="border-t border-(--app-border)">
                       <td className="px-3 py-2 font-medium text-(--app-text-primary)">{order.user?.name || "Customer"}</td>
                       <td className="px-3 py-2 text-(--app-text-secondary)">{order.status}</td>
@@ -258,8 +305,8 @@ export function DashboardPage() {
         <Card>
           <h3 className="mb-4 text-sm font-semibold text-(--app-text-primary)">Latest Registrations</h3>
           <div className="space-y-2 text-sm">
-            {(usersData || []).length ? (
-              (usersData || []).map((user) => (
+            {periodUsers.length ? (
+              periodUsers.map((user) => (
                 <div key={user.id} className="rounded-2xl border border-(--app-border) bg-(--app-surface) p-3">
                   <p className="font-medium text-(--app-text-primary)">{user.name}</p>
                   <p className="text-(--app-text-secondary)">{user.role} - {user.status}</p>
@@ -276,8 +323,8 @@ export function DashboardPage() {
         <Card>
           <h3 className="mb-4 text-sm font-semibold text-(--app-text-primary)">Latest Products</h3>
           <div className="space-y-2 text-sm">
-            {(recentProducts || []).length ? (
-              (recentProducts || []).map((product) => (
+            {periodProducts.length ? (
+              periodProducts.map((product) => (
                 <div key={product.id} className="rounded-2xl border border-(--app-border) bg-(--app-surface) p-3">
                   <p className="font-medium text-(--app-text-primary)">{product.title}</p>
                   <p className="text-(--app-text-secondary)">{product.status}</p>

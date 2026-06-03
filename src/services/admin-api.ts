@@ -234,7 +234,13 @@ export async function fetchAdminCompanies(params: {
 
 export async function reviewCompanyApplicationApi(
   applicationId: string,
-  payload: { action: "APPROVE" | "REJECT"; maxProducts?: number; adminNote?: string }
+  payload: {
+    action: "APPROVE" | "REJECT";
+    maxProducts?: number;
+    email?: string;
+    password?: string;
+    adminNote?: string;
+  }
 ) {
   const { data } = await http.patch(`/admin/companies/applications/${applicationId}/review`, payload);
   return data;
@@ -306,6 +312,29 @@ export async function fetchAdminCategories(params?: {
   return data.data;
 }
 
+export async function createAdminCategoryApi(payload: {
+  nameAr: string;
+  nameEn?: string;
+  image?: string;
+  sortOrder?: number;
+  isActive?: boolean;
+}) {
+  const { data } = await http.post<ApiResponse<AdminCategory>>("/admin/categories", payload);
+  return data.data;
+}
+
+export async function updateAdminCategoryApi(
+  categoryId: string,
+  payload: Partial<{ nameAr: string; nameEn: string; image: string; sortOrder: number; isActive: boolean }>
+) {
+  const { data } = await http.patch<ApiResponse<AdminCategory>>(`/admin/categories/${categoryId}`, payload);
+  return data.data;
+}
+
+export async function deleteAdminCategoryApi(categoryId: string) {
+  await http.delete(`/admin/categories/${categoryId}`);
+}
+
 export type AdminCropPrice = {
   id: string;
   cropName: string;
@@ -334,20 +363,64 @@ export async function fetchAdminCropPrices(params?: {
   };
 }
 
+export type WeatherThresholds = {
+  windSpeedMax?: number;
+  tempMin?: number;
+  tempMax?: number;
+};
+
 export type WeatherSettings = {
-  provider: string;
   defaultCity: string;
-  units: string;
+  thresholds?: WeatherThresholds;
+  updatedAt?: string;
+};
+
+export type WeatherSettingsPayload = {
+  defaultCity?: string;
+  thresholds?: WeatherThresholds;
 };
 
 export async function fetchWeatherSettingsApi() {
-  const { data } = await http.get<ApiResponse<WeatherSettings>>("/admin/weather-settings");
+  const { data } = await http.get<ApiResponse<WeatherSettings>>("/admin/weather/settings");
+  return data.data;
+}
+
+export async function updateWeatherSettingsApi(payload: WeatherSettingsPayload) {
+  const { data } = await http.patch<ApiResponse<WeatherSettings>>("/admin/weather/settings", payload);
   return data.data;
 }
 
 export async function fetchAdminBanners() {
   const { data } = await http.get<ApiResponse<AdminBanner[]>>("/admin/banners");
   return data.data;
+}
+
+export type BannerFormPayload = {
+  title: string;
+  image: File;
+  linkType?: string;
+  linkValue?: string;
+  sortOrder?: number;
+  isActive?: boolean;
+};
+
+export async function createAdminBannerApi(payload: BannerFormPayload) {
+  const formData = new FormData();
+  formData.append("title", payload.title);
+  formData.append("image", payload.image);
+  if (payload.linkType) formData.append("linkType", payload.linkType);
+  if (payload.linkValue) formData.append("linkValue", payload.linkValue);
+  formData.append("sortOrder", String(payload.sortOrder ?? 0));
+  formData.append("isActive", String(payload.isActive ?? true));
+
+  const { data } = await http.post<ApiResponse<AdminBanner>>("/admin/banners", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data.data;
+}
+
+export async function deleteAdminBannerApi(bannerId: string) {
+  await http.delete(`/admin/banners/${bannerId}`);
 }
 
 export type AdminNotification = {
@@ -553,4 +626,90 @@ export async function updateRoleApi(
 
 export async function deleteRoleApi(roleId: string) {
   await http.delete(`/admin/roles-permissions/roles/${roleId}`);
+}
+
+export type JoinUsApplicationListItem = {
+  id: string;
+  applicationType: string;
+  applicantName: string;
+  companyName?: string;
+  phone: string;
+  city: string;
+  status: string;
+  createdAt: string;
+};
+
+export type JoinUsApplicationDetail = {
+  id: string;
+  applicationType: string;
+  status: string;
+  fullName: string;
+  companyName?: string;
+  phone: string;
+  email?: string;
+  city: string;
+  bio?: string;
+  whatsappNumber?: string;
+  profileImage?: string;
+  idImage?: string;
+  licenseImage?: string;
+  commercialReg?: string;
+  businessLicense?: string;
+  description?: string;
+  specializations?: string[];
+  otherTypeLabel?: string;
+  yearsOfExperience?: number;
+  adminNote?: string;
+  reviewedAt?: string;
+  createdAt: string;
+  review: {
+    kind: "company" | "serviceProvider" | "other";
+    approveButtonText: string;
+    fields: Record<string, unknown>;
+  };
+};
+
+export type JoinUsTab =
+  | "ALL"
+  | "COMPANIES"
+  | "DOCTORS"
+  | "ENGINEERS"
+  | "CONSULTANTS"
+  | "BROKERS"
+  | "TRANSPORT"
+  | "OTHERS";
+
+export async function fetchJoinUsApplications(params: {
+  page: number;
+  limit: number;
+  search?: string;
+  status?: string;
+  tab?: JoinUsTab;
+}) {
+  const { data } = await http.get<ApiResponse<JoinUsApplicationListItem[]>>("/admin/join-us", { params });
+  return {
+    items: data.data,
+    meta: data.meta as { page?: number; limit?: number; total?: number; totalPages?: number },
+  };
+}
+
+export async function fetchJoinUsApplicationById(applicationId: string) {
+  const { data } = await http.get<ApiResponse<JoinUsApplicationDetail>>(`/admin/join-us/${applicationId}`);
+  return data.data;
+}
+
+export async function approveJoinUsApplicationApi(
+  applicationId: string,
+  payload: { email?: string; password?: string; maxProducts?: number; adminNote?: string }
+) {
+  const { data } = await http.post<ApiResponse<{
+    application: JoinUsApplicationDetail;
+    credentials?: { email: string; password: string; deliveryChannels: string[] };
+  }>>(`/admin/join-us/${applicationId}/approve`, payload);
+  return data.data;
+}
+
+export async function rejectJoinUsApplicationApi(applicationId: string, payload: { adminNote?: string }) {
+  const { data } = await http.post<ApiResponse<JoinUsApplicationDetail>>(`/admin/join-us/${applicationId}/reject`, payload);
+  return data.data;
 }

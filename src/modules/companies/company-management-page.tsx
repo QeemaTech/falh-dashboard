@@ -74,7 +74,7 @@ export function CompanyManagementPage() {
   if (!companies.length) return <Card>No companies found for current filters.</Card>;
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4 overflow-x-hidden">
       <div className="grid gap-4 sm:grid-cols-4">
         <AppStatCard title="Companies" value={companies.length} />
         <AppStatCard title="Approved" value={companies.filter((c) => c.status === "APPROVED").length} trend="up" />
@@ -106,7 +106,7 @@ export function CompanyManagementPage() {
         </div>
       </Card>
 
-      <AppTable containerClassName="min-w-[1000px]">
+      <AppTable>
           <AppTableHead>
             <tr>
               <AppTableHeaderCell>Company</AppTableHeaderCell>

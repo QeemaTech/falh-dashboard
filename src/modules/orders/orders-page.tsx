@@ -44,7 +44,7 @@ export function OrdersPage() {
   if (!rows.length) return <Card>No orders found for current filters.</Card>;
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4 overflow-x-hidden">
       <Card className="flex flex-wrap items-center gap-2">
         <p className="text-sm text-(--app-text-secondary)">Filter by order status</p>
         <AppSelect value={status} onChange={(e) => setStatus(e.target.value)}>

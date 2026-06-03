@@ -14,7 +14,7 @@ export function ReusableTable<T extends Record<string, unknown>>({ title, column
   return (
     <Card>
       <h3 className="mb-4 text-sm font-semibold text-(--app-text-primary)">{title}</h3>
-      <AppTable className="border-none bg-transparent p-0 shadow-none" containerClassName="min-w-[620px]">
+      <AppTable className="border-none bg-transparent p-0 shadow-none">
           <AppTableHead>
             <tr>
               {columns.map((column) => (

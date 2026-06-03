@@ -1,13 +1,22 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type PropsWithChildren,
 } from "react";
 import type { AuthUser, LoginPayload } from "../types/auth";
 import { loginApi } from "../services/auth-api";
-import { clearAuthSession, getStoredUser, saveAuthSession } from "../services/auth-storage";
+import { clearRefreshSchedule, scheduleTokenRefresh } from "../services/auth-refresh";
+import { subscribeSessionExpired } from "../services/auth-session";
+import {
+  clearAuthSession,
+  getAccessToken,
+  getStoredUser,
+  saveAuthSession,
+} from "../services/auth-storage";
+import { toast } from "../components/ui/sonner";
 
 type AuthContextValue = {
   user: AuthUser | null;
@@ -20,13 +29,44 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+function readInitialUser(): AuthUser | null {
+  const stored = getStoredUser();
+  if (!stored) return null;
+  if (!getAccessToken()) {
+    clearAuthSession();
+    return null;
+  }
+  return stored;
+}
+
 export function AuthProvider({ children }: PropsWithChildren) {
-  const [user, setUser] = useState<AuthUser | null>(() => getStoredUser());
+  const [user, setUser] = useState<AuthUser | null>(() => readInitialUser());
+
+  useEffect(() => {
+    if (user && getAccessToken()) {
+      scheduleTokenRefresh();
+    } else {
+      clearRefreshSchedule();
+    }
+    return () => clearRefreshSchedule();
+  }, [user]);
+
+  useEffect(() => {
+    return subscribeSessionExpired((message) => {
+      clearAuthSession();
+      clearRefreshSchedule();
+      setUser(null);
+      toast.error(message);
+      if (!window.location.pathname.startsWith("/login")) {
+        window.location.assign("/login");
+      }
+    });
+  }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
-      isAuthenticated: Boolean(user),
+      isAuthenticated: Boolean(user && getAccessToken()),
       isAdmin: user?.role === "ADMIN",
       isCompany: user?.role === "COMPANY",
       async login(payload) {
@@ -40,8 +80,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
           result.user
         );
         setUser(result.user);
+        scheduleTokenRefresh();
       },
       logout() {
+        clearRefreshSchedule();
         clearAuthSession();
         setUser(null);
       },

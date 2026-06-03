@@ -23,6 +23,7 @@ import { ProtectedRoute } from "./protected-route";
 import { CompanyProtectedRoute } from "./company-protected-route";
 import { CompanyLayout } from "../layouts/company-layout";
 import { CompanyApplicationsPage } from "../modules/companies/company-applications-page";
+import { JoinRequestsPage } from "../modules/join-us/join-requests-page";
 import { CompanyProductsPage } from "../modules/company-portal/company-products-page";
 
 const placeholderRoutes = [
@@ -78,6 +79,7 @@ export const router = createBrowserRouter([
           { index: true, element: <DashboardPage /> },
           { path: "users", element: <UsersPage /> },
           { path: "companies", element: <CompanyManagementPage /> },
+          { path: "join-requests", element: <JoinRequestsPage /> },
           { path: "company-applications", element: <CompanyApplicationsPage /> },
           { path: "pending-products", element: <ProductManagementPage pendingOnly /> },
           { path: "products", element: <ProductManagementPage /> },

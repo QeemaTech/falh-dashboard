@@ -23,7 +23,7 @@ export function UsersPage() {
   if (!filtered.length) return <Card>No users found for the selected filter.</Card>;
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4 overflow-x-hidden">
       <GlobalFilters status={status} onStatusChange={setStatus} />
       <ReusableTable<User>
         title="المستخدمون"

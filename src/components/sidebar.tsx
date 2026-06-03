@@ -27,6 +27,7 @@ const sections = [
     items: [
       { to: "/users", labelKey: "nav.users", icon: Users },
       { to: "/companies", labelKey: "nav.companies", icon: Building2 },
+      { to: "/join-requests", labelKey: "nav.joinRequests", icon: Building2 },
       { to: "/company-applications", labelKey: "nav.companyApplications", icon: Building2 },
       { to: "/products", labelKey: "nav.products", icon: Boxes },
       { to: "/pending-products", labelKey: "nav.pendingProducts", icon: Boxes },
@@ -66,7 +67,7 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "sticky top-3 hidden h-[calc(100vh-1.5rem)] rounded-[30px] border border-(--app-border) bg-(--app-sidebar-bg) p-3 shadow-(--app-shadow-soft) transition-all duration-300 lg:mx-3 lg:block",
+        "fixed top-3 z-40 hidden h-[calc(100vh-1.5rem)] rounded-[30px] border border-(--app-border) bg-(--app-sidebar-bg) p-3 shadow-(--app-shadow-soft) transition-all duration-300 start-3 lg:block",
         sidebarOpen ? "w-72" : "w-24"
       )}
     >

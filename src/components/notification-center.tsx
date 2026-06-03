@@ -11,7 +11,7 @@ export function NotificationCenter() {
   ];
 
   return (
-    <Card className="min-w-72">
+    <Card className="min-w-0 w-full max-w-full">
       <div className="mb-5 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Bell className="size-4 text-[#23673A]" />

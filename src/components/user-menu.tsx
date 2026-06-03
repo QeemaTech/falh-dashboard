@@ -1,5 +1,4 @@
 import { ChevronDown, LogOut, Moon, Sun, Languages } from "lucide-react";
-import { useState } from "react";
 import { useTheme } from "next-themes";
 import { useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
@@ -7,9 +6,16 @@ import { useUiStore } from "../store/ui-store";
 import { useAuth } from "../store/auth-store";
 import { AppAvatar } from "./design-system";
 import { useI18n } from "../hooks/use-i18n";
+import { useDropdown } from "../hooks/use-dropdown";
 
-export function UserMenu() {
-  const [open, setOpen] = useState(false);
+type Props = {
+  onOpen?: () => void;
+  dropdown?: ReturnType<typeof useDropdown>;
+};
+
+export function UserMenu({ onOpen, dropdown: externalDropdown }: Props) {
+  const internalDropdown = useDropdown();
+  const { open, close, toggle, containerRef } = externalDropdown ?? internalDropdown;
   const { theme, setTheme } = useTheme();
   const { language, setLanguage } = useUiStore();
   const { t } = useI18n();
@@ -18,10 +24,16 @@ export function UserMenu() {
 
   const name = user?.name || "Admin User";
 
+  const handleToggle = () => {
+    if (!open) onOpen?.();
+    toggle();
+  };
+
   return (
-    <div className="relative">
+    <div ref={containerRef} className="relative">
       <button
-        onClick={() => setOpen((current) => !current)}
+        type="button"
+        onClick={handleToggle}
         className="flex items-center gap-3 rounded-[14px] border border-(--app-border) bg-(--app-surface) px-3 py-2 shadow-(--app-shadow-soft) transition hover:border-[#23673A]/30 hover:shadow-[0_12px_26px_-16px_rgba(35,103,58,0.55)]"
       >
         <AppAvatar name={name} className="size-9" />
@@ -37,10 +49,7 @@ export function UserMenu() {
           <Button
             variant="ghost"
             className="w-full justify-start"
-            onClick={() => {
-              setTheme(theme === "dark" ? "light" : "dark");
-              setOpen(false);
-            }}
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           >
             {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
             {theme === "dark" ? t("menu.lightMode") : t("menu.darkMode")}
@@ -59,7 +68,7 @@ export function UserMenu() {
               className="w-full"
               onClick={() => {
                 setLanguage("ar");
-                setOpen(false);
+                close();
               }}
             >
               {t("menu.arabic")}
@@ -67,10 +76,7 @@ export function UserMenu() {
             <Button
               variant={language === "en" ? "default" : "outline"}
               className="w-full"
-              onClick={() => {
-                setLanguage("en");
-                setOpen(false);
-              }}
+              onClick={() => setLanguage("en")}
             >
               {t("menu.english")}
             </Button>
@@ -79,6 +85,7 @@ export function UserMenu() {
             variant="ghost"
             className="w-full justify-start text-red-600 hover:bg-red-50 hover:text-red-700"
             onClick={() => {
+              close();
               logout();
               navigate("/login", { replace: true });
             }}

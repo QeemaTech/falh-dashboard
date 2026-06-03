@@ -17,8 +17,8 @@ export function AppTable({ title, actions, className, containerClassName, childr
           {actions}
         </div>
       ) : null}
-      <div className={cn("overflow-auto", containerClassName)}>
-        <table className="w-full text-start text-sm">{children}</table>
+      <div className={cn("min-w-0 max-w-full overflow-x-auto", containerClassName)}>
+        <table className="w-full min-w-0 text-start text-sm">{children}</table>
       </div>
     </div>
   );
