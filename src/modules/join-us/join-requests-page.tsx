@@ -70,6 +70,7 @@ export function JoinRequestsPage() {
   const [status, setStatus] = useState("PENDING");
   const [tab, setTab] = useState<JoinUsTab>("ALL");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<string | null>(null);
   const [maxProducts, setMaxProducts] = useState("10");
   const [adminNote, setAdminNote] = useState("");
   const [companyEmail, setCompanyEmail] = useState("");
@@ -90,34 +91,38 @@ export function JoinRequestsPage() {
   });
 
   const { data: detail, isLoading: detailLoading } = useQuery({
-    queryKey: ["join-us-application", selectedId],
-    queryFn: () => fetchJoinUsApplicationById(selectedId!),
-    enabled: Boolean(selectedId),
+    queryKey: ["join-us-application", selectedId, selectedType],
+    queryFn: () => fetchJoinUsApplicationById(selectedId!, selectedType!),
+    enabled: Boolean(selectedId && selectedType),
   });
 
   const reviewMutation = useMutation({
     mutationFn: async (payload: { action: "APPROVE" | "REJECT" }) => {
       if (!selectedId || !detail) throw new Error("No application selected");
       if (payload.action === "REJECT") {
-        return rejectJoinUsApplicationApi(selectedId, { adminNote: adminNote.trim() || undefined });
-      }
-      if (detail.applicationType === "COMPANY") {
-        return approveJoinUsApplicationApi(selectedId, {
-          email: companyEmail.trim().toLowerCase(),
-          password: companyPassword,
-          maxProducts: Number(maxProducts),
+        return rejectJoinUsApplicationApi(selectedId, detail.applicationType, {
           adminNote: adminNote.trim() || undefined,
         });
       }
-      return approveJoinUsApplicationApi(selectedId, { adminNote: adminNote.trim() || undefined });
+      return approveJoinUsApplicationApi(selectedId, detail.applicationType, {
+        email: detail.applicationType === "COMPANY" ? companyEmail.trim().toLowerCase() : undefined,
+        password: detail.applicationType === "COMPANY" ? companyPassword : undefined,
+        maxProducts: detail.applicationType === "COMPANY" ? Number(maxProducts) : undefined,
+        adminNote: adminNote.trim() || undefined,
+      });
     },
     onSuccess: (result, variables) => {
       queryClient.invalidateQueries({ queryKey: ["join-us-applications"] });
       queryClient.invalidateQueries({ queryKey: ["join-us-application"] });
+      queryClient.invalidateQueries({ queryKey: ["company-applications"] });
       queryClient.invalidateQueries({ queryKey: ["admin-companies"] });
       queryClient.invalidateQueries({ queryKey: ["admin-service-providers"] });
-      if (variables.action === "APPROVE" && result && "credentials" in result && result.credentials) {
-        setCredentials({ email: result.credentials.email, password: result.credentials.password });
+      const creds =
+        result && typeof result === "object" && "credentials" in result
+          ? (result as { credentials?: { email: string; password: string } }).credentials
+          : null;
+      if (variables.action === "APPROVE" && creds) {
+        setCredentials({ email: creds.email, password: creds.password });
       } else {
         setSelectedId(null);
         setCredentials(null);
@@ -142,6 +147,7 @@ export function JoinRequestsPage() {
 
   function openReview(item: JoinUsApplicationListItem) {
     setSelectedId(item.id);
+    setSelectedType(item.applicationType);
     setMaxProducts("10");
     setAdminNote("");
     setCompanyEmail("");
@@ -254,6 +260,7 @@ export function JoinRequestsPage() {
         open={Boolean(selectedId)}
         onClose={() => {
           setSelectedId(null);
+          setSelectedType(null);
           setCredentials(null);
         }}
         title="Review Join Request"
@@ -345,7 +352,7 @@ export function JoinRequestsPage() {
                 <p>Email: {credentials.email}</p>
                 <p>Password: {credentials.password}</p>
                 <p className="text-xs text-neutral-500">Share via email, SMS, or WhatsApp.</p>
-                <Button onClick={() => { setSelectedId(null); setCredentials(null); }}>Close</Button>
+                <Button onClick={() => { setSelectedId(null); setSelectedType(null); setCredentials(null); }}>Close</Button>
               </Card>
             ) : null}
 

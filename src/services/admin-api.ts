@@ -166,11 +166,21 @@ export async function fetchCompanyApplications(params: {
   search?: string;
   status?: string;
 }) {
-  const { data } = await http.get<ApiResponse<CompanyApplication[]>>("/admin/companies/applications", { params });
+  const { data } = await http.get<ApiResponse<CompanyApplication[]>>("/admin/company-applications", { params });
   return {
     items: data.data,
     meta: data.meta as { page?: number; limit?: number; total?: number; totalPages?: number },
   };
+}
+
+export async function fetchCompanyApplicationById(applicationId: string) {
+  const { data } = await http.get<ApiResponse<CompanyApplication & {
+    description?: string;
+    businessLicense?: string;
+    commercialReg?: string;
+    email?: string;
+  }>>(`/admin/company-applications/${applicationId}`);
+  return data.data;
 }
 
 export async function fetchServiceProvidersCount() {
@@ -240,9 +250,25 @@ export async function reviewCompanyApplicationApi(
     email?: string;
     password?: string;
     adminNote?: string;
+    companyStatus?: string;
   }
 ) {
-  const { data } = await http.patch(`/admin/companies/applications/${applicationId}/review`, payload);
+  if (payload.action === "REJECT") {
+    const { data } = await http.post<ApiResponse<unknown>>(`/admin/company-applications/${applicationId}/reject`, {
+      adminNote: payload.adminNote,
+    });
+    return data;
+  }
+  const { data } = await http.post<ApiResponse<{ credentials?: { email: string; password: string } }>>(
+    `/admin/company-applications/${applicationId}/approve`,
+    {
+      maxProducts: payload.maxProducts,
+      email: payload.email,
+      password: payload.password,
+      adminNote: payload.adminNote,
+      companyStatus: payload.companyStatus,
+    }
+  );
   return data;
 }
 
@@ -679,6 +705,196 @@ export type JoinUsTab =
   | "TRANSPORT"
   | "OTHERS";
 
+const JOIN_TAB_PROVIDER_TYPE: Partial<Record<JoinUsTab, string>> = {
+  DOCTORS: "DOCTOR",
+  ENGINEERS: "AGRICULTURAL_ENGINEER",
+  CONSULTANTS: "CONSULTANT",
+  BROKERS: "LAND_BROKER",
+  TRANSPORT: "TRANSPORT",
+  OTHERS: "OTHER",
+};
+
+export type ServiceProviderApplicationListItem = {
+  id: string;
+  fullName: string;
+  type: string;
+  phone: string;
+  city: string;
+  status: string;
+  createdAt: string;
+};
+
+export type ServiceProviderApplicationDetail = {
+  id: string;
+  type: string;
+  fullName: string;
+  phone: string;
+  email?: string;
+  city: string;
+  bio?: string;
+  whatsappNumber: string;
+  profileImage?: string;
+  idImage?: string;
+  licenseImage?: string;
+  specializations?: string[];
+  yearsOfExperience?: number;
+  otherTypeLabel?: string;
+  status: string;
+  adminNote?: string;
+  reviewedAt?: string;
+  createdAt: string;
+};
+
+function mapProviderListItem(row: ServiceProviderApplicationListItem): JoinUsApplicationListItem {
+  return {
+    id: row.id,
+    applicationType: row.type,
+    applicantName: row.fullName,
+    phone: row.phone,
+    city: row.city,
+    status: row.status,
+    createdAt: row.createdAt,
+  };
+}
+
+function mapCompanyListItem(row: CompanyApplication): JoinUsApplicationListItem {
+  return {
+    id: row.id,
+    applicationType: "COMPANY",
+    applicantName: row.applicantName,
+    companyName: row.companyName,
+    phone: row.phone,
+    city: row.city,
+    status: row.status,
+    createdAt: row.createdAt,
+  };
+}
+
+function mapProviderDetail(row: ServiceProviderApplicationDetail): JoinUsApplicationDetail {
+  return {
+    id: row.id,
+    applicationType: row.type,
+    status: row.status,
+    fullName: row.fullName,
+    phone: row.phone,
+    email: row.email,
+    city: row.city,
+    bio: row.bio,
+    whatsappNumber: row.whatsappNumber,
+    profileImage: row.profileImage,
+    idImage: row.idImage,
+    licenseImage: row.licenseImage,
+    specializations: row.specializations || [],
+    otherTypeLabel: row.otherTypeLabel,
+    yearsOfExperience: row.yearsOfExperience,
+    adminNote: row.adminNote,
+    reviewedAt: row.reviewedAt,
+    createdAt: row.createdAt,
+    review: {
+      kind: "serviceProvider",
+      approveButtonText: "Approve & Publish",
+      fields: {
+        fullName: row.fullName,
+        type: row.type,
+        city: row.city,
+        whatsapp: row.whatsappNumber,
+        phone: row.phone,
+        bio: row.bio,
+        specializations: row.specializations || [],
+        experience: row.yearsOfExperience,
+        idImage: row.idImage,
+        licenseImage: row.licenseImage,
+        otherTypeLabel: row.otherTypeLabel,
+      },
+    },
+  };
+}
+
+function mapCompanyDetail(
+  row: CompanyApplication & {
+    description?: string;
+    businessLicense?: string;
+    commercialReg?: string;
+    email?: string;
+  }
+): JoinUsApplicationDetail {
+  return {
+    id: row.id,
+    applicationType: "COMPANY",
+    status: row.status,
+    fullName: row.applicantName,
+    companyName: row.companyName,
+    phone: row.phone,
+    email: row.email,
+    city: row.city,
+    description: row.description,
+    commercialReg: row.commercialReg,
+    businessLicense: row.businessLicense,
+    adminNote: row.adminNote,
+    createdAt: row.createdAt,
+    review: {
+      kind: "company",
+      approveButtonText: "Approve & Create Company Account",
+      fields: {
+        companyName: row.companyName,
+        applicantName: row.applicantName,
+        phone: row.phone,
+        email: row.email,
+        city: row.city,
+        description: row.description,
+        businessLicense: row.businessLicense,
+        commercialReg: row.commercialReg,
+      },
+    },
+  };
+}
+
+export async function fetchServiceProviderApplications(params: {
+  page: number;
+  limit: number;
+  search?: string;
+  status?: string;
+  type?: string;
+}) {
+  const { data } = await http.get<ApiResponse<ServiceProviderApplicationListItem[]>>(
+    "/admin/service-provider-applications",
+    { params }
+  );
+  return {
+    items: data.data,
+    meta: data.meta as { page?: number; limit?: number; total?: number; totalPages?: number },
+  };
+}
+
+export async function fetchServiceProviderApplicationById(applicationId: string) {
+  const { data } = await http.get<ApiResponse<ServiceProviderApplicationDetail>>(
+    `/admin/service-provider-applications/${applicationId}`
+  );
+  return data.data;
+}
+
+export async function approveServiceProviderApplicationApi(
+  applicationId: string,
+  payload: { adminNote?: string }
+) {
+  const { data } = await http.post<ApiResponse<{ application: ServiceProviderApplicationDetail }>>(
+    `/admin/service-provider-applications/${applicationId}/approve`,
+    payload
+  );
+  return data.data;
+}
+
+export async function rejectServiceProviderApplicationApi(
+  applicationId: string,
+  payload: { adminNote?: string }
+) {
+  const { data } = await http.post<ApiResponse<ServiceProviderApplicationDetail>>(
+    `/admin/service-provider-applications/${applicationId}/reject`,
+    payload
+  );
+  return data.data;
+}
+
 export async function fetchJoinUsApplications(params: {
   page: number;
   limit: number;
@@ -686,30 +902,73 @@ export async function fetchJoinUsApplications(params: {
   status?: string;
   tab?: JoinUsTab;
 }) {
-  const { data } = await http.get<ApiResponse<JoinUsApplicationListItem[]>>("/admin/join-us", { params });
+  if (params.tab === "COMPANIES") {
+    const result = await fetchCompanyApplications({
+      page: params.page,
+      limit: params.limit,
+      search: params.search,
+      status: params.status,
+    });
+    return {
+      items: result.items.map(mapCompanyListItem),
+      meta: result.meta,
+    };
+  }
+
+  const type = params.tab && params.tab !== "ALL" ? JOIN_TAB_PROVIDER_TYPE[params.tab] : undefined;
+  const result = await fetchServiceProviderApplications({
+    page: params.page,
+    limit: params.limit,
+    search: params.search,
+    status: params.status,
+    type,
+  });
+
   return {
-    items: data.data,
-    meta: data.meta as { page?: number; limit?: number; total?: number; totalPages?: number },
+    items: result.items.map(mapProviderListItem),
+    meta: result.meta,
   };
 }
 
-export async function fetchJoinUsApplicationById(applicationId: string) {
-  const { data } = await http.get<ApiResponse<JoinUsApplicationDetail>>(`/admin/join-us/${applicationId}`);
-  return data.data;
+export async function fetchJoinUsApplicationById(applicationId: string, applicationType: string) {
+  if (applicationType === "COMPANY") {
+    const row = await fetchCompanyApplicationById(applicationId);
+    return mapCompanyDetail(row);
+  }
+  const row = await fetchServiceProviderApplicationById(applicationId);
+  return mapProviderDetail(row);
 }
 
 export async function approveJoinUsApplicationApi(
   applicationId: string,
+  applicationType: string,
   payload: { email?: string; password?: string; maxProducts?: number; adminNote?: string }
 ) {
-  const { data } = await http.post<ApiResponse<{
-    application: JoinUsApplicationDetail;
-    credentials?: { email: string; password: string; deliveryChannels: string[] };
-  }>>(`/admin/join-us/${applicationId}/approve`, payload);
-  return data.data;
+  if (applicationType === "COMPANY") {
+    const { data } = await http.post<ApiResponse<{
+      credentials?: { email: string; password: string; deliveryChannels?: string[] };
+    }>>(`/admin/company-applications/${applicationId}/approve`, {
+      email: payload.email,
+      password: payload.password,
+      maxProducts: payload.maxProducts,
+      adminNote: payload.adminNote,
+    });
+    return data.data;
+  }
+  return approveServiceProviderApplicationApi(applicationId, { adminNote: payload.adminNote });
 }
 
-export async function rejectJoinUsApplicationApi(applicationId: string, payload: { adminNote?: string }) {
-  const { data } = await http.post<ApiResponse<JoinUsApplicationDetail>>(`/admin/join-us/${applicationId}/reject`, payload);
-  return data.data;
+export async function rejectJoinUsApplicationApi(
+  applicationId: string,
+  applicationType: string,
+  payload: { adminNote?: string }
+) {
+  if (applicationType === "COMPANY") {
+    const { data } = await http.post<ApiResponse<JoinUsApplicationDetail>>(
+      `/admin/company-applications/${applicationId}/reject`,
+      payload
+    );
+    return data.data;
+  }
+  return rejectServiceProviderApplicationApi(applicationId, payload);
 }
