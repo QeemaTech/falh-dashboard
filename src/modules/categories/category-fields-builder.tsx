@@ -1,10 +1,22 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { GripVertical, Plus, Save, Trash2 } from "lucide-react";
-import { Button } from "../../components/ui/button";
-import { Card } from "../../components/ui/card";
-import { Input } from "../../components/ui/input";
-import { AppSelect } from "../../components/design-system";
+import { Add, Delete, DragIndicator, Save } from "@mui/icons-material";
+import {
+  Box,
+  Button,
+  Checkbox,
+  FormControlLabel,
+  Grid,
+  IconButton,
+  MenuItem,
+  Paper,
+  Radio,
+  RadioGroup,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { EmptyState, PageSection } from "../../components/layout";
 import {
   createDynamicFieldApi,
   deleteDynamicFieldApi,
@@ -55,24 +67,45 @@ function defaultField(type: DynamicFieldType): Omit<DynamicField, "id" | "catego
 }
 
 function fieldPreview(field: DynamicField) {
-  if (field.fieldType === "TEXTAREA") return <textarea className="h-24 w-full rounded-lg border p-2 text-sm" disabled />;
-  if (field.fieldType === "BOOLEAN") return <input type="checkbox" disabled />;
-  if (field.fieldType === "FILE") return <input type="file" disabled className="text-xs" />;
-  if (field.fieldType === "SELECT")
+  if (field.fieldType === "TEXTAREA") {
+    return <TextField multiline rows={3} fullWidth size="small" disabled />;
+  }
+  if (field.fieldType === "BOOLEAN") {
+    return <Checkbox disabled />;
+  }
+  if (field.fieldType === "FILE") {
     return (
-      <AppSelect disabled>
-        <option>Select</option>
-      </AppSelect>
+      <Button variant="outlined" component="label" size="small" disabled>
+        Choose file
+        <input type="file" hidden disabled />
+      </Button>
     );
-  if (field.fieldType === "RADIO")
+  }
+  if (field.fieldType === "SELECT") {
     return (
-      <div className="flex flex-wrap gap-3 text-sm">
-        <label><input type="radio" disabled /> Option 1</label>
-        <label><input type="radio" disabled /> Option 2</label>
-      </div>
+      <TextField select size="small" fullWidth disabled value="">
+        <MenuItem value="">Select</MenuItem>
+      </TextField>
     );
+  }
+  if (field.fieldType === "RADIO") {
+    return (
+      <RadioGroup row>
+        <FormControlLabel value="1" control={<Radio disabled />} label="Option 1" />
+        <FormControlLabel value="2" control={<Radio disabled />} label="Option 2" />
+      </RadioGroup>
+    );
+  }
   const type = field.fieldType === "NUMBER" ? "number" : field.fieldType === "DATE" ? "date" : "text";
-  return <Input type={type} placeholder={field.placeholder || field.label} disabled />;
+  return (
+    <TextField
+      type={type}
+      size="small"
+      fullWidth
+      placeholder={field.placeholder || field.label}
+      disabled
+    />
+  );
 }
 
 type Props = {
@@ -154,160 +187,205 @@ export function CategoryFieldsBuilder({ categoryId, categoryLabel }: Props) {
 
   if (!categoryId) {
     return (
-      <Card>
-        <p className="text-sm text-neutral-500">Select a category from the table above to manage its dynamic fields.</p>
-      </Card>
+      <EmptyState
+        title="No category selected"
+        description="Select a category from the table above to manage its dynamic fields."
+      />
     );
   }
 
   return (
-    <div className="min-w-0 space-y-4">
-      <Card className="flex flex-wrap items-center gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">Dynamic fields</p>
-          <p className="text-xs text-neutral-500">{categoryLabel || categoryId}</p>
-        </div>
-        <Button variant="outline" onClick={() => applyTemplate("agriculturalLand")}>
-          Agricultural Land Example
-        </Button>
-        <Button variant="outline" onClick={() => applyTemplate("crop")}>
-          Crop Example
-        </Button>
-      </Card>
+    <Stack spacing={3} sx={{ minWidth: 0 }}>
+      <Paper sx={{ p: 2 }}>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={2}
+          sx={{ alignItems: { sm: "center" }, flexWrap: "wrap" }}
+        >
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              Dynamic fields
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {categoryLabel || categoryId}
+            </Typography>
+          </Box>
+          <Button variant="outlined" onClick={() => applyTemplate("agriculturalLand")}>
+            Agricultural Land Example
+          </Button>
+          <Button variant="outlined" onClick={() => applyTemplate("crop")}>
+            Crop Example
+          </Button>
+        </Stack>
+      </Paper>
 
-      <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-3">
-        <Card className="min-w-0 space-y-3">
-          <h3 className="font-semibold">Field types</h3>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {FIELD_TYPES.map((type) => (
-              <Button
-                key={type}
-                variant="outline"
-                onClick={() => createMutation.mutate({ type })}
-                className="justify-start"
-              >
-                <Plus className="me-1 size-4 shrink-0" />
-                {type}
-              </Button>
-            ))}
-          </div>
-        </Card>
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, xl: 4 }}>
+          <Paper sx={{ p: 2 }}>
+            <PageSection title="Field types">
+              <Grid container spacing={1}>
+                {FIELD_TYPES.map((type) => (
+                  <Grid key={type} size={{ xs: 12, sm: 6 }}>
+                    <Button
+                      variant="outlined"
+                      fullWidth
+                      startIcon={<Add />}
+                      onClick={() => createMutation.mutate({ type })}
+                      sx={{ justifyContent: "flex-start" }}
+                    >
+                      {type}
+                    </Button>
+                  </Grid>
+                ))}
+              </Grid>
+            </PageSection>
+          </Paper>
+        </Grid>
 
-        <Card className="min-w-0 space-y-3">
-          <h3 className="font-semibold">Fields list</h3>
-          <div className="max-h-[420px] space-y-2 overflow-y-auto">
-            {fields.map((field) => (
-              <div
-                key={field.id}
-                draggable
-                onDragStart={() => setDragFieldId(field.id)}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={() => {
-                  if (!dragFieldId || dragFieldId === field.id) return;
-                  const reordered = [...fields];
-                  const fromIndex = reordered.findIndex((f) => f.id === dragFieldId);
-                  const toIndex = reordered.findIndex((f) => f.id === field.id);
-                  if (fromIndex < 0 || toIndex < 0) return;
-                  const [moved] = reordered.splice(fromIndex, 1);
-                  reordered.splice(toIndex, 0, moved);
-                  reorderMutation.mutate(reordered.map((item, idx) => ({ fieldId: item.id, sortOrder: idx + 1 })));
-                  setDragFieldId(null);
-                }}
-                className={`cursor-move rounded-lg border p-3 ${selectedFieldId === field.id ? "border-[#23673A]" : ""}`}
-                onClick={() => setSelectedFieldId(field.id)}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <GripVertical className="size-4 shrink-0 text-neutral-500" />
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">{field.label}</p>
-                      <p className="text-xs text-neutral-500">
-                        {field.fieldType} · {field.isRequired ? "Required" : "Optional"}
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteMutation.mutate(field.id);
+        <Grid size={{ xs: 12, xl: 4 }}>
+          <Paper sx={{ p: 2 }}>
+            <PageSection title="Fields list">
+              <Stack spacing={1} sx={{ maxHeight: 420, overflowY: "auto" }}>
+                {fields.map((field) => (
+                  <Paper
+                    key={field.id}
+                    variant="outlined"
+                    draggable
+                    onDragStart={() => setDragFieldId(field.id)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => {
+                      if (!dragFieldId || dragFieldId === field.id) return;
+                      const reordered = [...fields];
+                      const fromIndex = reordered.findIndex((f) => f.id === dragFieldId);
+                      const toIndex = reordered.findIndex((f) => f.id === field.id);
+                      if (fromIndex < 0 || toIndex < 0) return;
+                      const [moved] = reordered.splice(fromIndex, 1);
+                      reordered.splice(toIndex, 0, moved);
+                      reorderMutation.mutate(reordered.map((item, idx) => ({ fieldId: item.id, sortOrder: idx + 1 })));
+                      setDragFieldId(null);
+                    }}
+                    onClick={() => setSelectedFieldId(field.id)}
+                    sx={{
+                      p: 1.5,
+                      cursor: "move",
+                      borderColor: selectedFieldId === field.id ? "primary.main" : "divider",
+                      borderWidth: selectedFieldId === field.id ? 2 : 1,
                     }}
                   >
-                    <Trash2 className="size-4 text-red-500" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-            {!fields.length ? <p className="text-sm text-neutral-500">No fields yet. Add a field type to start.</p> : null}
-          </div>
-        </Card>
+                    <Stack direction="row" spacing={1} sx={{ alignItems: "center", justifyContent: "space-between" }}>
+                      <Stack direction="row" spacing={1} sx={{ alignItems: "center", minWidth: 0 }}>
+                        <DragIndicator fontSize="small" color="action" />
+                        <Box sx={{ minWidth: 0 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {field.label}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {field.fieldType} · {field.isRequired ? "Required" : "Optional"}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteMutation.mutate(field.id);
+                        }}
+                      >
+                        <Delete fontSize="small" />
+                      </IconButton>
+                    </Stack>
+                  </Paper>
+                ))}
+                {!fields.length ? (
+                  <Typography variant="body2" color="text.secondary">
+                    No fields yet. Add a field type to start.
+                  </Typography>
+                ) : null}
+              </Stack>
+            </PageSection>
+          </Paper>
+        </Grid>
 
-        <Card className="min-w-0 space-y-3">
-          <h3 className="font-semibold">Field settings</h3>
-          {selectedField ? (
-            <div className="space-y-3">
-              <div>
-                <p className="mb-1 text-xs text-neutral-500">Label</p>
-                <Input value={selectedField.label} onChange={(e) => updateSelectedField({ label: e.target.value })} />
-              </div>
-              <div>
-                <p className="mb-1 text-xs text-neutral-500">Field key</p>
-                <Input value={selectedField.fieldKey} onChange={(e) => updateSelectedField({ fieldKey: e.target.value })} />
-              </div>
-              <div>
-                <p className="mb-1 text-xs text-neutral-500">Placeholder</p>
-                <Input
-                  value={selectedField.placeholder || ""}
-                  onChange={(e) => updateSelectedField({ placeholder: e.target.value })}
-                />
-              </div>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={selectedField.isRequired}
-                  onChange={(e) => updateSelectedField({ isRequired: e.target.checked })}
-                />
-                Required
-              </label>
-              {(selectedField.fieldType === "SELECT" || selectedField.fieldType === "RADIO") && (
-                <div>
-                  <p className="mb-1 text-xs text-neutral-500">Options (comma separated)</p>
-                  <Input
-                    value={
-                      Array.isArray((selectedField.options as { items?: string[] } | undefined)?.items)
-                        ? ((selectedField.options as { items: string[] }).items || []).join(", ")
-                        : ""
-                    }
-                    onChange={(e) =>
-                      updateSelectedField({
-                        options: {
-                          items: e.target.value
-                            .split(",")
-                            .map((v) => v.trim())
-                            .filter(Boolean),
-                        },
-                      })
-                    }
+        <Grid size={{ xs: 12, xl: 4 }}>
+          <Paper sx={{ p: 2 }}>
+            <PageSection title="Field settings">
+              {selectedField ? (
+                <Stack spacing={2}>
+                  <TextField
+                    label="Label"
+                    size="small"
+                    fullWidth
+                    value={selectedField.label}
+                    onChange={(e) => updateSelectedField({ label: e.target.value })}
                   />
-                </div>
+                  <TextField
+                    label="Field key"
+                    size="small"
+                    fullWidth
+                    value={selectedField.fieldKey}
+                    onChange={(e) => updateSelectedField({ fieldKey: e.target.value })}
+                  />
+                  <TextField
+                    label="Placeholder"
+                    size="small"
+                    fullWidth
+                    value={selectedField.placeholder || ""}
+                    onChange={(e) => updateSelectedField({ placeholder: e.target.value })}
+                  />
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={selectedField.isRequired}
+                        onChange={(e) => updateSelectedField({ isRequired: e.target.checked })}
+                      />
+                    }
+                    label="Required"
+                  />
+                  {(selectedField.fieldType === "SELECT" || selectedField.fieldType === "RADIO") && (
+                    <TextField
+                      label="Options (comma separated)"
+                      size="small"
+                      fullWidth
+                      value={
+                        Array.isArray((selectedField.options as { items?: string[] } | undefined)?.items)
+                          ? ((selectedField.options as { items: string[] }).items || []).join(", ")
+                          : ""
+                      }
+                      onChange={(e) =>
+                        updateSelectedField({
+                          options: {
+                            items: e.target.value
+                              .split(",")
+                              .map((v) => v.trim())
+                              .filter(Boolean),
+                          },
+                        })
+                      }
+                    />
+                  )}
+                  <Paper variant="outlined" sx={{ p: 2 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
+                      Preview
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                      {selectedField.label} {selectedField.isRequired ? "*" : ""}
+                    </Typography>
+                    {fieldPreview(selectedField)}
+                  </Paper>
+                </Stack>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  Select a field to edit.
+                </Typography>
               )}
-              <div className="rounded-lg border p-3">
-                <p className="mb-2 text-xs text-neutral-500">Preview</p>
-                <label className="mb-1 block text-sm font-medium">
-                  {selectedField.label} {selectedField.isRequired ? "*" : ""}
-                </label>
-                {fieldPreview(selectedField)}
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-neutral-500">Select a field to edit.</p>
-          )}
-          <Button variant="outline" className="w-full" disabled>
-            <Save className="me-2 size-4" />
-            Auto-saved
-          </Button>
-        </Card>
-      </div>
-    </div>
+              <Button variant="outlined" fullWidth disabled startIcon={<Save />} sx={{ mt: 2 }}>
+                Auto-saved
+              </Button>
+            </PageSection>
+          </Paper>
+        </Grid>
+      </Grid>
+    </Stack>
   );
 }

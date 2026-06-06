@@ -1,9 +1,28 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Plus, Save, Shield, Trash2 } from "lucide-react";
-import { Button } from "../../components/ui/button";
-import { Card } from "../../components/ui/card";
-import { Input } from "../../components/ui/input";
+import { Add, Check, Delete, Save, Security } from "@mui/icons-material";
+import {
+  Box,
+  Button,
+  Checkbox,
+  CircularProgress,
+  Grid,
+  IconButton,
+  List,
+  ListItemButton,
+  ListItemText,
+  Paper,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { EmptyState, PageHeader } from "../../components/layout";
 import { toast } from "../../components/ui/sonner";
 import {
   createRoleApi,
@@ -97,135 +116,141 @@ export function RolesPermissionsPage() {
     }));
   };
 
+  if (rolesQuery.isLoading) {
+    return (
+      <Stack sx={{ py: 6, alignItems: "center" }}>
+        <CircularProgress size={28} />
+      </Stack>
+    );
+  }
+
+  if (rolesQuery.isError) {
+    return <EmptyState title="Failed to load roles" description={(rolesQuery.error as Error).message} />;
+  }
+
   return (
-    <div className="min-w-0 space-y-4 overflow-x-hidden">
-      <Card className="flex items-center justify-between bg-linear-to-r from-[#23673A] to-[#2f8f52] text-white">
-        <div>
-          <h2 className="text-xl font-semibold">Roles & Permissions</h2>
-          <p className="text-sm text-white/90">Create, edit, delete roles and assign permissions through matrix UI.</p>
-        </div>
-        <Shield className="size-10 opacity-80" />
-      </Card>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Roles & Permissions"
+        subtitle="Create, edit, delete roles and assign permissions through matrix UI."
+        icon={<Security fontSize="small" />}
+      />
 
-      {rolesQuery.isLoading ? (
-        <Card>Loading roles and permissions...</Card>
-      ) : rolesQuery.isError ? (
-        <Card>Failed to load roles and permissions: {(rolesQuery.error as Error).message}</Card>
-      ) : (
-      <div className="grid gap-4 lg:grid-cols-12">
-        <Card className="space-y-3 lg:col-span-4">
-          <h3 className="font-semibold">Roles</h3>
-          <div className="flex items-center gap-2">
-            <Input
-              value={newRoleName}
-              onChange={(e) => setNewRoleName(e.target.value)}
-              placeholder="New role name"
-            />
-            <Button onClick={() => createMutation.mutate(newRoleName)} disabled={!newRoleName.trim()}>
-              <Plus className="size-4" />
-            </Button>
-          </div>
-          <div className="space-y-2">
-            {roles.map((role) => (
-              <button
-                key={role.id}
-                type="button"
-                onClick={() => loadRole(role.id)}
-                className={`w-full rounded-xl border px-3 py-2 text-start text-sm transition ${
-                  selectedRoleId === role.id
-                    ? "border-[#23673A] bg-[#23673A]/10 text-[#23673A]"
-                    : "border-(--app-border) hover:border-[#23673A]/40 hover:bg-(--app-surface-alt)"
-                }`}
-              >
-                {role.name}
-              </button>
-            ))}
-          </div>
-        </Card>
-
-        <Card className="space-y-4 lg:col-span-8">
-          {selectedRole ? (
-            <>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="min-w-52 flex-1">
-                  <p className="mb-1 text-xs text-neutral-500">Role Name</p>
-                  <Input value={editableName} onChange={(e) => setEditableName(e.target.value)} />
-                </div>
-                <Button variant="ghost" onClick={() => deleteMutation.mutate(selectedRole.id)}>
-                  <Trash2 className="me-1 size-4 text-red-500" />
-                  Delete Role
-                </Button>
-              </div>
-
-              <div className="overflow-auto rounded-2xl border border-(--app-border)">
-                <table className="w-full text-sm">
-                  <thead className="bg-(--app-surface-alt)">
-                    <tr>
-                      <th className="px-4 py-3 text-start text-xs font-semibold uppercase tracking-wide text-(--app-text-muted)">
-                        Module
-                      </th>
-                      {actions.map((action) => (
-                        <th
-                          key={action}
-                          className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide text-(--app-text-muted)"
-                        >
-                          {action}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {modules.map((moduleName) => (
-                      <tr key={moduleName} className="border-t border-(--app-border)">
-                        <td className="px-4 py-3 font-medium capitalize text-(--app-text-primary)">{moduleName}</td>
-                        {actions.map((action) => {
-                          const isChecked = Boolean(permissions?.[moduleName]?.[action]);
-                          return (
-                            <td key={action} className="px-3 py-3 text-center">
-                              <button
-                                type="button"
-                                aria-label={`${moduleName} ${action}`}
-                                onClick={() =>
-                                  togglePermission(moduleName, action as keyof PermissionActions, !isChecked)
-                                }
-                                className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border transition ${
-                                  isChecked
-                                    ? "border-[#23673A] bg-[#23673A] text-white shadow-sm"
-                                    : "border-(--app-border) bg-(--app-surface) text-transparent hover:border-[#23673A]/50"
-                                }`}
-                              >
-                                <Check className="size-4" />
-                              </button>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="flex justify-end">
-                <Button
-                  onClick={() =>
-                    saveMutation.mutate({
-                      roleId: selectedRole.id,
-                      name: editableName,
-                      rolePermissions: permissions,
-                    })
-                  }
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, lg: 4 }}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+              Roles
+            </Typography>
+            <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+              <TextField
+                size="small"
+                fullWidth
+                placeholder="New role name"
+                value={newRoleName}
+                onChange={(e) => setNewRoleName(e.target.value)}
+              />
+              <IconButton color="primary" onClick={() => createMutation.mutate(newRoleName)} disabled={!newRoleName.trim()}>
+                <Add />
+              </IconButton>
+            </Stack>
+            <List dense disablePadding>
+              {roles.map((role) => (
+                <ListItemButton
+                  key={role.id}
+                  selected={selectedRoleId === role.id}
+                  onClick={() => loadRole(role.id)}
+                  sx={{ borderRadius: 2, mb: 0.5 }}
                 >
-                  <Save className="me-2 size-4" />
-                  Save Changes
-                </Button>
-              </div>
-            </>
-          ) : (
-            <p className="text-sm text-neutral-500">Select a role to edit permissions matrix.</p>
-          )}
-        </Card>
-      </div>
-      )}
-    </div>
+                  <ListItemText primary={role.name} />
+                </ListItemButton>
+              ))}
+            </List>
+          </Paper>
+        </Grid>
+
+        <Grid size={{ xs: 12, lg: 8 }}>
+          <Paper sx={{ p: 2 }}>
+            {selectedRole ? (
+              <Stack spacing={2}>
+                <Stack direction="row" spacing={1} sx={{ alignItems: "flex-end", flexWrap: "wrap" }}>
+                  <TextField
+                    size="small"
+                    fullWidth
+                    label="Role Name"
+                    value={editableName}
+                    onChange={(e) => setEditableName(e.target.value)}
+                    sx={{ flex: 1, minWidth: 200 }}
+                  />
+                  <Button color="error" startIcon={<Delete />} onClick={() => deleteMutation.mutate(selectedRole.id)}>
+                    Delete Role
+                  </Button>
+                </Stack>
+
+                <TableContainer component={Paper} variant="outlined">
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 700 }}>Module</TableCell>
+                        {actions.map((action) => (
+                          <TableCell key={action} align="center" sx={{ fontWeight: 700, textTransform: "capitalize" }}>
+                            {action}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {modules.map((moduleName) => (
+                        <TableRow key={moduleName}>
+                          <TableCell sx={{ fontWeight: 600, textTransform: "capitalize" }}>
+                            {moduleName}
+                          </TableCell>
+                          {actions.map((action) => {
+                            const isChecked = Boolean(permissions?.[moduleName]?.[action as keyof PermissionActions]);
+                            return (
+                              <TableCell key={action} align="center">
+                                <Checkbox
+                                  size="small"
+                                  checked={isChecked}
+                                  icon={<Box sx={{ width: 20, height: 20, border: 1, borderColor: "divider", borderRadius: 1 }} />}
+                                  checkedIcon={<Check fontSize="small" />}
+                                  onChange={(_, checked) =>
+                                    togglePermission(moduleName, action as keyof PermissionActions, checked)
+                                  }
+                                />
+                              </TableCell>
+                            );
+                          })}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+
+                <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+                  <Button
+                    variant="contained"
+                    startIcon={<Save />}
+                    onClick={() =>
+                      saveMutation.mutate({
+                        roleId: selectedRole.id,
+                        name: editableName,
+                        rolePermissions: permissions,
+                      })
+                    }
+                  >
+                    Save Changes
+                  </Button>
+                </Box>
+              </Stack>
+            ) : (
+              <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: "center" }}>
+                Select a role to edit permissions matrix.
+              </Typography>
+            )}
+          </Paper>
+        </Grid>
+      </Grid>
+    </Stack>
   );
 }

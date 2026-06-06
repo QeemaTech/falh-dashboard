@@ -1,13 +1,24 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, Eye, Filter, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Add, Delete, Download, Edit, Search, Tune, Visibility } from "@mui/icons-material";
+import {
+  Box,
+  Button,
+  Checkbox,
+  CircularProgress,
+  IconButton,
+  InputAdornment,
+  MenuItem,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
 import { utils as XLSXUtils, writeFile as XLSXWriteFile } from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { Button } from "../../components/ui/button";
-import { Card } from "../../components/ui/card";
-import { Input } from "../../components/ui/input";
-import { AppBadge, AppDrawer, AppSelect, AppTable, AppTableCell, AppTableHead, AppTableHeaderCell, AppTableRow } from "../../components/design-system";
+import { AppBadge, AppDrawer, AppTable, AppTableCell, AppTableHead, AppTableHeaderCell, AppTableRow } from "../../components/design-system";
+import { EmptyState, FilterBar, PageHeader } from "../../components/layout";
 import {
   bulkReviewProductsApi,
   deleteProductApi,
@@ -149,78 +160,65 @@ export function ProductManagementPage({ pendingOnly = false }: Props) {
   };
 
   return (
-    <div className="min-w-0 space-y-4 overflow-x-hidden">
-      <Card className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative w-full max-w-xs min-w-0 sm:max-w-sm">
-            <Search className="pointer-events-none absolute inset-s-3 top-3 size-4 text-neutral-400" />
-            <Input
-              placeholder="Search products..."
-              className="ps-9"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <Filter className="size-4 text-neutral-500" />
-            <AppSelect
-              value={status}
-              onChange={(e) => {
-                setStatus(e.target.value);
-                setPage(1);
-              }}
-            >
-              <option value="">All Statuses</option>
-              <option value="DRAFT">Draft</option>
-              <option value="PENDING">Pending</option>
-              <option value="ACTIVE">Approved</option>
-              <option value="REJECTED">Rejected</option>
-              <option value="SOLD">Sold</option>
-              <option value="EXPIRED">Expired</option>
-            </AppSelect>
-          </div>
-          <div className="ms-auto flex items-center gap-2">
-            <Button onClick={() => { setEditProduct(null); setFormOpen(true); }}>
-              <Plus className="me-2 size-4" />
-              Add Product
-            </Button>
-            <Button variant="outline" onClick={exportExcel}>
-              <Download className="me-2 size-4" />
-              Export Excel
-            </Button>
-            <Button variant="outline" onClick={exportPdf}>
-              <Download className="me-2 size-4" />
-              Export PDF
-            </Button>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 border-t pt-3">
-          <Button variant="outline" onClick={() => runBulk("approve")} disabled={!selected.length || bulkMutation.isPending}>
-            Bulk Approve
+    <Stack spacing={3}>
+      <PageHeader
+        title={pendingOnly ? "Pending Products" : "Products"}
+        subtitle="Manage catalog items, moderation, and exports"
+        action={
+          <Button variant="contained" startIcon={<Add />} onClick={() => { setEditProduct(null); setFormOpen(true); }}>
+            Add Product
           </Button>
-          <Button variant="outline" onClick={() => runBulk("reject")} disabled={!selected.length || bulkMutation.isPending}>
-            Bulk Reject
-          </Button>
-          <Button variant="outline" onClick={() => runBulk("delete")} disabled={!selected.length || deleteMutation.isPending}>
-            Bulk Delete
-          </Button>
-          <Input
-            className="max-w-xs"
-            placeholder="Reject note (bulk)"
-            value={rejectNote}
-            onChange={(e) => setRejectNote(e.target.value)}
-          />
-          <span className="text-xs text-neutral-500">{selected.length} selected</span>
-        </div>
-      </Card>
+        }
+      />
 
-      {isLoading ? <Card>Loading products...</Card> : null}
-      {isError ? <Card>Failed to load products: {(error as Error).message}</Card> : null}
+      <FilterBar>
+        <TextField
+          size="small"
+          placeholder="Search products..."
+          value={search}
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          sx={{ minWidth: { xs: "100%", sm: 260 } }}
+          slotProps={{ input: { startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment> } }}
+        />
+        <TextField
+          select
+          label="Status"
+          size="small"
+          value={status}
+          onChange={(e) => { setStatus(e.target.value); setPage(1); }}
+          sx={{ minWidth: 180 }}
+          slotProps={{ input: { startAdornment: <InputAdornment position="start"><Tune fontSize="small" /></InputAdornment> } }}
+        >
+          <MenuItem value="">All Statuses</MenuItem>
+          <MenuItem value="DRAFT">Draft</MenuItem>
+          <MenuItem value="PENDING">Pending</MenuItem>
+          <MenuItem value="ACTIVE">Approved</MenuItem>
+          <MenuItem value="REJECTED">Rejected</MenuItem>
+          <MenuItem value="SOLD">Sold</MenuItem>
+          <MenuItem value="EXPIRED">Expired</MenuItem>
+        </TextField>
+        <Stack direction="row" spacing={1} sx={{ ml: { sm: "auto" }, flexWrap: "wrap" }}>
+          <Button variant="outlined" startIcon={<Download />} onClick={exportExcel}>Export Excel</Button>
+          <Button variant="outlined" startIcon={<Download />} onClick={exportPdf}>Export PDF</Button>
+        </Stack>
+      </FilterBar>
+
+      <Paper sx={{ p: 2 }}>
+        <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", alignItems: "center" }}>
+          <Button variant="outlined" size="small" onClick={() => runBulk("approve")} disabled={!selected.length || bulkMutation.isPending}>Bulk Approve</Button>
+          <Button variant="outlined" size="small" onClick={() => runBulk("reject")} disabled={!selected.length || bulkMutation.isPending}>Bulk Reject</Button>
+          <Button variant="outlined" size="small" color="error" onClick={() => runBulk("delete")} disabled={!selected.length || deleteMutation.isPending}>Bulk Delete</Button>
+          <TextField size="small" placeholder="Reject note (bulk)" value={rejectNote} onChange={(e) => setRejectNote(e.target.value)} sx={{ minWidth: 200 }} />
+          <Typography variant="caption" color="text.secondary">{selected.length} selected</Typography>
+        </Stack>
+      </Paper>
+
+      {isLoading ? (
+        <Stack sx={{ py: 4, alignItems: "center" }}><CircularProgress size={28} /></Stack>
+      ) : null}
+      {isError ? <EmptyState title="Failed to load products" description={(error as Error).message} /> : null}
       {!isLoading && !isError && !products.length ? (
-        <Card className="p-8 text-center text-neutral-500">No products found for current filters.</Card>
+        <EmptyState title="No products found" description="Try adjusting your search or filters." />
       ) : null}
 
       {!isLoading && !isError && products.length > 0 ? (
@@ -229,8 +227,8 @@ export function ProductManagementPage({ pendingOnly = false }: Props) {
             <AppTableHead>
               <tr>
                 <AppTableHeaderCell>
-                  <input
-                    type="checkbox"
+                  <Checkbox
+                    size="small"
                     checked={products.length > 0 && selected.length === products.length}
                     onChange={(e) => setSelected(e.target.checked ? products.map((p) => p.id) : [])}
                   />
@@ -250,17 +248,13 @@ export function ProductManagementPage({ pendingOnly = false }: Props) {
               {products.map((product) => (
                 <AppTableRow key={product.id}>
                   <AppTableCell>
-                    <input type="checkbox" checked={selected.includes(product.id)} onChange={() => toggleSelect(product.id)} />
+                    <Checkbox size="small" checked={selected.includes(product.id)} onChange={() => toggleSelect(product.id)} />
                   </AppTableCell>
                   <AppTableCell>
                     {product.images?.[0]?.path ? (
-                      <img
-                        src={resolveAssetUrl(product.images[0].path)}
-                        alt={product.title}
-                        className="h-10 w-10 rounded-md object-cover"
-                      />
+                      <Box component="img" src={resolveAssetUrl(product.images[0].path)} alt={product.title} sx={{ height: 40, width: 40, borderRadius: 1, objectFit: "cover" }} />
                     ) : (
-                      <div className="h-10 w-10 rounded-md bg-neutral-200 dark:bg-neutral-700" />
+                      <Box sx={{ height: 40, width: 40, borderRadius: 1, bgcolor: "action.hover" }} />
                     )}
                   </AppTableCell>
                   <AppTableCell className="font-medium">{product.title}</AppTableCell>
@@ -275,50 +269,28 @@ export function ProductManagementPage({ pendingOnly = false }: Props) {
                   <AppTableCell>{product.city || "-"}</AppTableCell>
                   <AppTableCell>{new Date(product.createdAt).toLocaleDateString()}</AppTableCell>
                   <AppTableCell>
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" onClick={() => setDrawerProduct(product)} title="View">
-                        <Eye className="size-4" />
-                      </Button>
-                      <Button variant="ghost" onClick={() => { setEditProduct(product); setFormOpen(true); }} title="Edit">
-                        <Pencil className="size-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        disabled={!canModerate(product.status)}
-                        onClick={() => approveMutation.mutate(product.id)}
-                      >
-                        Approve
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        disabled={!canModerate(product.status)}
-                        onClick={() => rejectMutation.mutate({ id: product.id, adminNote: rejectNote })}
-                      >
-                        Reject
-                      </Button>
-                      <Button variant="ghost" onClick={() => setConfirmDeleteId(product.id)}>
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </div>
+                    <Stack direction="row" spacing={0.5}>
+                      <IconButton size="small" onClick={() => setDrawerProduct(product)} title="View"><Visibility fontSize="small" /></IconButton>
+                      <IconButton size="small" onClick={() => { setEditProduct(product); setFormOpen(true); }} title="Edit"><Edit fontSize="small" /></IconButton>
+                      <Button size="small" disabled={!canModerate(product.status)} onClick={() => approveMutation.mutate(product.id)}>Approve</Button>
+                      <Button size="small" disabled={!canModerate(product.status)} onClick={() => rejectMutation.mutate({ id: product.id, adminNote: rejectNote })}>Reject</Button>
+                      <IconButton size="small" color="error" onClick={() => setConfirmDeleteId(product.id)}><Delete fontSize="small" /></IconButton>
+                    </Stack>
                   </AppTableCell>
                 </AppTableRow>
               ))}
             </tbody>
           </AppTable>
 
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-neutral-500">
+          <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
+            <Typography variant="body2" color="text.secondary">
               Page {page} of {totalPages} {isFetching ? "(refreshing...)" : ""}
-            </p>
-            <div className="flex gap-2">
-              <Button variant="outline" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
-                Previous
-              </Button>
-              <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
-                Next
-              </Button>
-            </div>
-          </div>
+            </Typography>
+            <Stack direction="row" spacing={1}>
+              <Button variant="outlined" size="small" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>Previous</Button>
+              <Button variant="outlined" size="small" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>Next</Button>
+            </Stack>
+          </Stack>
         </>
       ) : null}
 
@@ -328,45 +300,32 @@ export function ProductManagementPage({ pendingOnly = false }: Props) {
         title="Product Details"
         footer={
           drawerProduct ? (
-            <>
-              <Button
-                disabled={!canModerate(drawerProduct.status)}
-                onClick={() => { approveMutation.mutate(drawerProduct.id); setDrawerProduct(null); }}
-              >
-                Approve
-              </Button>
-              <Button
-                variant="outline"
-                disabled={!canModerate(drawerProduct.status)}
-                onClick={() => { rejectMutation.mutate({ id: drawerProduct.id, adminNote: rejectNote }); setDrawerProduct(null); }}
-              >
-                Reject
-              </Button>
-              <Button variant="ghost" onClick={() => setDrawerProduct(null)}>
-                Close
-              </Button>
-            </>
+            <Stack direction="row" spacing={1}>
+              <Button variant="contained" disabled={!canModerate(drawerProduct.status)} onClick={() => { approveMutation.mutate(drawerProduct.id); setDrawerProduct(null); }}>Approve</Button>
+              <Button variant="outlined" disabled={!canModerate(drawerProduct.status)} onClick={() => { rejectMutation.mutate({ id: drawerProduct.id, adminNote: rejectNote }); setDrawerProduct(null); }}>Reject</Button>
+              <Button onClick={() => setDrawerProduct(null)}>Close</Button>
+            </Stack>
           ) : null
         }
       >
         {drawerProduct ? (
-          <div className="space-y-3 text-sm">
+          <Stack spacing={2}>
             {drawerProduct.images?.length ? (
-              <div className="flex flex-wrap gap-2">
+              <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
                 {drawerProduct.images.map((img) => (
-                  <img key={img.id} src={resolveAssetUrl(img.path)} alt="" className="h-20 w-20 rounded-md object-cover" />
+                  <Box key={img.id} component="img" src={resolveAssetUrl(img.path)} alt="" sx={{ height: 80, width: 80, borderRadius: 1, objectFit: "cover" }} />
                 ))}
-              </div>
+              </Stack>
             ) : null}
-            <p><span className="font-medium">Title:</span> {drawerProduct.title}</p>
-            <p><span className="font-medium">Category:</span> {drawerProduct.category?.nameAr || drawerProduct.category?.nameEn || "-"}</p>
-            <p><span className="font-medium">Owner:</span> {drawerProduct.company?.name || drawerProduct.user?.name || "Global"}</p>
-            <p><span className="font-medium">Status:</span> {drawerProduct.status}</p>
-            <p><span className="font-medium">Price:</span> {drawerProduct.price ? `EGP ${drawerProduct.price}` : "-"}</p>
-            <p><span className="font-medium">Location:</span> {drawerProduct.city || "-"}</p>
-            <p><span className="font-medium">Created:</span> {new Date(drawerProduct.createdAt).toLocaleString()}</p>
-            <p><span className="font-medium">Description:</span> {drawerProduct.description || "-"}</p>
-          </div>
+            <Typography variant="body2"><strong>Title:</strong> {drawerProduct.title}</Typography>
+            <Typography variant="body2"><strong>Category:</strong> {drawerProduct.category?.nameAr || drawerProduct.category?.nameEn || "-"}</Typography>
+            <Typography variant="body2"><strong>Owner:</strong> {drawerProduct.company?.name || drawerProduct.user?.name || "Global"}</Typography>
+            <Typography variant="body2"><strong>Status:</strong> {drawerProduct.status}</Typography>
+            <Typography variant="body2"><strong>Price:</strong> {drawerProduct.price ? `EGP ${drawerProduct.price}` : "-"}</Typography>
+            <Typography variant="body2"><strong>Location:</strong> {drawerProduct.city || "-"}</Typography>
+            <Typography variant="body2"><strong>Created:</strong> {new Date(drawerProduct.createdAt).toLocaleString()}</Typography>
+            <Typography variant="body2"><strong>Description:</strong> {drawerProduct.description || "-"}</Typography>
+          </Stack>
         ) : null}
       </AppDrawer>
 
@@ -375,17 +334,13 @@ export function ProductManagementPage({ pendingOnly = false }: Props) {
         onClose={() => setConfirmDeleteId(null)}
         title="Confirm Delete"
         footer={
-          <>
-            <Button onClick={() => confirmDeleteId && deleteMutation.mutate(confirmDeleteId)}>
-              Delete
-            </Button>
-            <Button variant="ghost" onClick={() => setConfirmDeleteId(null)}>
-              Cancel
-            </Button>
-          </>
+          <Stack direction="row" spacing={1}>
+            <Button variant="contained" color="error" onClick={() => confirmDeleteId && deleteMutation.mutate(confirmDeleteId)}>Delete</Button>
+            <Button onClick={() => setConfirmDeleteId(null)}>Cancel</Button>
+          </Stack>
         }
       >
-        <p className="text-sm">This permanently removes the product from all lists.</p>
+        <Typography variant="body2">This permanently removes the product from all lists.</Typography>
       </AppDrawer>
 
       <ProductFormDrawer
@@ -395,6 +350,6 @@ export function ProductManagementPage({ pendingOnly = false }: Props) {
         scope="admin"
         product={editProduct}
       />
-    </div>
+    </Stack>
   );
 }

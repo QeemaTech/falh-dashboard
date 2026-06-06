@@ -1,11 +1,38 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis } from "recharts";
-import { Link } from "react-router-dom";
-import { Box, Building2, DollarSign, PackageOpen, ShoppingCart, TrendingUp, Users, Warehouse } from "lucide-react";
+import { Link as RouterLink } from "react-router-dom";
+import {
+  Box,
+  Button,
+  Chip,
+  Grid,
+  Paper,
+  Skeleton,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  ToggleButton,
+  ToggleButtonGroup,
+  Typography,
+} from "@mui/material";
+import {
+  Business,
+  Inventory2,
+  LocalShipping,
+  MonetizationOn,
+  PendingActions,
+  Storefront,
+  TrendingUp,
+  People,
+  Warehouse,
+} from "@mui/icons-material";
 import { AnalyticsWidget } from "../../components/analytics-widget";
-import { Card } from "../../components/ui/card";
-import { Button } from "../../components/ui/button";
+import { EmptyState } from "../../components/layout";
 import {
   fetchDashboardStats,
   fetchRecentOrders,
@@ -46,24 +73,44 @@ function periodScale(period: DashboardPeriod) {
 
 function DashboardSkeleton() {
   return (
-    <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <Stack spacing={3}>
+      <Skeleton variant="rounded" height={120} />
+      <Grid container spacing={2}>
         {Array.from({ length: 8 }).map((_, index) => (
-          <div
-            key={`skeleton-stat-${index}`}
-            className="h-44 animate-pulse rounded-[20px] border border-(--app-border) bg-(--app-surface) shadow-(--app-shadow-soft)"
-          />
+          <Grid key={`sk-stat-${index}`} size={{ xs: 12, sm: 6, xl: 3 }}>
+            <Skeleton variant="rounded" height={128} />
+          </Grid>
         ))}
-      </div>
-      <div className="grid gap-4 xl:grid-cols-2">
+      </Grid>
+      <Grid container spacing={2}>
         {Array.from({ length: 4 }).map((_, index) => (
-          <div
-            key={`skeleton-chart-${index}`}
-            className="h-80 animate-pulse rounded-[20px] border border-(--app-border) bg-(--app-surface) shadow-(--app-shadow-soft)"
-          />
+          <Grid key={`sk-chart-${index}`} size={{ xs: 12, xl: 6 }}>
+            <Skeleton variant="rounded" height={320} />
+          </Grid>
         ))}
-      </div>
-    </div>
+      </Grid>
+    </Stack>
+  );
+}
+
+function ChartCard({ title, badge, subtitle, children }: { title: string; badge?: string; subtitle?: string; children: ReactNode }) {
+  return (
+    <Paper sx={{ p: 2, height: "100%" }}>
+      <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
+        <Box>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            {title}
+          </Typography>
+          {subtitle ? (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              {subtitle}
+            </Typography>
+          ) : null}
+        </Box>
+        {badge ? <Chip label={badge} size="small" color="primary" variant="outlined" /> : null}
+      </Stack>
+      <Box sx={{ height: 256, borderRadius: 2, bgcolor: "action.hover", p: 1 }}>{children}</Box>
+    </Paper>
   );
 }
 
@@ -100,19 +147,15 @@ export function DashboardPage() {
   const isLoading = statsLoading || usersLoading || ordersLoading || productsLoading || providersLoading;
   if (isLoading) return <DashboardSkeleton />;
   if (statsError || usersError || ordersError || productsError || providersError) {
-    return <Card>Failed to load one or more dashboard data sources. Please refresh.</Card>;
+    return <EmptyState title="Failed to load dashboard" description="Please refresh the page and try again." />;
   }
   if (!stats) {
     return (
-      <Card className="flex min-h-[280px] flex-col items-center justify-center text-center">
-        <div className="mb-4 flex size-16 items-center justify-center rounded-2xl bg-[#23673A]/10 text-[#23673A]">
-          <TrendingUp className="size-7" />
-        </div>
-        <h3 className="text-xl font-semibold text-(--app-text-primary)">No dashboard data yet</h3>
-        <p className="mt-2 max-w-md text-sm text-(--app-text-secondary)">
-          Once users, orders, and products are active, this dashboard will auto-populate with live analytics and trend insights.
-        </p>
-      </Card>
+      <EmptyState
+        icon={<TrendingUp sx={{ fontSize: 48 }} />}
+        title="No dashboard data yet"
+        description="Once users, orders, and products are active, this dashboard will auto-populate with live analytics."
+      />
     );
   }
 
@@ -134,61 +177,70 @@ export function DashboardPage() {
     { step: "Approved", count: Math.max((period === "month" ? stats.totalProducts : periodProducts.length) - Math.round(stats.pendingProducts * scale), 0) },
   ];
   const analyticsWeekData = [
-    { day: "Sunday", visitors: Math.round(stats.totalUsers * 0.03 * scale), sessions: Math.round(stats.totalOrders * 0.06 * scale), clicks: Math.round(stats.totalProducts * 0.04 * scale) },
-    { day: "Monday", visitors: Math.round(stats.totalUsers * 0.05 * scale), sessions: Math.round(stats.totalOrders * 0.08 * scale), clicks: Math.round(stats.totalProducts * 0.06 * scale) },
-    { day: "Tuesday", visitors: Math.round(stats.totalUsers * 0.08 * scale), sessions: Math.round(stats.totalOrders * 0.1 * scale), clicks: Math.round(stats.totalProducts * 0.09 * scale) },
-    { day: "Wednesday", visitors: Math.round(stats.totalUsers * 0.07 * scale), sessions: Math.round(stats.totalOrders * 0.09 * scale), clicks: Math.round(stats.totalProducts * 0.08 * scale) },
-    { day: "Thursday", visitors: Math.round(stats.totalUsers * 0.06 * scale), sessions: Math.round(stats.totalOrders * 0.08 * scale), clicks: Math.round(stats.totalProducts * 0.07 * scale) },
-    { day: "Friday", visitors: Math.round(stats.totalUsers * 0.045 * scale), sessions: Math.round(stats.totalOrders * 0.07 * scale), clicks: Math.round(stats.totalProducts * 0.05 * scale) },
-    { day: "Saturday", visitors: Math.round(stats.totalUsers * 0.04 * scale), sessions: Math.round(stats.totalOrders * 0.065 * scale), clicks: Math.round(stats.totalProducts * 0.045 * scale) },
+    { day: "Sun", visitors: Math.round(stats.totalUsers * 0.03 * scale), sessions: Math.round(stats.totalOrders * 0.06 * scale), clicks: Math.round(stats.totalProducts * 0.04 * scale) },
+    { day: "Mon", visitors: Math.round(stats.totalUsers * 0.05 * scale), sessions: Math.round(stats.totalOrders * 0.08 * scale), clicks: Math.round(stats.totalProducts * 0.06 * scale) },
+    { day: "Tue", visitors: Math.round(stats.totalUsers * 0.08 * scale), sessions: Math.round(stats.totalOrders * 0.1 * scale), clicks: Math.round(stats.totalProducts * 0.09 * scale) },
+    { day: "Wed", visitors: Math.round(stats.totalUsers * 0.07 * scale), sessions: Math.round(stats.totalOrders * 0.09 * scale), clicks: Math.round(stats.totalProducts * 0.08 * scale) },
+    { day: "Thu", visitors: Math.round(stats.totalUsers * 0.06 * scale), sessions: Math.round(stats.totalOrders * 0.08 * scale), clicks: Math.round(stats.totalProducts * 0.07 * scale) },
+    { day: "Fri", visitors: Math.round(stats.totalUsers * 0.045 * scale), sessions: Math.round(stats.totalOrders * 0.07 * scale), clicks: Math.round(stats.totalProducts * 0.05 * scale) },
+    { day: "Sat", visitors: Math.round(stats.totalUsers * 0.04 * scale), sessions: Math.round(stats.totalOrders * 0.065 * scale), clicks: Math.round(stats.totalProducts * 0.045 * scale) },
   ];
 
   const periodLabel = period === "today" ? "Today" : period === "week" ? "This week" : "This month";
 
   return (
-    <div className="min-w-0 space-y-6 overflow-x-hidden">
-      <Card className="border-[#23673A]/10 bg-[linear-gradient(120deg,rgba(35,103,58,0.11),transparent_40%)]">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#23673A]">Performance Overview</p>
-            <h2 className="mt-2 text-2xl font-semibold text-(--app-text-primary)">Admin Command Center</h2>
-            <p className="mt-2 max-w-xl text-sm text-(--app-text-secondary)">
-              Premium unified analytics for operations, users, products, and orders with real-time insights.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant={period === "today" ? "default" : "outline"} onClick={() => setPeriod("today")}>
-              Today
-            </Button>
-            <Button variant={period === "week" ? "default" : "outline"} onClick={() => setPeriod("week")}>
-              This Week
-            </Button>
-            <Button variant={period === "month" ? "default" : "outline"} onClick={() => setPeriod("month")}>
-              This Month
-            </Button>
-          </div>
-          <p className="w-full text-xs text-(--app-text-secondary)">Showing data for: {periodLabel}</p>
-        </div>
-      </Card>
+    <Stack spacing={3}>
+      <Paper
+        sx={{
+          p: 3,
+          background: (theme) =>
+            `linear-gradient(120deg, ${theme.palette.primary.main}18, transparent 40%)`,
+        }}
+      >
+        <Stack spacing={2}>
+          <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ justifyContent: "space-between", alignItems: { md: "center" } }}>
+            <Box>
+              <Typography variant="overline" color="primary" sx={{ fontWeight: 700, letterSpacing: 1.5 }}>
+                Performance Overview
+              </Typography>
+              <Typography variant="h5" sx={{ mt: 1, fontWeight: 700 }}>
+                Admin Command Center
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1, maxWidth: 560 }}>
+                Premium unified analytics for operations, users, products, and orders with real-time insights.
+              </Typography>
+            </Box>
+            <ToggleButtonGroup
+              exclusive
+              size="small"
+              value={period}
+              onChange={(_, value: DashboardPeriod | null) => value && setPeriod(value)}
+            >
+              <ToggleButton value="today">Today</ToggleButton>
+              <ToggleButton value="week">This Week</ToggleButton>
+              <ToggleButton value="month">This Month</ToggleButton>
+            </ToggleButtonGroup>
+          </Stack>
+          <Typography variant="caption" color="text.secondary">
+            Showing data for: {periodLabel}
+          </Typography>
+        </Stack>
+      </Paper>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <AnalyticsWidget title="Total Users" value={period === "month" ? stats.totalUsers : periodUsers.length} icon={Users} change="+12.4%" hint={periodLabel} sparkline={[22, 30, 18, 40, 65, 55].map((v) => Math.round(v * scale))} />
-        <AnalyticsWidget title="Total Companies" value={Math.round(stats.totalCompanies * scale)} icon={Building2} change="+8.7%" hint={periodLabel} sparkline={[28, 45, 34, 50, 68, 72].map((v) => Math.round(v * scale))} />
-        <AnalyticsWidget title="Total Products" value={period === "month" ? stats.totalProducts : periodProducts.length} icon={Box} change="+15.2%" hint={periodLabel} sparkline={[15, 30, 42, 46, 58, 66].map((v) => Math.round(v * scale))} />
-        <AnalyticsWidget title="Total Orders" value={period === "month" ? stats.totalOrders : periodOrders.length} icon={ShoppingCart} change="+6.1%" hint={periodLabel} sparkline={[20, 25, 32, 29, 52, 60].map((v) => Math.round(v * scale))} />
-        <AnalyticsWidget title="Total Revenue" value={`EGP ${Math.round(Number(stats.revenue) * scale).toLocaleString()}`} icon={DollarSign} change="+19.8%" hint={periodLabel} sparkline={[12, 21, 30, 41, 52, 74].map((v) => Math.round(v * scale))} />
-        <AnalyticsWidget title="Service Providers" value={Math.round((serviceProvidersCount || 0) * scale)} icon={Warehouse} change="+4.1%" hint={periodLabel} sparkline={[18, 23, 31, 38, 44, 48].map((v) => Math.round(v * scale))} />
-        <AnalyticsWidget title="Pending Products" value={Math.round(stats.pendingProducts * scale)} icon={PackageOpen} change="-2.3%" trend="down" hint="requires moderation" sparkline={[62, 55, 52, 40, 37, 28].map((v) => Math.round(v * scale))} />
-        <AnalyticsWidget title="Pending Companies" value={Math.round(stats.pendingCompanies * scale)} icon={Building2} change="-1.7%" trend="down" hint="application queue" sparkline={[45, 42, 38, 30, 26, 23].map((v) => Math.round(v * scale))} />
-      </div>
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, sm: 6, xl: 3 }}><AnalyticsWidget title="Total Users" value={period === "month" ? stats.totalUsers : periodUsers.length} icon={<People fontSize="small" />} change="+12.4%" hint={periodLabel} sparkline={[22, 30, 18, 40, 65, 55].map((v) => Math.round(v * scale))} /></Grid>
+        <Grid size={{ xs: 12, sm: 6, xl: 3 }}><AnalyticsWidget title="Total Companies" value={Math.round(stats.totalCompanies * scale)} icon={<Business fontSize="small" />} change="+8.7%" hint={periodLabel} sparkline={[28, 45, 34, 50, 68, 72].map((v) => Math.round(v * scale))} /></Grid>
+        <Grid size={{ xs: 12, sm: 6, xl: 3 }}><AnalyticsWidget title="Total Products" value={period === "month" ? stats.totalProducts : periodProducts.length} icon={<Inventory2 fontSize="small" />} change="+15.2%" hint={periodLabel} sparkline={[15, 30, 42, 46, 58, 66].map((v) => Math.round(v * scale))} /></Grid>
+        <Grid size={{ xs: 12, sm: 6, xl: 3 }}><AnalyticsWidget title="Total Orders" value={period === "month" ? stats.totalOrders : periodOrders.length} icon={<LocalShipping fontSize="small" />} change="+6.1%" hint={periodLabel} sparkline={[20, 25, 32, 29, 52, 60].map((v) => Math.round(v * scale))} /></Grid>
+        <Grid size={{ xs: 12, sm: 6, xl: 3 }}><AnalyticsWidget title="Total Revenue" value={`EGP ${Math.round(Number(stats.revenue) * scale).toLocaleString()}`} icon={<MonetizationOn fontSize="small" />} change="+19.8%" hint={periodLabel} sparkline={[12, 21, 30, 41, 52, 74].map((v) => Math.round(v * scale))} /></Grid>
+        <Grid size={{ xs: 12, sm: 6, xl: 3 }}><AnalyticsWidget title="Service Providers" value={Math.round((serviceProvidersCount || 0) * scale)} icon={<Warehouse fontSize="small" />} change="+4.1%" hint={periodLabel} sparkline={[18, 23, 31, 38, 44, 48].map((v) => Math.round(v * scale))} /></Grid>
+        <Grid size={{ xs: 12, sm: 6, xl: 3 }}><AnalyticsWidget title="Pending Products" value={Math.round(stats.pendingProducts * scale)} icon={<PendingActions fontSize="small" />} change="-2.3%" trend="down" hint="requires moderation" sparkline={[62, 55, 52, 40, 37, 28].map((v) => Math.round(v * scale))} /></Grid>
+        <Grid size={{ xs: 12, sm: 6, xl: 3 }}><AnalyticsWidget title="Pending Companies" value={Math.round(stats.pendingCompanies * scale)} icon={<Storefront fontSize="small" />} change="-1.7%" trend="down" hint="application queue" sparkline={[45, 42, 38, 30, 26, 23].map((v) => Math.round(v * scale))} /></Grid>
+      </Grid>
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        <Card className="rounded-3xl border-(--app-border) bg-(--app-surface) shadow-[0_10px_30px_-24px_rgba(15,23,42,0.25)]">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold tracking-tight text-(--app-text-primary)">Revenue Analytics</h3>
-            <span className="rounded-full bg-[#23673A]/10 px-2.5 py-1 text-xs font-semibold text-[#23673A]">Income</span>
-          </div>
-          <div className="h-64 rounded-2xl bg-[#edf5ef]/60 p-2">
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, xl: 6 }}>
+          <ChartCard title="Revenue Analytics" badge="Income">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={salesData}>
                 <defs>
@@ -204,15 +256,10 @@ export function DashboardPage() {
                 <Area type="monotone" dataKey="orders" stroke="#69A87B" strokeWidth={2} fill="transparent" />
               </AreaChart>
             </ResponsiveContainer>
-          </div>
-        </Card>
-
-        <Card className="rounded-3xl border-(--app-border) bg-(--app-surface) shadow-[0_10px_30px_-24px_rgba(15,23,42,0.25)]">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold tracking-tight text-(--app-text-primary)">Project Status</h3>
-            <span className="rounded-full bg-[#23673A]/10 px-2.5 py-1 text-xs font-semibold text-[#23673A]">Overview</span>
-          </div>
-          <div className="h-64 rounded-2xl bg-[#edf5ef]/60 p-2">
+          </ChartCard>
+        </Grid>
+        <Grid size={{ xs: 12, xl: 6 }}>
+          <ChartCard title="Project Status" badge="Overview">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={growthData}>
                 <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#E4E7EC" />
@@ -221,15 +268,10 @@ export function DashboardPage() {
                 <Bar dataKey="value" fill="#23673A" radius={[8, 8, 0, 0]} barSize={12} />
               </BarChart>
             </ResponsiveContainer>
-          </div>
-        </Card>
-
-        <Card className="rounded-3xl border-(--app-border) bg-(--app-surface) shadow-[0_10px_30px_-24px_rgba(15,23,42,0.25)]">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold tracking-tight text-(--app-text-primary)">Products Analytics</h3>
-            <span className="rounded-full bg-[#23673A]/10 px-2.5 py-1 text-xs font-semibold text-[#23673A]">Catalog</span>
-          </div>
-          <div className="h-64 rounded-2xl bg-[#edf5ef]/60 p-2">
+          </ChartCard>
+        </Grid>
+        <Grid size={{ xs: 12, xl: 6 }}>
+          <ChartCard title="Products Analytics" badge="Catalog">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={productGrowthData}>
                 <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#E4E7EC" />
@@ -238,124 +280,131 @@ export function DashboardPage() {
                 <Bar dataKey="count" fill="#15803D" radius={[8, 8, 0, 0]} barSize={12} />
               </BarChart>
             </ResponsiveContainer>
-          </div>
-        </Card>
-
-        <Card className="rounded-3xl border-(--app-border) bg-(--app-surface) shadow-[0_10px_30px_-24px_rgba(15,23,42,0.25)]">
-          <div className="mb-4">
-            <h3 className="text-xl font-semibold tracking-tight text-(--app-text-primary)">Analytics</h3>
-            <p className="mt-1 text-sm text-(--app-text-secondary)">Sunday to Saturday performance overview</p>
-          </div>
-          <div className="h-64 rounded-2xl bg-[#edf5ef]/55 px-2 py-3">
+          </ChartCard>
+        </Grid>
+        <Grid size={{ xs: 12, xl: 6 }}>
+          <ChartCard title="Analytics" subtitle="Sunday to Saturday performance overview">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={analyticsWeekData} barGap={10} barCategoryGap="44%">
                 <CartesianGrid strokeDasharray="3 5" vertical={false} stroke="#dbe7de" />
-                <XAxis
-                  axisLine={false}
-                  tickLine={false}
-                  dataKey="day"
-                  tick={{ fill: "#6b7280", fontSize: 11, fontWeight: 500 }}
-                />
-                <Tooltip
-                  cursor={{ fill: "rgba(35, 103, 58, 0.08)" }}
-                  contentStyle={{
-                    borderRadius: "14px",
-                    border: "1px solid #e8efea",
-                    boxShadow: "0 10px 22px -16px rgba(15,23,42,.3)",
-                  }}
-                />
+                <XAxis axisLine={false} tickLine={false} dataKey="day" tick={{ fill: "#6b7280", fontSize: 11 }} />
+                <Tooltip cursor={{ fill: "rgba(35, 103, 58, 0.08)" }} />
                 <Bar dataKey="visitors" fill="#82b695" radius={[8, 8, 0, 0]} barSize={6} />
                 <Bar dataKey="sessions" fill="#23673A" radius={[8, 8, 0, 0]} barSize={6} />
                 <Bar dataKey="clicks" fill="#c7ddcd" radius={[8, 8, 0, 0]} barSize={6} />
               </BarChart>
             </ResponsiveContainer>
-          </div>
-        </Card>
-      </div>
+          </ChartCard>
+        </Grid>
+      </Grid>
 
-      <div className="grid gap-4 xl:grid-cols-3">
-        <Card>
-          <h3 className="mb-4 text-sm font-semibold text-(--app-text-primary)">Latest Orders</h3>
-          <div className="overflow-hidden rounded-2xl border border-(--app-border)">
-            {periodOrders.length ? (
-              <table className="w-full text-sm">
-                <thead className="bg-(--app-surface-muted)">
-                  <tr>
-                    <th className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-(--app-text-secondary)">Customer</th>
-                    <th className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-(--app-text-secondary)">Status</th>
-                    <th className="px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide text-(--app-text-secondary)">Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {periodOrders.map((order) => (
-                    <tr key={order.id} className="border-t border-(--app-border)">
-                      <td className="px-3 py-2 font-medium text-(--app-text-primary)">{order.user?.name || "Customer"}</td>
-                      <td className="px-3 py-2 text-(--app-text-secondary)">{order.status}</td>
-                      <td className="px-3 py-2 text-[#23673A]">EGP {Number(order.total).toLocaleString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div className="p-8 text-center text-sm text-(--app-text-secondary)">No recent orders available.</div>
-            )}
-          </div>
-        </Card>
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, xl: 4 }}>
+          <Paper sx={{ p: 2, height: "100%" }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>
+              Latest Orders
+            </Typography>
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Customer</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Amount</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {periodOrders.length ? (
+                    periodOrders.map((order) => (
+                      <TableRow key={order.id}>
+                        <TableCell>{order.user?.name || "Customer"}</TableCell>
+                        <TableCell>{order.status}</TableCell>
+                        <TableCell sx={{ color: "primary.main" }}>EGP {Number(order.total).toLocaleString()}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={3} align="center" sx={{ color: "text.secondary", py: 4 }}>
+                        No recent orders available.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+        </Grid>
+        <Grid size={{ xs: 12, xl: 4 }}>
+          <Paper sx={{ p: 2, height: "100%" }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>
+              Latest Registrations
+            </Typography>
+            <Stack spacing={1}>
+              {periodUsers.length ? (
+                periodUsers.map((user) => (
+                  <Paper key={user.id} variant="outlined" sx={{ p: 1.5 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {user.name}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {user.role} — {user.status}
+                    </Typography>
+                  </Paper>
+                ))
+              ) : (
+                <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: "center" }}>
+                  No user registrations yet.
+                </Typography>
+              )}
+            </Stack>
+          </Paper>
+        </Grid>
+        <Grid size={{ xs: 12, xl: 4 }}>
+          <Paper sx={{ p: 2, height: "100%" }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>
+              Latest Products
+            </Typography>
+            <Stack spacing={1}>
+              {periodProducts.length ? (
+                periodProducts.map((product) => (
+                  <Paper key={product.id} variant="outlined" sx={{ p: 1.5 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {product.title}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {product.status}
+                    </Typography>
+                  </Paper>
+                ))
+              ) : (
+                <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: "center" }}>
+                  No products added recently.
+                </Typography>
+              )}
+            </Stack>
+          </Paper>
+        </Grid>
+      </Grid>
 
-        <Card>
-          <h3 className="mb-4 text-sm font-semibold text-(--app-text-primary)">Latest Registrations</h3>
-          <div className="space-y-2 text-sm">
-            {periodUsers.length ? (
-              periodUsers.map((user) => (
-                <div key={user.id} className="rounded-2xl border border-(--app-border) bg-(--app-surface) p-3">
-                  <p className="font-medium text-(--app-text-primary)">{user.name}</p>
-                  <p className="text-(--app-text-secondary)">{user.role} - {user.status}</p>
-                </div>
-              ))
-            ) : (
-              <div className="rounded-2xl border border-dashed border-(--app-border) p-8 text-center text-(--app-text-secondary)">
-                No user registrations yet.
-              </div>
-            )}
-          </div>
-        </Card>
-
-        <Card>
-          <h3 className="mb-4 text-sm font-semibold text-(--app-text-primary)">Latest Products</h3>
-          <div className="space-y-2 text-sm">
-            {periodProducts.length ? (
-              periodProducts.map((product) => (
-                <div key={product.id} className="rounded-2xl border border-(--app-border) bg-(--app-surface) p-3">
-                  <p className="font-medium text-(--app-text-primary)">{product.title}</p>
-                  <p className="text-(--app-text-secondary)">{product.status}</p>
-                </div>
-              ))
-            ) : (
-              <div className="rounded-2xl border border-dashed border-(--app-border) p-8 text-center text-(--app-text-secondary)">
-                No products added recently.
-              </div>
-            )}
-          </div>
-        </Card>
-      </div>
-
-      <Card>
-        <h3 className="mb-4 text-sm font-semibold text-(--app-text-primary)">Quick Actions</h3>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Link to="/categories">
-            <Button className="w-full">Add Category</Button>
-          </Link>
-          <Link to="/banners">
-            <Button className="w-full">Add Banner</Button>
-          </Link>
-          <Link to="/company-applications">
-            <Button className="w-full">Review Company Applications</Button>
-          </Link>
-          <Link to="/products">
-            <Button className="w-full">Manage Products</Button>
-          </Link>
-        </div>
-      </Card>
-    </div>
+      <Paper sx={{ p: 2 }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>
+          Quick Actions
+        </Typography>
+        <Grid container spacing={2}>
+          {[
+            { to: "/categories", label: "Add Category" },
+            { to: "/banners", label: "Add Banner" },
+            { to: "/company-applications", label: "Review Company Applications" },
+            { to: "/products", label: "Manage Products" },
+          ].map((action) => (
+            <Grid key={action.to} size={{ xs: 12, sm: 6, lg: 3 }}>
+              <Button component={RouterLink} to={action.to} variant="contained" fullWidth>
+                {action.label}
+              </Button>
+            </Grid>
+          ))}
+        </Grid>
+      </Paper>
+    </Stack>
   );
 }

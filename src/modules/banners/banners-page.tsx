@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Megaphone, Plus, Trash2 } from "lucide-react";
-import { Card } from "../../components/ui/card";
-import { Button } from "../../components/ui/button";
+import { Add, Campaign, Delete } from "@mui/icons-material";
+import { Box, Button, CircularProgress, IconButton, Stack } from "@mui/material";
 import { AppBadge, AppTable, AppTableCell, AppTableHead, AppTableHeaderCell, AppTableRow } from "../../components/design-system";
+import { EmptyState, PageHeader } from "../../components/layout";
 import { deleteAdminBannerApi, fetchAdminBanners, type AdminBanner } from "../../services/admin-api";
 import { resolveAssetUrl } from "../../utils/asset-url";
 import { getApiErrorMessage } from "../../utils/api-error";
@@ -31,43 +31,41 @@ export function BannersPage() {
   });
 
   const banners = useMemo(() => (data || []) as AdminBanner[], [data]);
-
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin-banners"] });
 
   return (
-    <div className="min-w-0 space-y-4 overflow-x-hidden">
-      <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
-        <div className="flex items-center gap-3">
-          <div className="flex size-11 items-center justify-center rounded-2xl bg-[#23673A]/12 text-[#23673A]">
-            <Megaphone className="size-5" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-(--app-text-primary)">{t("banners.title")}</h2>
-            <p className="text-sm text-(--app-text-secondary)">{t("banners.subtitle")}</p>
-          </div>
-        </div>
-        <Button onClick={() => setFormOpen(true)}>
-          <Plus className="me-2 size-4" />
-          {t("banners.addButton")}
-        </Button>
-      </Card>
+    <Stack spacing={3}>
+      <PageHeader
+        title={t("banners.title")}
+        subtitle={t("banners.subtitle")}
+        icon={<Campaign fontSize="small" />}
+        action={
+          <Button variant="contained" startIcon={<Add />} onClick={() => setFormOpen(true)}>
+            {t("banners.addButton")}
+          </Button>
+        }
+      />
 
-      {isLoading ? <Card className="p-6">{t("common.loading")}</Card> : null}
+      {isLoading ? (
+        <Stack sx={{ py: 6, alignItems: "center" }}>
+          <CircularProgress size={28} />
+        </Stack>
+      ) : null}
+
       {isError ? (
-        <Card className="p-6 text-red-600">
-          {t("banners.loadFailed")}: {getApiErrorMessage(error)}
-        </Card>
+        <EmptyState title={t("banners.loadFailed")} description={getApiErrorMessage(error)} />
       ) : null}
 
       {!isLoading && !isError && !banners.length ? (
-        <Card className="flex flex-col items-center gap-4 p-10 text-center">
-          <Megaphone className="size-10 text-(--app-text-secondary)" />
-          <p className="text-sm text-(--app-text-secondary)">{t("banners.empty")}</p>
-          <Button onClick={() => setFormOpen(true)}>
-            <Plus className="me-2 size-4" />
-            {t("banners.addButton")}
-          </Button>
-        </Card>
+        <EmptyState
+          icon={<Campaign sx={{ fontSize: 48 }} />}
+          title={t("banners.empty")}
+          action={
+            <Button variant="contained" startIcon={<Add />} onClick={() => setFormOpen(true)}>
+              {t("banners.addButton")}
+            </Button>
+          }
+        />
       ) : null}
 
       {!isLoading && !isError && banners.length > 0 ? (
@@ -87,16 +85,17 @@ export function BannersPage() {
               <AppTableRow key={banner.id}>
                 <AppTableCell>
                   {banner.imagePath ? (
-                    <img
+                    <Box
+                      component="img"
                       src={resolveAssetUrl(banner.imagePath)}
                       alt={banner.title}
-                      className="h-14 w-24 rounded-lg object-cover"
+                      sx={{ height: 56, width: 96, borderRadius: 1, objectFit: "cover" }}
                     />
                   ) : (
-                    <div className="h-14 w-24 rounded-lg bg-(--app-surface-muted)" />
+                    <Box sx={{ height: 56, width: 96, borderRadius: 1, bgcolor: "action.hover" }} />
                   )}
                 </AppTableCell>
-                <AppTableCell className="font-medium">{banner.title}</AppTableCell>
+                <AppTableCell>{banner.title}</AppTableCell>
                 <AppTableCell>{banner.linkType || "—"}</AppTableCell>
                 <AppTableCell>{banner.sortOrder ?? 0}</AppTableCell>
                 <AppTableCell>
@@ -105,9 +104,9 @@ export function BannersPage() {
                   </AppBadge>
                 </AppTableCell>
                 <AppTableCell>
-                  <Button
-                    variant="ghost"
-                    className="text-red-600"
+                  <IconButton
+                    color="error"
+                    size="small"
                     disabled={deleteMutation.isPending}
                     onClick={() => {
                       if (window.confirm(t("banners.confirmDelete"))) {
@@ -115,8 +114,8 @@ export function BannersPage() {
                       }
                     }}
                   >
-                    <Trash2 className="size-4" />
-                  </Button>
+                    <Delete fontSize="small" />
+                  </IconButton>
                 </AppTableCell>
               </AppTableRow>
             ))}
@@ -125,6 +124,6 @@ export function BannersPage() {
       ) : null}
 
       <BannerFormDrawer open={formOpen} onClose={() => setFormOpen(false)} onSuccess={invalidate} />
-    </div>
+    </Stack>
   );
 }

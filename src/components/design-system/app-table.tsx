@@ -1,5 +1,15 @@
 import type { PropsWithChildren, ReactNode } from "react";
-import { cn } from "../../utils/cn";
+import {
+  Paper,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Typography,
+} from "@mui/material";
 
 type AppTableProps = PropsWithChildren<{
   title?: string;
@@ -8,38 +18,56 @@ type AppTableProps = PropsWithChildren<{
   containerClassName?: string;
 }>;
 
-export function AppTable({ title, actions, className, containerClassName, children }: AppTableProps) {
+export function AppTable({ title, actions, className, children }: AppTableProps) {
   return (
-    <div className={cn("rounded-[20px] border border-[var(--app-border)] bg-[var(--app-card)] p-0 shadow-[var(--app-shadow-soft)]", className)}>
-      {(title || actions) ? (
-        <div className="flex items-center justify-between gap-2 border-b border-[var(--app-border)] px-4 py-3">
-          {title ? <h3 className="text-sm font-semibold text-[var(--app-text-primary)]">{title}</h3> : <span />}
+    <Paper className={className} sx={{ overflow: "hidden" }}>
+      {title || actions ? (
+        <Stack
+          direction="row"
+          sx={{
+            px: 2,
+            py: 1.5,
+            borderBottom: 1,
+            borderColor: "divider",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          {title ? (
+            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+              {title}
+            </Typography>
+          ) : (
+            <span />
+          )}
           {actions}
-        </div>
+        </Stack>
       ) : null}
-      <div className={cn("min-w-0 max-w-full overflow-x-auto", containerClassName)}>
-        <table className="w-full min-w-0 text-start text-sm">{children}</table>
-      </div>
-    </div>
+      <TableContainer>
+        <Table size="small">{children}</Table>
+      </TableContainer>
+    </Paper>
   );
 }
 
 export function AppTableHead({ children }: PropsWithChildren) {
-  return <thead className="bg-[var(--app-surface-muted)]">{children}</thead>;
+  return <TableHead>{children}</TableHead>;
 }
 
 export function AppTableRow({ children, className }: PropsWithChildren<{ className?: string }>) {
-  return <tr className={cn("border-t border-[var(--app-border)]", className)}>{children}</tr>;
+  return <TableRow className={className}>{children}</TableRow>;
 }
 
 export function AppTableCell({ children, className }: PropsWithChildren<{ className?: string }>) {
-  return <td className={cn("px-3 py-3", className)}>{children}</td>;
+  return <TableCell className={className}>{children}</TableCell>;
 }
 
 export function AppTableHeaderCell({ children, className }: PropsWithChildren<{ className?: string }>) {
   return (
-    <th className={cn("px-3 py-3 text-start text-xs font-semibold uppercase tracking-wide text-[var(--app-text-secondary)]", className)}>
+    <TableCell className={className} sx={{ fontWeight: 700, textTransform: "uppercase", fontSize: 12 }}>
       {children}
-    </th>
+    </TableCell>
   );
 }
+
+export { TableBody };

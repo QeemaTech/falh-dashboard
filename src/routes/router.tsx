@@ -14,6 +14,7 @@ import { BannersPage } from "../modules/banners/banners-page";
 import { NotificationsPage } from "../modules/notifications/notifications-page";
 import { ConsultantsPage } from "../modules/consultants/consultants-page";
 import { CropPricesPage } from "../modules/crop-prices/crop-prices-page";
+import { MarketPage } from "../modules/market/market-page";
 import { WeatherSettingsPage } from "../modules/weather/weather-settings-page";
 import { AiSettingsPage } from "../modules/ai-settings/ai-settings-page";
 import { PlaceholderPage } from "../pages/placeholder-page";
@@ -32,11 +33,6 @@ const placeholderRoutes = [
     path: "service-providers",
     title: "Service Providers",
     description: "Manage all service provider profiles and statuses.",
-  },
-  {
-    path: "livestock-prices",
-    title: "Livestock Prices",
-    description: "Manage livestock and poultry market prices.",
   },
   {
     path: "advertisements",
@@ -89,6 +85,7 @@ export const router = createBrowserRouter([
           { path: "notifications", element: <NotificationsPage /> },
           { path: "consultants", element: <ConsultantsPage /> },
           { path: "crop-prices", element: <CropPricesPage /> },
+          { path: "market", element: <MarketPage /> },
           { path: "weather-settings", element: <WeatherSettingsPage /> },
           { path: "ai-settings", element: <AiSettingsPage /> },
           { path: "dynamic-fields", element: <DynamicFormBuilderPage /> },

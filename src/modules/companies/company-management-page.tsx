@@ -1,10 +1,28 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Building2, KeyRound, Search, SlidersHorizontal } from "lucide-react";
-import { Button } from "../../components/ui/button";
-import { Card } from "../../components/ui/card";
-import { Input } from "../../components/ui/input";
-import { AppBadge, AppDrawer, AppSelect, AppStatCard, AppTable, AppTableCell, AppTableHead, AppTableHeaderCell, AppTableRow } from "../../components/design-system";
+import { Business, Key, Search, Tune } from "@mui/icons-material";
+import {
+  Box,
+  Button,
+  CircularProgress,
+  Grid,
+  InputAdornment,
+  MenuItem,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import {
+  AppBadge,
+  AppDrawer,
+  AppStatCard,
+  AppTable,
+  AppTableCell,
+  AppTableHead,
+  AppTableHeaderCell,
+  AppTableRow,
+} from "../../components/design-system";
+import { EmptyState, FilterBar, PageHeader } from "../../components/layout";
 import {
   assignCompanyProductLimitApi,
   fetchAdminCompanies,
@@ -69,44 +87,91 @@ export function CompanyManagementPage() {
     mutationFn: ({ companyId }: { companyId: string }) => resetCompanyPasswordApi(companyId),
   });
 
-  if (isLoading) return <Card>Loading companies...</Card>;
-  if (isError) return <Card>Failed to load companies: {(error as Error).message}</Card>;
-  if (!companies.length) return <Card>No companies found for current filters.</Card>;
+  if (isLoading) {
+    return (
+      <Stack sx={{ py: 6, alignItems: "center" }}>
+        <CircularProgress size={28} />
+      </Stack>
+    );
+  }
+
+  if (isError) {
+    return <EmptyState title="Failed to load companies" description={(error as Error).message} />;
+  }
 
   return (
-    <div className="min-w-0 space-y-4 overflow-x-hidden">
-      <div className="grid gap-4 sm:grid-cols-4">
-        <AppStatCard title="Companies" value={companies.length} />
-        <AppStatCard title="Approved" value={companies.filter((c) => c.status === "APPROVED").length} trend="up" />
-        <AppStatCard title="Pending" value={companies.filter((c) => c.status === "PENDING").length} trend="neutral" />
-        <AppStatCard title="Revenue" value={`EGP ${totalRevenue.toLocaleString()}`} trend="up" />
-      </div>
+    <Stack spacing={3}>
+      <PageHeader title="Companies" subtitle="Manage company accounts, limits, and approval status" />
 
-      <Card className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative w-72">
-            <Search className="pointer-events-none absolute inset-s-3 top-3 size-4 text-neutral-400" />
-            <Input
-              className="ps-9"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search companies..."
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <SlidersHorizontal className="size-4 text-neutral-500" />
-            <AppSelect value={status} onChange={(e) => setStatus(e.target.value)}>
-              <option value="">All statuses</option>
-              <option value="PENDING">Pending</option>
-              <option value="APPROVED">Approved</option>
-              <option value="REJECTED">Rejected</option>
-              <option value="SUSPENDED">Suspended</option>
-            </AppSelect>
-          </div>
-        </div>
-      </Card>
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <AppStatCard title="Companies" value={companies.length} icon={<Business fontSize="small" />} />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <AppStatCard
+            title="Approved"
+            value={companies.filter((c) => c.status === "APPROVED").length}
+            trend="up"
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <AppStatCard
+            title="Pending"
+            value={companies.filter((c) => c.status === "PENDING").length}
+            trend="neutral"
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <AppStatCard title="Revenue" value={`EGP ${totalRevenue.toLocaleString()}`} trend="up" />
+        </Grid>
+      </Grid>
 
-      <AppTable>
+      <FilterBar>
+        <TextField
+          size="small"
+          placeholder="Search companies..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          sx={{ minWidth: { xs: "100%", sm: 280 } }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search fontSize="small" />
+                </InputAdornment>
+              ),
+            },
+          }}
+        />
+        <TextField
+          select
+          label="Status"
+          size="small"
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          sx={{ minWidth: 200 }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Tune fontSize="small" />
+                </InputAdornment>
+              ),
+            },
+          }}
+        >
+          <MenuItem value="">All statuses</MenuItem>
+          <MenuItem value="PENDING">Pending</MenuItem>
+          <MenuItem value="APPROVED">Approved</MenuItem>
+          <MenuItem value="REJECTED">Rejected</MenuItem>
+          <MenuItem value="SUSPENDED">Suspended</MenuItem>
+        </TextField>
+      </FilterBar>
+
+      {!companies.length ? (
+        <EmptyState title="No companies found" description="Try adjusting your search or filters." />
+      ) : (
+        <AppTable>
           <AppTableHead>
             <tr>
               <AppTableHeaderCell>Company</AppTableHeaderCell>
@@ -122,19 +187,34 @@ export function CompanyManagementPage() {
             {companies.map((company) => (
               <AppTableRow key={company.id}>
                 <AppTableCell>
-                  <div className="flex items-center gap-2">
-                    <div className="rounded-lg bg-emerald-100 p-2 text-emerald-700">
-                      <Building2 className="size-4" />
-                    </div>
-                    <div>
-                      <p className="font-medium">{company.name}</p>
-                      <p className="text-xs text-neutral-500">{company.user?.email || "-"}</p>
-                    </div>
-                  </div>
+                  <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+                    <Box
+                      sx={{
+                        p: 1,
+                        borderRadius: 1,
+                        bgcolor: "primary.main",
+                        color: "primary.contrastText",
+                        display: "grid",
+                        placeItems: "center",
+                      }}
+                    >
+                      <Business fontSize="small" />
+                    </Box>
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {company.name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {company.user?.email || "-"}
+                      </Typography>
+                    </Box>
+                  </Stack>
                 </AppTableCell>
                 <AppTableCell>
-                  <p>{company.city}</p>
-                  <p className="text-xs text-neutral-500">{company.phone}</p>
+                  <Typography variant="body2">{company.city}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {company.phone}
+                  </Typography>
                 </AppTableCell>
                 <AppTableCell>{company.productsCount}</AppTableCell>
                 <AppTableCell>EGP {Number(company.revenue || 0).toLocaleString()}</AppTableCell>
@@ -145,33 +225,19 @@ export function CompanyManagementPage() {
                   </AppBadge>
                 </AppTableCell>
                 <AppTableCell>
-                  <div className="flex flex-wrap gap-1">
-                    <Button
-                      variant="ghost"
-                      onClick={() =>
-                        statusMutation.mutate({ companyId: company.id, action: "approve", adminNote: "Approved" })
-                      }
-                    >
+                  <Stack direction="row" spacing={0.5} sx={{ flexWrap: "wrap" }}>
+                    <Button size="small" onClick={() => statusMutation.mutate({ companyId: company.id, action: "approve", adminNote: "Approved" })}>
                       Approve
                     </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={() =>
-                        statusMutation.mutate({ companyId: company.id, action: "reject", adminNote: "Rejected" })
-                      }
-                    >
+                    <Button size="small" color="error" onClick={() => statusMutation.mutate({ companyId: company.id, action: "reject", adminNote: "Rejected" })}>
                       Reject
                     </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={() =>
-                        statusMutation.mutate({ companyId: company.id, action: "suspend", adminNote: "Suspended" })
-                      }
-                    >
+                    <Button size="small" onClick={() => statusMutation.mutate({ companyId: company.id, action: "suspend", adminNote: "Suspended" })}>
                       Suspend
                     </Button>
                     <Button
-                      variant="ghost"
+                      size="small"
+                      variant="outlined"
                       onClick={() => {
                         setSelectedCompany(company);
                         setNewLimit(company.maxProducts || 10);
@@ -179,57 +245,50 @@ export function CompanyManagementPage() {
                     >
                       Set Limit
                     </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={() => resetPasswordMutation.mutate({ companyId: company.id })}
-                    >
-                      <KeyRound className="size-4" />
+                    <Button size="small" onClick={() => resetPasswordMutation.mutate({ companyId: company.id })}>
+                      <Key fontSize="small" />
                     </Button>
-                  </div>
+                  </Stack>
                 </AppTableCell>
               </AppTableRow>
             ))}
           </tbody>
-      </AppTable>
+        </AppTable>
+      )}
 
-      <AppDrawer
-        open={Boolean(selectedCompany)}
-        onClose={() => setSelectedCompany(null)}
-        title="Company Details"
-      >
+      <AppDrawer open={Boolean(selectedCompany)} onClose={() => setSelectedCompany(null)} title="Company Details">
         {selectedCompany ? (
-          <>
-            <div className="space-y-2 text-sm">
-              <p><span className="font-medium">Name:</span> {selectedCompany.name}</p>
-              <p><span className="font-medium">Products Count:</span> {selectedCompany.productsCount}</p>
-              <p><span className="font-medium">Product Limit:</span> {selectedCompany.maxProducts}</p>
-              <p><span className="font-medium">Revenue:</span> EGP {Number(selectedCompany.revenue || 0).toLocaleString()}</p>
-              <p><span className="font-medium">Status:</span> {selectedCompany.status}</p>
-              <p><span className="font-medium">Rating:</span> {Number(selectedCompany.rating || 0).toFixed(1)}</p>
-            </div>
-            <div className="mt-4 space-y-2">
-              <label className="text-sm font-medium">Assign Product Limit</label>
-              <Input
-                type="number"
-                min={1}
-                value={newLimit}
-                onChange={(e) => setNewLimit(Number(e.target.value))}
-              />
-              <Button
-                onClick={() =>
-                  limitMutation.mutate(
-                    { companyId: selectedCompany.id, maxProducts: newLimit },
-                    { onSuccess: () => setSelectedCompany(null) }
-                  )
-                }
-                className="w-full"
-              >
-                Save Product Limit
-              </Button>
-            </div>
-          </>
+          <Stack spacing={2}>
+            <Typography variant="body2"><strong>Name:</strong> {selectedCompany.name}</Typography>
+            <Typography variant="body2"><strong>Products Count:</strong> {selectedCompany.productsCount}</Typography>
+            <Typography variant="body2"><strong>Product Limit:</strong> {selectedCompany.maxProducts}</Typography>
+            <Typography variant="body2"><strong>Revenue:</strong> EGP {Number(selectedCompany.revenue || 0).toLocaleString()}</Typography>
+            <Typography variant="body2"><strong>Status:</strong> {selectedCompany.status}</Typography>
+            <Typography variant="body2"><strong>Rating:</strong> {Number(selectedCompany.rating || 0).toFixed(1)}</Typography>
+            <TextField
+              label="Assign Product Limit"
+              type="number"
+              size="small"
+              fullWidth
+              slotProps={{ htmlInput: { min: 1 } }}
+              value={newLimit}
+              onChange={(e) => setNewLimit(Number(e.target.value))}
+            />
+            <Button
+              variant="contained"
+              fullWidth
+              onClick={() =>
+                limitMutation.mutate(
+                  { companyId: selectedCompany.id, maxProducts: newLimit },
+                  { onSuccess: () => setSelectedCompany(null) }
+                )
+              }
+            >
+              Save Product Limit
+            </Button>
+          </Stack>
         ) : null}
       </AppDrawer>
-    </div>
+    </Stack>
   );
 }

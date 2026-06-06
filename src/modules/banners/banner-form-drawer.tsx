@@ -1,8 +1,16 @@
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
-import { AppDrawer, AppSelect } from "../../components/design-system";
+import {
+  Box,
+  Button,
+  Checkbox,
+  FormControlLabel,
+  MenuItem,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { AppDrawer } from "../../components/design-system";
 import { createAdminBannerApi } from "../../services/admin-api";
 import { getApiErrorMessage } from "../../utils/api-error";
 import { useI18n } from "../../hooks/use-i18n";
@@ -82,69 +90,58 @@ export function BannerFormDrawer({ open, onClose, onSuccess }: Props) {
       title={t("banners.addTitle")}
       description={t("banners.addDescription")}
       footer={
-        <>
-          <Button disabled={saveMutation.isPending} onClick={() => saveMutation.mutate()}>
+        <Stack direction="row" spacing={1}>
+          <Button variant="contained" disabled={saveMutation.isPending} onClick={() => saveMutation.mutate()}>
             {saveMutation.isPending ? t("common.loading") : t("banners.save")}
           </Button>
-          <Button variant="ghost" onClick={onClose}>
-            {t("banners.cancel")}
-          </Button>
-        </>
+          <Button onClick={onClose}>{t("banners.cancel")}</Button>
+        </Stack>
       }
     >
-      <div className="space-y-4 text-sm">
-        {error ? <p className="text-red-500">{error}</p> : null}
-        <div>
-          <label className="font-medium text-(--app-text-primary)">{t("banners.fieldTitle")}</label>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} className="mt-1" />
-        </div>
-        <div>
-          <label className="font-medium text-(--app-text-primary)">{t("banners.fieldImage")}</label>
-          <Input
-            type="file"
-            accept="image/*"
-            className="mt-1"
-            onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-          />
-          {previewUrl ? (
-            <img src={previewUrl} alt="" className="mt-2 h-32 w-full rounded-xl object-cover" />
-          ) : null}
-        </div>
-        <div>
-          <label className="font-medium text-(--app-text-primary)">{t("banners.fieldLinkType")}</label>
-          <AppSelect value={linkType} onChange={(e) => setLinkType(e.target.value)} className="mt-1">
-            {LINK_TYPES.map((item) => (
-              <option key={item.value || "none"} value={item.value}>
-                {t(item.labelKey)}
-              </option>
-            ))}
-          </AppSelect>
-        </div>
-        <div>
-          <label className="font-medium text-(--app-text-primary)">{t("banners.fieldLinkValue")}</label>
-          <Input
-            value={linkValue}
-            onChange={(e) => setLinkValue(e.target.value)}
-            placeholder={t("banners.linkValuePlaceholder")}
-            className="mt-1"
-            disabled={!linkType}
-          />
-        </div>
-        <div>
-          <label className="font-medium text-(--app-text-primary)">{t("banners.fieldSortOrder")}</label>
-          <Input
-            type="number"
-            min={0}
-            value={sortOrder}
-            onChange={(e) => setSortOrder(Number(e.target.value))}
-            className="mt-1"
-          />
-        </div>
-        <label className="flex items-center gap-2">
-          <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
-          <span>{t("banners.fieldActive")}</span>
-        </label>
-      </div>
+      <Stack spacing={2}>
+        {error ? (
+          <Typography variant="body2" color="error">
+            {error}
+          </Typography>
+        ) : null}
+        <TextField size="small" fullWidth label={t("banners.fieldTitle")} value={title} onChange={(e) => setTitle(e.target.value)} />
+        <Button component="label" variant="outlined" fullWidth>
+          {t("banners.fieldImage")}
+          <input hidden type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
+        </Button>
+        {previewUrl ? (
+          <Box component="img" src={previewUrl} alt="" sx={{ height: 128, width: "100%", borderRadius: 2, objectFit: "cover" }} />
+        ) : null}
+        <TextField select size="small" fullWidth label={t("banners.fieldLinkType")} value={linkType} onChange={(e) => setLinkType(e.target.value)}>
+          {LINK_TYPES.map((item) => (
+            <MenuItem key={item.value || "none"} value={item.value}>
+              {t(item.labelKey)}
+            </MenuItem>
+          ))}
+        </TextField>
+        <TextField
+          size="small"
+          fullWidth
+          label={t("banners.fieldLinkValue")}
+          value={linkValue}
+          onChange={(e) => setLinkValue(e.target.value)}
+          placeholder={t("banners.linkValuePlaceholder")}
+          disabled={!linkType}
+        />
+        <TextField
+          size="small"
+          fullWidth
+          type="number"
+          label={t("banners.fieldSortOrder")}
+          value={sortOrder}
+          onChange={(e) => setSortOrder(Number(e.target.value))}
+          slotProps={{ htmlInput: { min: 0 } }}
+        />
+        <FormControlLabel
+          control={<Checkbox checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />}
+          label={t("banners.fieldActive")}
+        />
+      </Stack>
     </AppDrawer>
   );
 }

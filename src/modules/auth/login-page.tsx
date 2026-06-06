@@ -1,29 +1,54 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ChevronRight, Eye, Leaf, Loader2 } from "lucide-react";
-import { Input } from "../../components/ui/input";
-import { Button } from "../../components/ui/button";
+import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
+import {
+  Alert,
+  Box,
+  Button,
+  Checkbox,
+  CircularProgress,
+  FormControlLabel,
+  IconButton,
+  InputAdornment,
+  Link,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { ChevronRight, Visibility, VisibilityOff } from "@mui/icons-material";
+import { AppLogo, AuthChrome } from "../../components/branding";
+import { useI18n } from "../../hooks/use-i18n";
 import { useAuth } from "../../store/auth-store";
 import { getStoredUser } from "../../services/auth-storage";
 
-const schema = z.object({
-  email: z.string().email("Enter a valid email"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  rememberMe: z.boolean(),
-});
-
-type FormValues = z.infer<typeof schema>;
+type FormValues = {
+  email: string;
+  password: string;
+  rememberMe: boolean;
+};
 
 export function LoginPage() {
   const [serverError, setServerError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const defaultRedirect = "/";
-  const redirectTo = (location.state as { from?: string } | undefined)?.from || defaultRedirect;
+  const { t, language } = useI18n();
+
+  const schema = useMemo(
+    () =>
+      z.object({
+        email: z.string().email(t("login.emailInvalid")),
+        password: z.string().min(6, t("login.passwordMin")),
+        rememberMe: z.boolean(),
+      }),
+    [t]
+  );
+
+  const redirectTo = (location.state as { from?: string } | undefined)?.from || "/";
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -33,7 +58,7 @@ export function LoginPage() {
   const onSubmit = form.handleSubmit(async (values) => {
     setServerError(null);
     try {
-      await login(values as FormValues);
+      await login(values);
       const stored = getStoredUser();
       const target =
         stored?.role === "COMPANY" ? "/company/products" : redirectTo === "/company/products" ? "/" : redirectTo;
@@ -43,118 +68,124 @@ export function LoginPage() {
         error && typeof error === "object" && "response" in error
           ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
           : null;
-      setServerError(message || "Login failed. Please try again.");
+      setServerError(message || t("login.failed"));
     }
   });
 
   return (
-    <div className="min-h-screen bg-[#f4f6f4]">
-      <div className="grid min-h-screen lg:grid-cols-2">
-        <section className="relative hidden border-e border-[#e7ece7] bg-[#f3f4f3] px-8 py-7 lg:block">
-          <div className="mb-16 flex items-center gap-3">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-white shadow-sm">
-              <Leaf className="size-4 text-[#23673A]" />
-            </div>
-            <p className="text-lg font-semibold text-[#0f172a]">Falh</p>
-            <span className="rounded-md bg-white px-2 py-1 text-xs text-neutral-500">Admin</span>
-          </div>
+    <AuthChrome
+      footer={
+        <Typography variant="caption" color="text.disabled">
+          {t("login.footer")}
+        </Typography>
+      }
+    >
+      <Paper
+        elevation={0}
+        sx={{
+          width: "100%",
+          maxWidth: 440,
+          p: { xs: 3, sm: 4 },
+          borderRadius: 3,
+          border: 1,
+          borderColor: "divider",
+          boxShadow: (theme) =>
+            theme.palette.mode === "light"
+              ? "0 24px 48px -24px rgba(15, 23, 42, 0.18)"
+              : "0 24px 48px -24px rgba(0, 0, 0, 0.45)",
+        }}
+      >
+        <Stack spacing={3} sx={{ alignItems: "center", textAlign: "center" }}>
+          <AppLogo size={56} />
+          <Box>
+            <Typography variant="h4" sx={{ fontWeight: 800 }}>
+              {t("login.title")}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+              {t("login.subtitle")}
+            </Typography>
+          </Box>
+        </Stack>
 
-          <div className="mx-auto mt-28 max-w-md text-center">
-            <div className="mx-auto mb-6 w-[250px] rounded-[22px] border border-[#e7ece7] bg-white p-8 shadow-[0_20px_40px_-32px_rgba(15,23,42,0.6)]">
-              <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl bg-[#23673A]/10">
-                <Leaf className="size-8 text-[#23673A]" />
-              </div>
-              <h2 className="text-3xl font-bold tracking-tight text-[#23673A]">FALH</h2>
-              <p className="mt-6 text-3xl font-semibold leading-tight text-[#1f2937]">Management<br />Control Center</p>
-            </div>
+        <Box component="form" key={language} onSubmit={onSubmit} sx={{ mt: 3.5 }}>
+          <Stack spacing={2.5}>
+            <TextField
+              label={t("login.email")}
+              type="email"
+              placeholder={t("login.emailPlaceholder")}
+              fullWidth
+              autoComplete="email"
+              error={Boolean(form.formState.errors.email)}
+              helperText={form.formState.errors.email?.message}
+              {...form.register("email")}
+            />
 
-            <p className="text-sm text-neutral-500">Your Gateway to Agricultural Operations</p>
-            <div className="mt-5 grid grid-cols-3 gap-5 text-center">
-              <div>
-                <p className="text-3xl font-semibold text-[#0f172a]">150+</p>
-                <p className="text-xs text-neutral-500">Partners</p>
-              </div>
-              <div>
-                <p className="text-3xl font-semibold text-[#0f172a]">200+</p>
-                <p className="text-xs text-neutral-500">Products</p>
-              </div>
-              <div>
-                <p className="text-3xl font-semibold text-[#0f172a]">30+</p>
-                <p className="text-xs text-neutral-500">Services</p>
-              </div>
-            </div>
-          </div>
+            <TextField
+              label={t("login.password")}
+              type={showPassword ? "text" : "password"}
+              placeholder={t("login.passwordPlaceholder")}
+              fullWidth
+              autoComplete="current-password"
+              error={Boolean(form.formState.errors.password)}
+              helperText={form.formState.errors.password?.message}
+              slotProps={{
+                input: {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label={showPassword ? t("login.hidePassword") : t("login.showPassword")}
+                        onClick={() => setShowPassword((v) => !v)}
+                        edge="end"
+                        size="small"
+                      >
+                        {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                },
+              }}
+              {...form.register("password")}
+            />
 
-          <p className="absolute bottom-7 inset-s-8 text-xs text-neutral-400">©2026 Falh</p>
-        </section>
+            {serverError ? (
+              <Alert severity="error" variant="outlined" sx={{ borderRadius: 2 }}>
+                {serverError}
+              </Alert>
+            ) : null}
 
-        <section className="flex items-center justify-center px-5 py-8 sm:px-8">
-          <div className="w-full max-w-md">
-            <div className="mb-10 flex justify-end">
-              <div className="inline-flex rounded-full border border-[#e7ece7] bg-white p-1">
-                <button className="rounded-full bg-[linear-gradient(90deg,#23673A,#2f8248)] px-3 py-1.5 text-xs font-semibold text-white">EN</button>
-                <button className="rounded-full px-3 py-1.5 text-xs font-semibold text-neutral-600">AR</button>
-              </div>
-            </div>
+            <Button
+              type="submit"
+              variant="contained"
+              size="large"
+              fullWidth
+              disabled={form.formState.isSubmitting}
+              endIcon={
+                form.formState.isSubmitting ? (
+                  <CircularProgress size={18} color="inherit" />
+                ) : (
+                  <ChevronRight />
+                )
+              }
+              sx={{
+                py: 1.25,
+                "&:hover:not(:disabled)": { filter: "brightness(1.05)" },
+              }}
+            >
+              {form.formState.isSubmitting ? t("login.signingIn") : t("login.signIn")}
+            </Button>
 
-            <h1 className="text-4xl font-bold tracking-tight text-[#111827]">Sign in</h1>
-            <p className="mt-2 text-sm text-neutral-500">Enter your credentials to access the dashboard</p>
-
-            <form onSubmit={onSubmit} className="mt-8 space-y-5">
-              <div>
-                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-neutral-500">Email address</label>
-                <Input
-                  type="email"
-                  placeholder="you@example.com"
-                  className="h-12 border-[#dfe6df] bg-white text-neutral-800 placeholder:text-neutral-400 dark:bg-white dark:text-neutral-800"
-                  {...form.register("email")}
-                />
-                {form.formState.errors.email ? (
-                  <p className="mt-1 text-xs text-red-500">{form.formState.errors.email.message}</p>
-                ) : null}
-              </div>
-
-              <div>
-                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-neutral-500">Password</label>
-                <div className="relative">
-                  <Input
-                    type="password"
-                    placeholder="••••••••"
-                    className="h-12 border-[#dfe6df] bg-white pe-11 text-neutral-800 placeholder:text-neutral-400 dark:bg-white dark:text-neutral-800"
-                    {...form.register("password")}
-                  />
-                  <Eye className="pointer-events-none absolute inset-e-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
-                </div>
-                {form.formState.errors.password ? (
-                  <p className="mt-1 text-xs text-red-500">{form.formState.errors.password.message}</p>
-                ) : null}
-              </div>
-
-              {serverError ? <p className="text-sm text-red-500">{serverError}</p> : null}
-
-              <Button
-                type="submit"
-                className="h-12 w-full rounded-[14px] bg-[linear-gradient(90deg,#23673A,#2f8248)] text-base font-semibold shadow-[0_16px_28px_-20px_rgba(35,103,58,0.95)]"
-                disabled={form.formState.isSubmitting}
-              >
-                {form.formState.isSubmitting ? <Loader2 className="size-4 animate-spin" /> : <>Sign In <ChevronRight className="size-4" /></>}
-              </Button>
-
-              <div className="flex items-center justify-between text-sm text-neutral-500">
-                <label className="flex items-center gap-2 font-medium">
-                  <input type="checkbox" {...form.register("rememberMe")} />
-                  Remember me
-                </label>
-                <Link to="/forgot-password" className="text-[#23673A] hover:underline">
-                  Forgot Password?
-                </Link>
-              </div>
-            </form>
-
-            <p className="mt-8 text-center text-xs text-neutral-400">Falh Admin Portal - internal use only</p>
-          </div>
-        </section>
-      </div>
-    </div>
+            <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 1 }}>
+              <FormControlLabel
+                control={<Checkbox {...form.register("rememberMe")} defaultChecked />}
+                label={<Typography variant="body2">{t("login.rememberMe")}</Typography>}
+              />
+              <Link component={RouterLink} to="/forgot-password" underline="hover" variant="body2">
+                {t("login.forgotPassword")}
+              </Link>
+            </Stack>
+          </Stack>
+        </Box>
+      </Paper>
+    </AuthChrome>
   );
 }

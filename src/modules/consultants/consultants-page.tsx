@@ -1,10 +1,26 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card } from "../../components/ui/card";
-import { ReusableTable } from "../../components/reusable-table";
-import { fetchAdminServiceProviders, type AdminServiceProvider } from "../../services/admin-api";
+import { Visibility } from "@mui/icons-material";
+import {
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  Link,
+  Stack,
+  Typography,
+} from "@mui/material";
+import { AppDrawer } from "../../components/design-system";
+import { DataTable, EmptyState, PageHeader } from "../../components/layout";
+import { useI18n } from "../../hooks/use-i18n";
+import {
+  fetchAdminServiceProviders,
+  fetchServiceProviderById,
+  type AdminServiceProvider,
+} from "../../services/admin-api";
 
 type ConsultantRow = {
+  id: string;
   name: string;
   type: string;
   city: string;
@@ -12,18 +28,55 @@ type ConsultantRow = {
   rating: string;
 };
 
+function providerName(provider: AdminServiceProvider) {
+  return provider.name || provider.displayName || provider.user?.name || "-";
+}
+
+function statusChipColor(status: string): "success" | "warning" | "error" | "default" {
+  if (status === "APPROVED") return "success";
+  if (status === "PENDING") return "warning";
+  if (status === "REJECTED" || status === "SUSPENDED") return "error";
+  return "default";
+}
+
+function DetailRow({ label, value }: { label: string; value?: string | null }) {
+  if (!value) return null;
+  return (
+    <Typography variant="body2">
+      <Box component="span" sx={{ fontWeight: 600 }}>
+        {label}:
+      </Box>{" "}
+      {value}
+    </Typography>
+  );
+}
+
 export function ConsultantsPage() {
+  const { t } = useI18n();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["admin-consultants"],
     queryFn: () => fetchAdminServiceProviders({ page: 1, limit: 100, sortBy: "createdAt", sortOrder: "desc" }),
   });
+
+  const { data: detail, isLoading: detailLoading } = useQuery({
+    queryKey: ["admin-consultant", selectedId],
+    queryFn: () => fetchServiceProviderById(selectedId!),
+    enabled: Boolean(selectedId),
+  });
+
+  const typeLabel = (type: string) => t(`consultants.type.${type}`, type);
+
+  const statusLabel = (status: string) => t(`consultants.status.${status}`, status);
 
   const rows = useMemo<ConsultantRow[]>(() => {
     const items = ((data?.items || []) as AdminServiceProvider[]).filter(
       (provider) => provider.type === "CONSULTANT" || provider.type === "ENGINEER" || provider.type === "DOCTOR"
     );
     return items.map((provider) => ({
-      name: provider.user?.name || "-",
+      id: provider.id,
+      name: providerName(provider),
       type: provider.type,
       city: provider.city || "-",
       status: provider.status,
@@ -31,21 +84,131 @@ export function ConsultantsPage() {
     }));
   }, [data?.items]);
 
-  if (isLoading) return <Card>Loading consultants...</Card>;
-  if (isError) return <Card>Failed to load consultants: {(error as Error).message}</Card>;
-  if (!rows.length) return <Card>No consultants found.</Card>;
+  if (isError) {
+    return (
+      <EmptyState
+        title={t("consultants.loadFailed")}
+        description={(error as Error).message}
+      />
+    );
+  }
 
   return (
-    <ReusableTable<ConsultantRow>
-      title="Consultants"
-      columns={[
-        { key: "name", label: "Name" },
-        { key: "type", label: "Type" },
-        { key: "city", label: "City" },
-        { key: "status", label: "Status" },
-        { key: "rating", label: "Rating" },
-      ]}
-      data={rows}
-    />
+    <Stack spacing={3}>
+      <PageHeader title={t("consultants.title")} subtitle={t("consultants.subtitle")} />
+
+      <DataTable<ConsultantRow>
+        title={t("consultants.listTitle")}
+        loading={isLoading}
+        loadingMessage={t("common.loading")}
+        emptyMessage={t("consultants.empty")}
+        getRowKey={(row) => row.id}
+        columns={[
+          {
+            key: "name",
+            label: t("consultants.col.name"),
+            render: (row) => (
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                {row.name}
+              </Typography>
+            ),
+          },
+          {
+            key: "type",
+            label: t("consultants.col.type"),
+            render: (row) => typeLabel(row.type),
+          },
+          { key: "city", label: t("consultants.col.city") },
+          {
+            key: "status",
+            label: t("consultants.col.status"),
+            render: (row) => (
+              <Chip label={statusLabel(row.status)} color={statusChipColor(row.status)} size="small" />
+            ),
+          },
+          { key: "rating", label: t("consultants.col.rating") },
+          {
+            key: "id",
+            label: t("consultants.col.actions"),
+            render: (row) => (
+              <Button
+                size="small"
+                startIcon={<Visibility fontSize="small" />}
+                onClick={() => setSelectedId(row.id)}
+              >
+                {t("consultants.view")}
+              </Button>
+            ),
+          },
+        ]}
+        data={rows}
+      />
+
+      <AppDrawer
+        open={Boolean(selectedId)}
+        onClose={() => setSelectedId(null)}
+        title={t("consultants.detailsTitle")}
+      >
+        {detailLoading ? (
+          <Stack sx={{ py: 2, alignItems: "center" }}>
+            <CircularProgress size={24} />
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              {t("common.loading")}
+            </Typography>
+          </Stack>
+        ) : null}
+
+        {detail ? (
+          <Stack spacing={2}>
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+              {providerName(detail)}
+            </Typography>
+            <Chip
+              label={statusLabel(detail.status)}
+              color={statusChipColor(detail.status)}
+              size="small"
+              sx={{ alignSelf: "flex-start" }}
+            />
+            <DetailRow label={t("consultants.col.type")} value={typeLabel(detail.type)} />
+            <DetailRow label={t("consultants.col.city")} value={detail.city} />
+            <DetailRow label={t("consultants.col.rating")} value={Number(detail.rating || 0).toFixed(1)} />
+            <DetailRow label={t("consultants.phone")} value={detail.contactNumber || undefined} />
+            {detail.whatsappNumber ? (
+              <Typography variant="body2">
+                <Box component="span" sx={{ fontWeight: 600 }}>
+                  {t("consultants.whatsapp")}:
+                </Box>{" "}
+                {detail.whatsappLink ? (
+                  <Link href={detail.whatsappLink} target="_blank" rel="noreferrer">
+                    {detail.whatsappNumber}
+                  </Link>
+                ) : (
+                  detail.whatsappNumber
+                )}
+              </Typography>
+            ) : null}
+            <DetailRow label={t("consultants.bio")} value={detail.bio || undefined} />
+            {detail.yearsOfExperience != null ? (
+              <DetailRow
+                label={t("consultants.experience")}
+                value={`${detail.yearsOfExperience} ${t("consultants.years")}`}
+              />
+            ) : null}
+            {detail.specializations?.length ? (
+              <Box>
+                <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                  {t("consultants.specializations")}
+                </Typography>
+                <Stack direction="row" spacing={0.5} sx={{ flexWrap: "wrap", gap: 0.5 }}>
+                  {detail.specializations.map((item) => (
+                    <Chip key={item} label={item} size="small" variant="outlined" />
+                  ))}
+                </Stack>
+              </Box>
+            ) : null}
+          </Stack>
+        ) : null}
+      </AppDrawer>
+    </Stack>
   );
 }

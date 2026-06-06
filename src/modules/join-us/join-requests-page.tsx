@@ -1,11 +1,23 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import { Search } from "lucide-react";
-import { Button } from "../../components/ui/button";
-import { Card } from "../../components/ui/card";
-import { Input } from "../../components/ui/input";
-import { AppBadge, AppDrawer, AppSelect, AppTable, AppTableCell, AppTableHead, AppTableHeaderCell, AppTableRow } from "../../components/design-system";
+import { Search } from "@mui/icons-material";
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  InputAdornment,
+  Link,
+  MenuItem,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { AppDrawer } from "../../components/design-system";
+import { DataTable, EmptyState, FilterBar, PageHeader } from "../../components/layout";
 import {
   approveJoinUsApplicationApi,
   fetchJoinUsApplicationById,
@@ -37,10 +49,12 @@ const TYPE_LABELS: Record<string, string> = {
   OTHER: "Other",
 };
 
-function statusBadge(status: string) {
+type JoinRequestRow = JoinUsApplicationListItem & Record<string, unknown>;
+
+function statusChipColor(status: string): "success" | "warning" | "error" | "default" {
   if (status === "APPROVED") return "success";
   if (status === "PENDING") return "warning";
-  return "danger";
+  return "error";
 }
 
 function generatePassword(length = 12) {
@@ -58,9 +72,9 @@ function AssetLink({ path, label }: { path?: string; label: string }) {
   if (!path) return <span>-</span>;
   const url = resolveAssetUrl(path);
   return (
-    <a href={url} target="_blank" rel="noreferrer" className="text-[#23673A] underline">
+    <Link href={url} target="_blank" rel="noreferrer">
       {label}
-    </a>
+    </Link>
   );
 }
 
@@ -70,7 +84,6 @@ export function JoinRequestsPage() {
   const [status, setStatus] = useState("PENDING");
   const [tab, setTab] = useState<JoinUsTab>("ALL");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [selectedType, setSelectedType] = useState<string | null>(null);
   const [maxProducts, setMaxProducts] = useState("10");
   const [adminNote, setAdminNote] = useState("");
   const [companyEmail, setCompanyEmail] = useState("");
@@ -91,20 +104,20 @@ export function JoinRequestsPage() {
   });
 
   const { data: detail, isLoading: detailLoading } = useQuery({
-    queryKey: ["join-us-application", selectedId, selectedType],
-    queryFn: () => fetchJoinUsApplicationById(selectedId!, selectedType!),
-    enabled: Boolean(selectedId && selectedType),
+    queryKey: ["join-us-application", selectedId],
+    queryFn: () => fetchJoinUsApplicationById(selectedId!),
+    enabled: Boolean(selectedId),
   });
 
   const reviewMutation = useMutation({
     mutationFn: async (payload: { action: "APPROVE" | "REJECT" }) => {
       if (!selectedId || !detail) throw new Error("No application selected");
       if (payload.action === "REJECT") {
-        return rejectJoinUsApplicationApi(selectedId, detail.applicationType, {
+        return rejectJoinUsApplicationApi(selectedId, {
           adminNote: adminNote.trim() || undefined,
         });
       }
-      return approveJoinUsApplicationApi(selectedId, detail.applicationType, {
+      return approveJoinUsApplicationApi(selectedId, {
         email: detail.applicationType === "COMPANY" ? companyEmail.trim().toLowerCase() : undefined,
         password: detail.applicationType === "COMPANY" ? companyPassword : undefined,
         maxProducts: detail.applicationType === "COMPANY" ? Number(maxProducts) : undefined,
@@ -140,14 +153,13 @@ export function JoinRequestsPage() {
     },
   });
 
-  const applications = data?.items || [];
+  const applications = (data?.items || []) as JoinRequestRow[];
 
   const isCompanyReview = detail?.review.kind === "company";
   const reviewFields = detail?.review.fields || {};
 
   function openReview(item: JoinUsApplicationListItem) {
     setSelectedId(item.id);
-    setSelectedType(item.applicationType);
     setMaxProducts("10");
     setAdminNote("");
     setCompanyEmail("");
@@ -178,203 +190,303 @@ export function JoinRequestsPage() {
     reviewMutation.mutate({ action: "APPROVE" });
   }
 
-  const tabButtons = useMemo(
-    () =>
-      TABS.map((t) => (
-        <button
-          key={t.id}
-          type="button"
-          onClick={() => setTab(t.id)}
-          className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
-            tab === t.id ? "bg-[#23673A] text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
-          }`}
-        >
-          {t.label}
-        </button>
-      )),
-    [tab]
-  );
+  if (isError) {
+    return <EmptyState title="Failed to load join requests" description={(error as Error).message} />;
+  }
 
   return (
-    <div className="min-w-0 space-y-4 overflow-x-hidden">
-      <div>
-        <h1 className="text-xl font-semibold text-(--app-text-primary)">Join Requests</h1>
-        <p className="text-sm text-(--app-text-secondary)">Review company and service provider applications from the mobile app.</p>
-      </div>
+    <Stack spacing={3} sx={{ minWidth: 0, overflowX: "hidden" }}>
+      <PageHeader
+        title="Join Requests"
+        subtitle="Review company and service provider applications from the mobile app."
+      />
 
-      <Card className="flex flex-wrap gap-2 p-3">{tabButtons}</Card>
+      <Paper sx={{ p: 1.5 }}>
+        <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
+          {TABS.map((t) => (
+            <Chip
+              key={t.id}
+              label={t.label}
+              clickable
+              color={tab === t.id ? "primary" : "default"}
+              variant={tab === t.id ? "filled" : "outlined"}
+              onClick={() => setTab(t.id)}
+              size="small"
+            />
+          ))}
+        </Stack>
+      </Paper>
 
-      <Card className="flex flex-wrap items-center gap-2 p-4">
-        <div className="relative w-72">
-          <Search className="pointer-events-none absolute inset-s-3 top-3 size-4 text-neutral-400" />
-          <Input className="ps-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name, phone, city..." />
-        </div>
-        <AppSelect value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="">All statuses</option>
-          <option value="PENDING">Pending</option>
-          <option value="APPROVED">Approved</option>
-          <option value="REJECTED">Rejected</option>
-        </AppSelect>
-      </Card>
+      <FilterBar>
+        <TextField
+          size="small"
+          placeholder="Search by name, phone, city..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          sx={{ minWidth: { xs: "100%", sm: 288 } }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search fontSize="small" />
+                </InputAdornment>
+              ),
+            },
+          }}
+        />
+        <TextField
+          select
+          label="Status"
+          size="small"
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          sx={{ minWidth: 180 }}
+        >
+          <MenuItem value="">All statuses</MenuItem>
+          <MenuItem value="PENDING">Pending</MenuItem>
+          <MenuItem value="APPROVED">Approved</MenuItem>
+          <MenuItem value="REJECTED">Rejected</MenuItem>
+        </TextField>
+      </FilterBar>
 
-      {isLoading ? <Card>Loading join requests...</Card> : null}
-      {isError ? <Card>Failed: {(error as Error).message}</Card> : null}
-      {!isLoading && !applications.length ? <Card>No join requests found.</Card> : null}
-
-      {applications.length > 0 ? (
-        <AppTable>
-          <AppTableHead>
-            <tr>
-              <AppTableHeaderCell>Applicant Name</AppTableHeaderCell>
-              <AppTableHeaderCell>Type</AppTableHeaderCell>
-              <AppTableHeaderCell>Phone</AppTableHeaderCell>
-              <AppTableHeaderCell>City</AppTableHeaderCell>
-              <AppTableHeaderCell>Status</AppTableHeaderCell>
-              <AppTableHeaderCell>Created At</AppTableHeaderCell>
-              <AppTableHeaderCell>Actions</AppTableHeaderCell>
-            </tr>
-          </AppTableHead>
-          <tbody>
-            {applications.map((app) => (
-              <AppTableRow key={app.id}>
-                <AppTableCell className="font-medium">{app.applicantName}</AppTableCell>
-                <AppTableCell>{TYPE_LABELS[app.applicationType] || app.applicationType}</AppTableCell>
-                <AppTableCell>{app.phone}</AppTableCell>
-                <AppTableCell>{app.city}</AppTableCell>
-                <AppTableCell>
-                  <AppBadge variant={statusBadge(app.status) as "success" | "warning" | "danger"}>{app.status}</AppBadge>
-                </AppTableCell>
-                <AppTableCell>{formatDate(app.createdAt)}</AppTableCell>
-                <AppTableCell>
-                  <Button variant="ghost" onClick={() => openReview(app)}>
-                    View
-                  </Button>
-                </AppTableCell>
-              </AppTableRow>
-            ))}
-          </tbody>
-        </AppTable>
-      ) : null}
+      <DataTable<JoinRequestRow>
+        loading={isLoading}
+        emptyMessage="No join requests found."
+        getRowKey={(row) => row.id}
+        columns={[
+          {
+            key: "applicantName",
+            label: "Applicant Name",
+            render: (row) => (
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                {row.applicantName}
+              </Typography>
+            ),
+          },
+          {
+            key: "applicationType",
+            label: "Type",
+            render: (row) => TYPE_LABELS[row.applicationType] || row.applicationType,
+          },
+          { key: "phone", label: "Phone" },
+          { key: "city", label: "City" },
+          {
+            key: "status",
+            label: "Status",
+            render: (row) => <Chip label={row.status} color={statusChipColor(row.status)} size="small" />,
+          },
+          {
+            key: "createdAt",
+            label: "Created At",
+            render: (row) => formatDate(row.createdAt),
+          },
+          {
+            key: "id",
+            label: "Actions",
+            render: (row) => (
+              <Button size="small" onClick={() => openReview(row)}>
+                View
+              </Button>
+            ),
+          },
+        ]}
+        data={applications}
+      />
 
       <AppDrawer
         open={Boolean(selectedId)}
         onClose={() => {
           setSelectedId(null);
-          setSelectedType(null);
           setCredentials(null);
         }}
         title="Review Join Request"
       >
-        {detailLoading ? <p className="text-sm">Loading details...</p> : null}
+        {detailLoading ? (
+          <Stack sx={{ py: 2, alignItems: "center" }}>
+            <CircularProgress size={24} />
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Loading details...
+            </Typography>
+          </Stack>
+        ) : null}
         {detail ? (
-          <div className="space-y-3 text-sm">
-            <p>
-              <span className="font-medium">Type:</span> {TYPE_LABELS[detail.applicationType] || detail.applicationType}
-            </p>
-            <p>
-              <span className="font-medium">Status:</span> {detail.status}
-            </p>
+          <Stack spacing={2}>
+            <Typography variant="body2">
+              <Box component="span" sx={{ fontWeight: 600 }}>
+                Type:
+              </Box>{" "}
+              {TYPE_LABELS[detail.applicationType] || detail.applicationType}
+            </Typography>
+            <Typography variant="body2">
+              <Box component="span" sx={{ fontWeight: 600 }}>
+                Status:
+              </Box>{" "}
+              {detail.status}
+            </Typography>
 
             {isCompanyReview ? (
               <>
-                <p><span className="font-medium">Company Name:</span> {String(reviewFields.companyName || detail.companyName || "-")}</p>
-                <p><span className="font-medium">Applicant Name:</span> {String(reviewFields.applicantName || detail.fullName)}</p>
-                <p><span className="font-medium">Phone:</span> {String(reviewFields.phone || detail.phone)}</p>
-                <p><span className="font-medium">Email:</span> {String(reviewFields.email || detail.email || "-")}</p>
-                <p><span className="font-medium">City:</span> {String(reviewFields.city || detail.city)}</p>
-                <p><span className="font-medium">Description:</span> {String(reviewFields.description || detail.description || "-")}</p>
-                <p>
-                  <span className="font-medium">Business License:</span>{" "}
+                <Typography variant="body2">
+                  <Box component="span" sx={{ fontWeight: 600 }}>Company Name:</Box>{" "}
+                  {String(reviewFields.companyName || detail.companyName || "-")}
+                </Typography>
+                <Typography variant="body2">
+                  <Box component="span" sx={{ fontWeight: 600 }}>Applicant Name:</Box>{" "}
+                  {String(reviewFields.applicantName || detail.fullName)}
+                </Typography>
+                <Typography variant="body2">
+                  <Box component="span" sx={{ fontWeight: 600 }}>Phone:</Box>{" "}
+                  {String(reviewFields.phone || detail.phone)}
+                </Typography>
+                <Typography variant="body2">
+                  <Box component="span" sx={{ fontWeight: 600 }}>Email:</Box>{" "}
+                  {String(reviewFields.email || detail.email || "-")}
+                </Typography>
+                <Typography variant="body2">
+                  <Box component="span" sx={{ fontWeight: 600 }}>City:</Box>{" "}
+                  {String(reviewFields.city || detail.city)}
+                </Typography>
+                <Typography variant="body2">
+                  <Box component="span" sx={{ fontWeight: 600 }}>Description:</Box>{" "}
+                  {String(reviewFields.description || detail.description || "-")}
+                </Typography>
+                <Typography variant="body2">
+                  <Box component="span" sx={{ fontWeight: 600 }}>Business License:</Box>{" "}
                   <AssetLink path={String(reviewFields.businessLicense || detail.businessLicense || "")} label="View file" />
-                </p>
-                <p>
-                  <span className="font-medium">Commercial Registration:</span>{" "}
+                </Typography>
+                <Typography variant="body2">
+                  <Box component="span" sx={{ fontWeight: 600 }}>Commercial Registration:</Box>{" "}
                   <AssetLink path={String(reviewFields.commercialReg || detail.commercialReg || "")} label="View file" />
-                </p>
+                </Typography>
 
-                <div>
-                  <label className="mb-1 block font-medium">Product quota on approval</label>
-                  <Input type="number" min={1} value={maxProducts} onChange={(e) => setMaxProducts(e.target.value)} />
-                </div>
-                <div>
-                  <label className="mb-1 block font-medium">Company login email</label>
-                  <Input type="email" value={companyEmail} onChange={(e) => setCompanyEmail(e.target.value)} />
-                </div>
-                <div>
-                  <label className="mb-1 block font-medium">Company login password</label>
-                  <div className="flex gap-2">
-                    <Input type="text" value={companyPassword} onChange={(e) => setCompanyPassword(e.target.value)} />
-                    <Button type="button" variant="outline" onClick={() => setCompanyPassword(generatePassword())}>
-                      Generate
-                    </Button>
-                  </div>
-                </div>
+                <TextField
+                  label="Product quota on approval"
+                  type="number"
+                  size="small"
+                  fullWidth
+                  slotProps={{ htmlInput: {  min: 1  } }}
+                  value={maxProducts}
+                  onChange={(e) => setMaxProducts(e.target.value)}
+                />
+                <TextField
+                  label="Company login email"
+                  type="email"
+                  size="small"
+                  fullWidth
+                  value={companyEmail}
+                  onChange={(e) => setCompanyEmail(e.target.value)}
+                />
+                <Stack direction="row" spacing={1}>
+                  <TextField
+                    label="Company login password"
+                    type="text"
+                    size="small"
+                    fullWidth
+                    value={companyPassword}
+                    onChange={(e) => setCompanyPassword(e.target.value)}
+                  />
+                  <Button type="button" variant="outlined" onClick={() => setCompanyPassword(generatePassword())}>
+                    Generate
+                  </Button>
+                </Stack>
               </>
             ) : (
               <>
-                <p><span className="font-medium">Full Name:</span> {String(reviewFields.fullName || detail.fullName)}</p>
-                <p><span className="font-medium">City:</span> {String(reviewFields.city || detail.city)}</p>
-                <p><span className="font-medium">WhatsApp:</span> {String(reviewFields.whatsapp || detail.whatsappNumber || "-")}</p>
-                <p><span className="font-medium">Phone:</span> {String(reviewFields.phone || detail.phone)}</p>
-                <p><span className="font-medium">Bio:</span> {String(reviewFields.bio || detail.bio || "-")}</p>
-                <p>
-                  <span className="font-medium">Specializations:</span>{" "}
+                <Typography variant="body2">
+                  <Box component="span" sx={{ fontWeight: 600 }}>Full Name:</Box>{" "}
+                  {String(reviewFields.fullName || detail.fullName)}
+                </Typography>
+                <Typography variant="body2">
+                  <Box component="span" sx={{ fontWeight: 600 }}>City:</Box>{" "}
+                  {String(reviewFields.city || detail.city)}
+                </Typography>
+                <Typography variant="body2">
+                  <Box component="span" sx={{ fontWeight: 600 }}>WhatsApp:</Box>{" "}
+                  {String(reviewFields.whatsapp || detail.whatsappNumber || "-")}
+                </Typography>
+                <Typography variant="body2">
+                  <Box component="span" sx={{ fontWeight: 600 }}>Phone:</Box>{" "}
+                  {String(reviewFields.phone || detail.phone)}
+                </Typography>
+                <Typography variant="body2">
+                  <Box component="span" sx={{ fontWeight: 600 }}>Bio:</Box>{" "}
+                  {String(reviewFields.bio || detail.bio || "-")}
+                </Typography>
+                <Typography variant="body2">
+                  <Box component="span" sx={{ fontWeight: 600 }}>Specializations:</Box>{" "}
                   {Array.isArray(reviewFields.specializations)
                     ? (reviewFields.specializations as string[]).join(", ") || "-"
                     : (detail.specializations || []).join(", ") || "-"}
-                </p>
-                <p>
-                  <span className="font-medium">Experience:</span>{" "}
+                </Typography>
+                <Typography variant="body2">
+                  <Box component="span" sx={{ fontWeight: 600 }}>Experience:</Box>{" "}
                   {String(reviewFields.experience ?? detail.yearsOfExperience ?? "-")} years
-                </p>
+                </Typography>
                 {detail.otherTypeLabel ? (
-                  <p><span className="font-medium">Other type:</span> {detail.otherTypeLabel}</p>
+                  <Typography variant="body2">
+                    <Box component="span" sx={{ fontWeight: 600 }}>Other type:</Box> {detail.otherTypeLabel}
+                  </Typography>
                 ) : null}
-                <p>
-                  <span className="font-medium">Identity Image:</span>{" "}
+                <Typography variant="body2">
+                  <Box component="span" sx={{ fontWeight: 600 }}>Identity Image:</Box>{" "}
                   <AssetLink path={String(reviewFields.idImage || detail.idImage || "")} label="View" />
-                </p>
-                <p>
-                  <span className="font-medium">License Image:</span>{" "}
+                </Typography>
+                <Typography variant="body2">
+                  <Box component="span" sx={{ fontWeight: 600 }}>License Image:</Box>{" "}
                   <AssetLink path={String(reviewFields.licenseImage || detail.licenseImage || "")} label="View" />
-                </p>
+                </Typography>
               </>
             )}
 
-            <div>
-              <label className="mb-1 block font-medium">Admin note</label>
-              <Input value={adminNote} onChange={(e) => setAdminNote(e.target.value)} />
-            </div>
+            <TextField
+              label="Admin note"
+              size="small"
+              fullWidth
+              value={adminNote}
+              onChange={(e) => setAdminNote(e.target.value)}
+            />
 
             {credentials ? (
-              <Card className="space-y-2 border border-[#23673A]/30 bg-[#23673A]/5 p-3">
-                <p className="font-medium text-[#23673A]">Company account created</p>
-                <p>Email: {credentials.email}</p>
-                <p>Password: {credentials.password}</p>
-                <p className="text-xs text-neutral-500">Share via email, SMS, or WhatsApp.</p>
-                <Button onClick={() => { setSelectedId(null); setSelectedType(null); setCredentials(null); }}>Close</Button>
-              </Card>
+              <Paper variant="outlined" sx={{ p: 2, bgcolor: "primary.50", borderColor: "primary.light" }}>
+                <Typography variant="subtitle2" color="primary.main" gutterBottom>
+                  Company account created
+                </Typography>
+                <Typography variant="body2">Email: {credentials.email}</Typography>
+                <Typography variant="body2">Password: {credentials.password}</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
+                  Share via email, SMS, or WhatsApp.
+                </Typography>
+                <Button
+                  sx={{ mt: 1 }}
+                  onClick={() => {
+                    setSelectedId(null);
+                    setCredentials(null);
+                  }}
+                >
+                  Close
+                </Button>
+              </Paper>
             ) : null}
 
-            {formError ? <p className="text-sm text-red-600">{formError}</p> : null}
+            {formError ? <Alert severity="error">{formError}</Alert> : null}
 
             {!credentials && detail.status === "PENDING" ? (
-              <div className="flex gap-2 pt-2">
-                <Button disabled={reviewMutation.isPending} onClick={handleApprove}>
+              <Stack direction="row" spacing={1} sx={{ pt: 1 }}>
+                <Button variant="contained" disabled={reviewMutation.isPending} onClick={handleApprove}>
                   {detail.review.approveButtonText}
                 </Button>
                 <Button
-                  variant="outline"
+                  variant="outlined"
                   disabled={reviewMutation.isPending}
                   onClick={() => reviewMutation.mutate({ action: "REJECT" })}
                 >
                   Reject
                 </Button>
-              </div>
+              </Stack>
             ) : null}
-          </div>
+          </Stack>
         ) : null}
       </AppDrawer>
-    </div>
+    </Stack>
   );
 }

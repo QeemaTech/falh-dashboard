@@ -1,11 +1,12 @@
-import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
+import { Box } from "@mui/material";
 import { AppStatCard } from "./design-system";
 
 type Props = {
   title: string;
   value: string | number;
   hint?: string;
-  icon?: LucideIcon;
+  icon?: ReactNode;
   change?: string;
   trend?: "up" | "down";
   sparkline?: number[];
@@ -24,12 +25,7 @@ function MiniSparkline({ points }: { points: number[] }) {
   const area = `${coords.join(" ")} ${width},${height} 0,${height}`;
 
   return (
-    <svg
-      viewBox={`0 0 ${width} ${height}`}
-      className="h-7 w-full"
-      preserveAspectRatio="none"
-      aria-hidden
-    >
+    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={28} preserveAspectRatio="none" aria-hidden>
       <defs>
         <linearGradient id="spark-fill" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#23673A" stopOpacity="0.35" />
@@ -49,15 +45,15 @@ function MiniSparkline({ points }: { points: number[] }) {
   );
 }
 
-export function AnalyticsWidget({ title, value, hint, icon: Icon, change, trend = "up", sparkline }: Props) {
+export function AnalyticsWidget({ title, value, hint, icon, change, trend = "up", sparkline }: Props) {
   return (
-    <div className="min-w-0 overflow-hidden rounded-[20px]">
-      <AppStatCard title={title} value={value} hint={hint} icon={Icon} change={change || "0.0%"} trend={trend} />
+    <Box sx={{ overflow: "hidden", borderRadius: 2 }}>
+      <AppStatCard title={title} value={value} hint={hint} icon={icon} change={change || "0.0%"} trend={trend} />
       {sparkline?.length ? (
-        <div className="border-t border-[var(--app-border)] px-4 pb-4 pt-2">
+        <Box sx={{ borderTop: 1, borderColor: "divider", px: 2, py: 1 }}>
           <MiniSparkline points={sparkline} />
-        </div>
+        </Box>
       ) : null}
-    </div>
+    </Box>
   );
 }

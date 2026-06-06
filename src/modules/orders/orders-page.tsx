@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card } from "../../components/ui/card";
-import { ReusableTable } from "../../components/reusable-table";
-import { AppSelect } from "../../components/design-system";
+import { MenuItem, Stack, TextField } from "@mui/material";
+import { DataTable, EmptyState, FilterBar, PageHeader } from "../../components/layout";
 import { fetchAdminOrders, type AdminOrder } from "../../services/admin-api";
 
 type OrderRow = {
@@ -39,25 +38,34 @@ export function OrdersPage() {
     }));
   }, [data?.items]);
 
-  if (isLoading) return <Card>Loading orders...</Card>;
-  if (isError) return <Card>Failed to load orders: {(error as Error).message}</Card>;
-  if (!rows.length) return <Card>No orders found for current filters.</Card>;
+  if (isError) {
+    return <EmptyState title="Failed to load orders" description={(error as Error).message} />;
+  }
 
   return (
-    <div className="min-w-0 space-y-4 overflow-x-hidden">
-      <Card className="flex flex-wrap items-center gap-2">
-        <p className="text-sm text-(--app-text-secondary)">Filter by order status</p>
-        <AppSelect value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="">All statuses</option>
-          <option value="PENDING">Pending</option>
-          <option value="CONFIRMED">Confirmed</option>
-          <option value="PREPARING">Preparing</option>
-          <option value="DELIVERED">Delivered</option>
-          <option value="CANCELLED">Cancelled</option>
-        </AppSelect>
-      </Card>
-      <ReusableTable<OrderRow>
+    <Stack spacing={3}>
+      <PageHeader title="Orders" subtitle="Track and manage customer orders" />
+      <FilterBar>
+        <TextField
+          select
+          label="Order status"
+          size="small"
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          sx={{ minWidth: 220 }}
+        >
+          <MenuItem value="">All statuses</MenuItem>
+          <MenuItem value="PENDING">Pending</MenuItem>
+          <MenuItem value="CONFIRMED">Confirmed</MenuItem>
+          <MenuItem value="PREPARING">Preparing</MenuItem>
+          <MenuItem value="DELIVERED">Delivered</MenuItem>
+          <MenuItem value="CANCELLED">Cancelled</MenuItem>
+        </TextField>
+      </FilterBar>
+      <DataTable<OrderRow>
         title="Orders"
+        loading={isLoading}
+        emptyMessage="No orders found for current filters."
         columns={[
           { key: "id", label: "Order ID" },
           { key: "customer", label: "Customer" },
@@ -66,7 +74,8 @@ export function OrdersPage() {
           { key: "createdAt", label: "Created At" },
         ]}
         data={rows}
+        getRowKey={(row) => row.id}
       />
-    </div>
+    </Stack>
   );
 }

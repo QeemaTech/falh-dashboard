@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { MenuItem, TextField } from "@mui/material";
+import { Stack } from "@mui/material";
+import { DataTable, EmptyState, FilterBar, PageHeader } from "../../components/layout";
 import { fetchUsers } from "../../services/admin-api";
-import { ReusableTable } from "../../components/reusable-table";
-import { GlobalFilters } from "../../components/global-filters";
-import { Card } from "../../components/ui/card";
 import type { User } from "../../types/dashboard";
 
 export function UsersPage() {
@@ -18,15 +18,32 @@ export function UsersPage() {
     return status ? rows.filter((u) => u.status === status) : rows;
   }, [data?.users, status]);
 
-  if (isLoading) return <Card>Loading users...</Card>;
-  if (isError) return <Card>Failed to load users: {(error as Error).message}</Card>;
-  if (!filtered.length) return <Card>No users found for the selected filter.</Card>;
+  if (isError) {
+    return <EmptyState title="Failed to load users" description={(error as Error).message} />;
+  }
 
   return (
-    <div className="min-w-0 space-y-4 overflow-x-hidden">
-      <GlobalFilters status={status} onStatusChange={setStatus} />
-      <ReusableTable<User>
-        title="المستخدمون"
+    <Stack spacing={3}>
+      <PageHeader title="المستخدمون" subtitle="Manage platform users and their access status" />
+      <FilterBar>
+        <TextField
+          select
+          label="Status"
+          size="small"
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          sx={{ minWidth: 200 }}
+        >
+          <MenuItem value="">All statuses</MenuItem>
+          <MenuItem value="ACTIVE">Active</MenuItem>
+          <MenuItem value="SUSPENDED">Suspended</MenuItem>
+          <MenuItem value="PENDING_VERIFICATION">Pending verification</MenuItem>
+        </TextField>
+      </FilterBar>
+      <DataTable<User>
+        title="Users list"
+        loading={isLoading}
+        emptyMessage="No users found for the selected filter."
         columns={[
           { key: "name", label: "الاسم" },
           { key: "email", label: "البريد" },
@@ -35,7 +52,8 @@ export function UsersPage() {
           { key: "status", label: "الحالة" },
         ]}
         data={filtered}
+        getRowKey={(row) => row.id}
       />
-    </div>
+    </Stack>
   );
 }

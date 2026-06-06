@@ -1,28 +1,29 @@
 import { Outlet } from "react-router-dom";
+import { Box, Container } from "@mui/material";
 import { Sidebar } from "../components/sidebar";
 import { Header } from "../components/header";
 import { useUiStore } from "../store/ui-store";
-import { cn } from "../utils/cn";
 
 export function DashboardLayout() {
-  const { direction, sidebarOpen } = useUiStore();
+  const { direction } = useUiStore();
 
   return (
-    <div dir={direction} className="min-h-screen overflow-x-hidden bg-(--app-background)">
+    <Box dir={direction} sx={{ display: "flex", minHeight: "100vh", bgcolor: "background.default" }}>
       <Sidebar />
-      <div
-        className={cn(
-          "flex min-h-screen min-w-0 flex-col transition-[margin] duration-300",
-          sidebarOpen ? "lg:ms-[19.5rem]" : "lg:ms-[7.5rem]"
-        )}
+      <Box
+        component="main"
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          display: "flex",
+          flexDirection: "column",
+        }}
       >
         <Header />
-        <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-4 lg:p-6">
-          <div className="mx-auto w-full min-w-0 space-y-6">
-            <Outlet />
-          </div>
-        </main>
-      </div>
-    </div>
+        <Container maxWidth={false} sx={{ py: { xs: 2, md: 2.5 }, px: { xs: 2, md: 3 }, flex: 1 }}>
+          <Outlet />
+        </Container>
+      </Box>
+    </Box>
   );
 }

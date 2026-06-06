@@ -1,11 +1,27 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CloudRain, Loader2, MapPin, Save, Thermometer, Wind } from "lucide-react";
-import { Card } from "../../components/ui/card";
-import { Input } from "../../components/ui/input";
-import { Button } from "../../components/ui/button";
+import {
+  CloudQueue,
+  LocationOn,
+  Refresh,
+  Save,
+  Thermostat,
+  Air,
+} from "@mui/icons-material";
+import {
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  Grid,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
 import { toast } from "../../components/ui/sonner";
 import { WeatherForecastStrip } from "../../components/weather-forecast-strip";
+import { EmptyState, PageSection } from "../../components/layout";
 import {
   fetchWeatherSettingsApi,
   updateWeatherSettingsApi,
@@ -72,42 +88,52 @@ export function WeatherSettingsPage() {
     forecastQuery.data?.location?.city || defaultCity || t("weather.defaultCity");
 
   if (settingsQuery.isLoading) {
-    return <Card className="p-6 text-sm text-(--app-text-secondary)">{t("common.loading")}</Card>;
+    return (
+      <Paper sx={{ p: 3 }}>
+        <Stack direction="row" spacing={2} sx={{ alignItems: "center" }}>
+          <CircularProgress size={24} />
+          <Typography variant="body2" color="text.secondary">
+            {t("common.loading")}
+          </Typography>
+        </Stack>
+      </Paper>
+    );
   }
 
   if (settingsQuery.isError) {
     return (
-      <Card className="p-6 text-sm text-red-600">
-        {t("weather.loadFailed")}: {getApiErrorMessage(settingsQuery.error)}
-      </Card>
+      <EmptyState
+        title={t("weather.loadFailed")}
+        description={getApiErrorMessage(settingsQuery.error)}
+      />
     );
   }
 
   return (
-    <div className="min-w-0 space-y-4 overflow-x-hidden">
-      <Card className="space-y-3 border-none bg-transparent p-0 shadow-none">
-        <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-          <div>
-            <h2 className="text-lg font-semibold text-(--app-text-primary)">{t("weather.forecastTitle")}</h2>
-            <p className="text-sm text-(--app-text-secondary)">
-              {locationLabel}
-              {forecastQuery.data?.location?.source
-                ? ` · ${t(`weather.source.${forecastQuery.data.location.source}`)}`
-                : null}
-            </p>
-          </div>
+    <Stack spacing={3} sx={{ minWidth: 0, overflowX: "hidden" }}>
+      <PageSection
+        title={t("weather.forecastTitle")}
+        action={
           <Button
-            variant="outline"
-            className="h-9 px-3 text-xs"
+            variant="outlined"
+            size="small"
+            startIcon={forecastQuery.isFetching ? <CircularProgress size={16} /> : <Refresh />}
             onClick={() => {
               forecastQuery.refetch();
               alertsQuery.refetch();
             }}
             disabled={forecastQuery.isFetching}
           >
-            {forecastQuery.isFetching ? <Loader2 className="size-4 animate-spin" /> : t("weather.refreshPreview")}
+            {t("weather.refreshPreview")}
           </Button>
-        </div>
+        }
+      >
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          {locationLabel}
+          {forecastQuery.data?.location?.source
+            ? ` · ${t(`weather.source.${forecastQuery.data.location.source}`)}`
+            : null}
+        </Typography>
 
         <WeatherForecastStrip
           days={forecastDays}
@@ -115,92 +141,138 @@ export function WeatherSettingsPage() {
           error={forecastQuery.isError ? getApiErrorMessage(forecastQuery.error, t("weather.previewFailed")) : null}
         />
 
-        <p className="px-1 text-xs text-(--app-text-secondary)">{t("weather.forecastHint")}</p>
-      </Card>
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
+          {t("weather.forecastHint")}
+        </Typography>
+      </PageSection>
 
       {alertsQuery.data?.alert ? (
-        <Card className="border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
-          <div className="flex items-center gap-2">
-            <CloudRain className="size-4 text-amber-700" />
-            <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">{t("weather.alerts")}</p>
-          </div>
-          <ul className="mt-2 space-y-1 text-sm text-amber-800 dark:text-amber-200">
+        <Alert
+          severity="warning"
+          icon={<CloudQueue fontSize="inherit" />}
+          sx={{ alignItems: "flex-start" }}
+        >
+          <Typography variant="subtitle2" gutterBottom>
+            {t("weather.alerts")}
+          </Typography>
+          <Stack component="ul" spacing={0.5} sx={{ m: 0, pl: 2 }}>
             {alertsQuery.data.alerts.map((item) => (
-              <li key={`${item.type}-${item.message}`}>
-                <span className="font-medium">{item.type}:</span> {item.message}
-              </li>
+              <Typography component="li" variant="body2" key={`${item.type}-${item.message}`}>
+                <Box component="span" sx={{ fontWeight: 600 }}>
+                  {item.type}:
+                </Box>{" "}
+                {item.message}
+              </Typography>
             ))}
-          </ul>
-        </Card>
+          </Stack>
+        </Alert>
       ) : null}
 
-      <Card className="space-y-4 p-4 sm:p-6">
-        <div>
-          <h3 className="text-base font-semibold text-(--app-text-primary)">{t("weather.adminSettings")}</h3>
-          <p className="mt-1 text-sm text-(--app-text-secondary)">{t("weather.subtitleAdmin")}</p>
-        </div>
+      <Paper sx={{ p: { xs: 2, sm: 3 } }}>
+        <Stack spacing={3}>
+          <Box>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+              {t("weather.adminSettings")}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              {t("weather.subtitleAdmin")}
+            </Typography>
+          </Box>
 
-        <div className="rounded-2xl border border-[#23673A]/20 bg-[#23673A]/5 p-4 text-sm text-(--app-text-secondary)">
-          <p className="font-medium text-(--app-text-primary)">{t("weather.gpsNoteTitle")}</p>
-          <p className="mt-1">{t("weather.gpsNoteBody")}</p>
-        </div>
+          <Paper variant="outlined" sx={{ p: 2, bgcolor: "primary.50", borderColor: "primary.light" }}>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              {t("weather.gpsNoteTitle")}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              {t("weather.gpsNoteBody")}
+            </Typography>
+          </Paper>
 
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 text-sm font-medium text-(--app-text-primary)">
-            <MapPin className="size-4 text-[#23673A]" />
-            {t("weather.defaultCity")}
-          </label>
-          <Input value={defaultCity} onChange={(e) => setDefaultCity(e.target.value)} placeholder="Cairo" />
-          <p className="text-xs text-(--app-text-secondary)">{t("weather.defaultCityHint")}</p>
-        </div>
+          <Stack spacing={1}>
+            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+              <LocationOn color="primary" fontSize="small" />
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                {t("weather.defaultCity")}
+              </Typography>
+            </Stack>
+            <TextField
+              size="small"
+              value={defaultCity}
+              onChange={(e) => setDefaultCity(e.target.value)}
+              placeholder="Cairo"
+              fullWidth
+            />
+            <Typography variant="caption" color="text.secondary">
+              {t("weather.defaultCityHint")}
+            </Typography>
+          </Stack>
 
-        <div className="rounded-2xl border border-(--app-border) bg-(--app-surface-muted) p-4">
-          <h3 className="mb-3 text-sm font-semibold text-(--app-text-primary)">{t("weather.thresholds")}</h3>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="space-y-1">
-              <label className="flex items-center gap-1 text-xs font-medium text-(--app-text-secondary)">
-                <Wind className="size-3.5" />
-                {t("weather.windMax")}
-              </label>
-              <Input
-                type="number"
-                min={0}
-                value={thresholds.windSpeedMax ?? ""}
-                onChange={(e) =>
-                  setThresholds((prev) => ({ ...prev, windSpeedMax: Number(e.target.value) }))
-                }
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="flex items-center gap-1 text-xs font-medium text-(--app-text-secondary)">
-                <Thermometer className="size-3.5" />
-                {t("weather.tempMin")}
-              </label>
-              <Input
-                type="number"
-                value={thresholds.tempMin ?? ""}
-                onChange={(e) => setThresholds((prev) => ({ ...prev, tempMin: Number(e.target.value) }))}
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="flex items-center gap-1 text-xs font-medium text-(--app-text-secondary)">
-                <Thermometer className="size-3.5" />
-                {t("weather.tempMax")}
-              </label>
-              <Input
-                type="number"
-                value={thresholds.tempMax ?? ""}
-                onChange={(e) => setThresholds((prev) => ({ ...prev, tempMax: Number(e.target.value) }))}
-              />
-            </div>
-          </div>
-        </div>
+          <Paper variant="outlined" sx={{ p: 2, bgcolor: "action.hover" }}>
+            <Typography variant="body2" sx={{ fontWeight: 600, mb: 2 }}>
+              {t("weather.thresholds")}
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12, sm: 4 }}>
+                <Stack direction="row" spacing={0.5} sx={{ alignItems: "center", mb: 0.5 }}>
+                  <Air sx={{ fontSize: 16 }} />
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: "text.secondary" }}>
+                    {t("weather.windMax")}
+                  </Typography>
+                </Stack>
+                <TextField
+                  type="number"
+                  size="small"
+                  fullWidth
+                  slotProps={{ htmlInput: { min: 0 } }}
+                  value={thresholds.windSpeedMax ?? ""}
+                  onChange={(e) =>
+                    setThresholds((prev) => ({ ...prev, windSpeedMax: Number(e.target.value) }))
+                  }
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 4 }}>
+                <Stack direction="row" spacing={0.5} sx={{ alignItems: "center", mb: 0.5 }}>
+                  <Thermostat sx={{ fontSize: 16 }} />
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: "text.secondary" }}>
+                    {t("weather.tempMin")}
+                  </Typography>
+                </Stack>
+                <TextField
+                  type="number"
+                  size="small"
+                  fullWidth
+                  value={thresholds.tempMin ?? ""}
+                  onChange={(e) => setThresholds((prev) => ({ ...prev, tempMin: Number(e.target.value) }))}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 4 }}>
+                <Stack direction="row" spacing={0.5} sx={{ alignItems: "center", mb: 0.5 }}>
+                  <Thermostat sx={{ fontSize: 16 }} />
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: "text.secondary" }}>
+                    {t("weather.tempMax")}
+                  </Typography>
+                </Stack>
+                <TextField
+                  type="number"
+                  size="small"
+                  fullWidth
+                  value={thresholds.tempMax ?? ""}
+                  onChange={(e) => setThresholds((prev) => ({ ...prev, tempMax: Number(e.target.value) }))}
+                />
+              </Grid>
+            </Grid>
+          </Paper>
 
-        <Button disabled={saveMutation.isPending} onClick={() => saveMutation.mutate()}>
-          {saveMutation.isPending ? <Loader2 className="me-2 size-4 animate-spin" /> : <Save className="me-2 size-4" />}
-          {t("weather.save")}
-        </Button>
-      </Card>
-    </div>
+          <Button
+            variant="contained"
+            disabled={saveMutation.isPending}
+            startIcon={saveMutation.isPending ? <CircularProgress size={16} color="inherit" /> : <Save />}
+            onClick={() => saveMutation.mutate()}
+          >
+            {t("weather.save")}
+          </Button>
+        </Stack>
+      </Paper>
+    </Stack>
   );
 }

@@ -1,9 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ImageUp, Loader2, Save, Settings2 } from "lucide-react";
-import { Card } from "../../components/ui/card";
-import { Input } from "../../components/ui/input";
-import { Button } from "../../components/ui/button";
+import { Image, Save, Settings } from "@mui/icons-material";
+import {
+  Box,
+  Button,
+  CircularProgress,
+  Grid,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { EmptyState, PageHeader } from "../../components/layout";
 import { toast } from "../../components/ui/sonner";
 import {
   fetchSystemSettings,
@@ -39,6 +47,7 @@ export function SystemSettingsPage() {
     queryKey: ["system-settings"],
     queryFn: fetchSystemSettings,
   });
+
   useEffect(() => {
     if (settingsQuery.data) setForm(settingsQuery.data);
   }, [settingsQuery.data]);
@@ -91,105 +100,135 @@ export function SystemSettingsPage() {
     });
   };
 
-  const onUploadAssets = () => {
-    uploadMutation.mutate(files);
-  };
-
+  const onUploadAssets = () => uploadMutation.mutate(files);
   const isSaving = saveMutation.isPending || uploadMutation.isPending;
 
-  if (settingsQuery.isLoading) return <Card>Loading system settings...</Card>;
-  if (settingsQuery.isError) return <Card>Failed to load system settings: {(settingsQuery.error as Error).message}</Card>;
+  if (settingsQuery.isLoading) {
+    return (
+      <Stack sx={{ py: 6, alignItems: "center" }}>
+        <CircularProgress size={28} />
+      </Stack>
+    );
+  }
+
+  if (settingsQuery.isError) {
+    return <EmptyState title="Failed to load system settings" description={(settingsQuery.error as Error).message} />;
+  }
+
+  const assetFields: Array<[AssetKey, string]> = [
+    ["logo", "Change Logo"],
+    ["favicon", "Change Favicon"],
+    ["splashScreen", "Change Splash Screen"],
+    ["appIcon", "Change App Icon"],
+    ["loginBackground", "Change Login Background"],
+  ];
 
   return (
-    <div className="space-y-4">
-      <Card className="flex items-center justify-between bg-linear-to-r from-[#23673A] to-[#2f8f52] text-white">
-        <div>
-          <h2 className="text-xl font-semibold">System Settings</h2>
-          <p className="text-sm text-white/90">Manage branding, contacts, socials, localization, and app assets.</p>
-        </div>
-        <Settings2 className="size-10 opacity-80" />
-      </Card>
+    <Stack spacing={3}>
+      <PageHeader
+        title="System Settings"
+        subtitle="Manage branding, contacts, socials, localization, and app assets."
+        icon={<Settings fontSize="small" />}
+      />
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="space-y-3">
-          <h3 className="font-semibold">General Settings</h3>
-          <Input value={form.general.projectName} onChange={(e) => setValue("general", "projectName", e.target.value)} placeholder="Project Name" />
-          <Input value={form.general.footerText} onChange={(e) => setValue("general", "footerText", e.target.value)} placeholder="Footer Text" />
-        </Card>
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, lg: 6 }}>
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+              General Settings
+            </Typography>
+            <Stack spacing={2}>
+              <TextField size="small" fullWidth label="Project Name" value={form.general.projectName} onChange={(e) => setValue("general", "projectName", e.target.value)} />
+              <TextField size="small" fullWidth label="Footer Text" value={form.general.footerText} onChange={(e) => setValue("general", "footerText", e.target.value)} />
+            </Stack>
+          </Paper>
+        </Grid>
+        <Grid size={{ xs: 12, lg: 6 }}>
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+              Contact Settings
+            </Typography>
+            <Stack spacing={2}>
+              <TextField size="small" fullWidth label="Phone" value={form.contact.phone} onChange={(e) => setValue("contact", "phone", e.target.value)} />
+              <TextField size="small" fullWidth label="Email" value={form.contact.email} onChange={(e) => setValue("contact", "email", e.target.value)} />
+              <TextField size="small" fullWidth label="WhatsApp" value={form.contact.whatsapp} onChange={(e) => setValue("contact", "whatsapp", e.target.value)} />
+              <TextField size="small" fullWidth label="Address" value={form.contact.address} onChange={(e) => setValue("contact", "address", e.target.value)} />
+            </Stack>
+          </Paper>
+        </Grid>
+        <Grid size={{ xs: 12, lg: 6 }}>
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+              Social Media
+            </Typography>
+            <Stack spacing={2}>
+              <TextField size="small" fullWidth label="Facebook URL" value={form.social.facebook} onChange={(e) => setValue("social", "facebook", e.target.value)} />
+              <TextField size="small" fullWidth label="Instagram URL" value={form.social.instagram} onChange={(e) => setValue("social", "instagram", e.target.value)} />
+              <TextField size="small" fullWidth label="X URL" value={form.social.x} onChange={(e) => setValue("social", "x", e.target.value)} />
+              <TextField size="small" fullWidth label="TikTok URL" value={form.social.tiktok} onChange={(e) => setValue("social", "tiktok", e.target.value)} />
+              <TextField size="small" fullWidth label="YouTube URL" value={form.social.youtube} onChange={(e) => setValue("social", "youtube", e.target.value)} />
+            </Stack>
+          </Paper>
+        </Grid>
+        <Grid size={{ xs: 12, lg: 6 }}>
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+              Application Settings
+            </Typography>
+            <Stack spacing={2}>
+              <TextField size="small" fullWidth label="Currency" value={form.application.currency} onChange={(e) => setValue("application", "currency", e.target.value)} />
+              <TextField size="small" fullWidth label="Language" value={form.application.language} onChange={(e) => setValue("application", "language", e.target.value)} />
+              <TextField size="small" fullWidth label="Timezone" value={form.application.timezone} onChange={(e) => setValue("application", "timezone", e.target.value)} />
+            </Stack>
+          </Paper>
+        </Grid>
+      </Grid>
 
-        <Card className="space-y-3">
-          <h3 className="font-semibold">Contact Settings</h3>
-          <Input value={form.contact.phone} onChange={(e) => setValue("contact", "phone", e.target.value)} placeholder="Phone" />
-          <Input value={form.contact.email} onChange={(e) => setValue("contact", "email", e.target.value)} placeholder="Email" />
-          <Input value={form.contact.whatsapp} onChange={(e) => setValue("contact", "whatsapp", e.target.value)} placeholder="WhatsApp" />
-          <Input value={form.contact.address} onChange={(e) => setValue("contact", "address", e.target.value)} placeholder="Address" />
-        </Card>
-
-        <Card className="space-y-3">
-          <h3 className="font-semibold">Social Media</h3>
-          <Input value={form.social.facebook} onChange={(e) => setValue("social", "facebook", e.target.value)} placeholder="Facebook URL" />
-          <Input value={form.social.instagram} onChange={(e) => setValue("social", "instagram", e.target.value)} placeholder="Instagram URL" />
-          <Input value={form.social.x} onChange={(e) => setValue("social", "x", e.target.value)} placeholder="X URL" />
-          <Input value={form.social.tiktok} onChange={(e) => setValue("social", "tiktok", e.target.value)} placeholder="TikTok URL" />
-          <Input value={form.social.youtube} onChange={(e) => setValue("social", "youtube", e.target.value)} placeholder="YouTube URL" />
-        </Card>
-
-        <Card className="space-y-3">
-          <h3 className="font-semibold">Application Settings</h3>
-          <Input value={form.application.currency} onChange={(e) => setValue("application", "currency", e.target.value)} placeholder="Currency" />
-          <Input value={form.application.language} onChange={(e) => setValue("application", "language", e.target.value)} placeholder="Language (e.g. ar, en)" />
-          <Input value={form.application.timezone} onChange={(e) => setValue("application", "timezone", e.target.value)} placeholder="Timezone" />
-        </Card>
-      </div>
-
-      <Card className="space-y-3">
-        <h3 className="font-semibold">Asset Uploads</h3>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {(
-            [
-              ["logo", "Change Logo"],
-              ["favicon", "Change Favicon"],
-              ["splashScreen", "Change Splash Screen"],
-              ["appIcon", "Change App Icon"],
-              ["loginBackground", "Change Login Background"],
-            ] as Array<[AssetKey, string]>
-          ).map(([key, label]) => (
-            <div key={key} className="space-y-2 rounded-xl border p-3">
-              <div className="flex h-28 items-center justify-center overflow-hidden rounded-lg bg-neutral-100 dark:bg-neutral-800">
-                {assetPreview[key] ? (
-                  <img src={assetPreview[key]} alt={label} className="h-full w-full object-cover" />
-                ) : (
-                  <ImageUp className="size-6 text-neutral-400" />
-                )}
-              </div>
-              <label className="block">
-                <span className="mb-1 block text-xs text-neutral-500">{label}</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="w-full text-xs"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    setFiles((prev) => ({ ...prev, [key]: file }));
-                  }}
-                />
-              </label>
-            </div>
+      <Paper sx={{ p: 3 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+          Asset Uploads
+        </Typography>
+        <Grid container spacing={2}>
+          {assetFields.map(([key, label]) => (
+            <Grid key={key} size={{ xs: 12, sm: 6, md: 4, lg: 2 }}>
+              <Paper variant="outlined" sx={{ p: 2 }}>
+                <Box sx={{ height: 112, display: "grid", placeItems: "center", bgcolor: "action.hover", borderRadius: 1, overflow: "hidden", mb: 1 }}>
+                  {assetPreview[key] ? (
+                    <Box component="img" src={assetPreview[key]} alt={label} sx={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    <Image color="disabled" />
+                  )}
+                </Box>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
+                  {label}
+                </Typography>
+                <Button component="label" variant="outlined" size="small" fullWidth>
+                  Choose file
+                  <input
+                    hidden
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) setFiles((prev) => ({ ...prev, [key]: file }));
+                    }}
+                  />
+                </Button>
+              </Paper>
+            </Grid>
           ))}
-        </div>
-      </Card>
+        </Grid>
+      </Paper>
 
-      <Card className="flex flex-wrap items-center justify-end gap-2">
-        <Button variant="outline" onClick={onUploadAssets} disabled={isSaving}>
-          {uploadMutation.isPending ? <Loader2 className="me-2 size-4 animate-spin" /> : null}
+      <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
+        <Button variant="outlined" onClick={onUploadAssets} disabled={isSaving}>
+          {uploadMutation.isPending ? <CircularProgress size={18} sx={{ mr: 1 }} /> : null}
           Upload Assets
         </Button>
-        <Button onClick={onSave} disabled={isSaving}>
-          {saveMutation.isPending ? <Loader2 className="me-2 size-4 animate-spin" /> : <Save className="me-2 size-4" />}
+        <Button variant="contained" startIcon={saveMutation.isPending ? <CircularProgress size={18} color="inherit" /> : <Save />} onClick={onSave} disabled={isSaving}>
           Save Settings
         </Button>
-      </Card>
-    </div>
+      </Stack>
+    </Stack>
   );
 }

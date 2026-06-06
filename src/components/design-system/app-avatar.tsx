@@ -1,4 +1,4 @@
-import { cn } from "../../utils/cn";
+import { Avatar } from "@mui/material";
 
 type AppAvatarProps = {
   name?: string;
@@ -6,6 +6,8 @@ type AppAvatarProps = {
   size?: "sm" | "md" | "lg";
   className?: string;
 };
+
+const sizeMap = { sm: 32, md: 40, lg: 48 };
 
 export function AppAvatar({ name = "Admin User", src, size = "md", className }: AppAvatarProps) {
   const initials = name
@@ -16,16 +18,13 @@ export function AppAvatar({ name = "Admin User", src, size = "md", className }: 
     .toUpperCase();
 
   return (
-    <div
-      className={cn(
-        "flex shrink-0 items-center justify-center rounded-full bg-[var(--app-primary)] text-xs font-semibold text-white",
-        size === "sm" && "size-8",
-        size === "md" && "size-10",
-        size === "lg" && "size-12",
-        className
-      )}
+    <Avatar
+      className={className}
+      src={src}
+      alt={name}
+      sx={{ width: sizeMap[size], height: sizeMap[size], bgcolor: "primary.main", fontWeight: 700 }}
     >
-      {src ? <img src={src} alt={name} className="size-full rounded-full object-cover" /> : initials}
-    </div>
+      {initials}
+    </Avatar>
   );
 }

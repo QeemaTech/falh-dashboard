@@ -1,5 +1,19 @@
-import { Cloud, CloudRain, CloudSun, Loader2, Sun } from "lucide-react";
-import { cn } from "../utils/cn";
+import {
+  Cloud,
+  CloudQueue,
+  Grain,
+  Thunderstorm,
+  WbSunny,
+} from "@mui/icons-material";
+import {
+  Box,
+  CircularProgress,
+  Paper,
+  Stack,
+  Typography,
+  type SxProps,
+  type Theme,
+} from "@mui/material";
 
 export type ForecastDay = {
   date: string;
@@ -17,86 +31,99 @@ type Props = {
   days: ForecastDay[];
   loading?: boolean;
   error?: string | null;
-  className?: string;
+  sx?: SxProps<Theme>;
 };
 
 function WeatherIcon({ day }: { day: ForecastDay }) {
   const code = String(day.conditionCode || "").toLowerCase();
-  const className = "size-9 text-amber-500";
+  const iconSx = { fontSize: 36 };
 
   if (day.isRain || day.isStorm || code.includes("rain") || code.includes("drizzle") || code.includes("thunder")) {
-    return <CloudRain className={cn(className, "text-sky-500")} />;
+    if (code.includes("thunder") || day.isStorm) {
+      return <Thunderstorm sx={{ ...iconSx, color: "info.main" }} />;
+    }
+    return <Grain sx={{ ...iconSx, color: "info.light" }} />;
   }
   if (code.includes("cloud")) {
-    return <CloudSun className={cn(className, "text-amber-400")} />;
+    return <CloudQueue sx={{ ...iconSx, color: "warning.light" }} />;
   }
   if (code === "clouds" || code === "mist" || code === "fog" || code === "haze") {
-    return <Cloud className={cn(className, "text-slate-400")} />;
+    return <Cloud sx={{ ...iconSx, color: "text.disabled" }} />;
   }
-  return <Sun className={className} />;
+  return <WbSunny sx={{ ...iconSx, color: "warning.main" }} />;
 }
 
-export function WeatherForecastStrip({ days, loading, error, className }: Props) {
+export function WeatherForecastStrip({ days, loading, error, sx }: Props) {
   if (loading) {
     return (
-      <div
-        className={cn(
-          "flex items-center justify-center rounded-2xl border border-(--app-border) bg-(--app-surface) py-8 shadow-(--app-shadow-soft)",
-          className
-        )}
+      <Paper
+        sx={{
+          py: 4,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          ...sx,
+        }}
       >
-        <Loader2 className="size-6 animate-spin text-[#23673A]" />
-      </div>
+        <CircularProgress size={28} />
+      </Paper>
     );
   }
 
   if (error) {
     return (
-      <div
-        className={cn(
-          "rounded-2xl border border-(--app-border) bg-(--app-surface) px-4 py-6 text-center text-sm text-red-600 shadow-(--app-shadow-soft)",
-          className
-        )}
-      >
-        {error}
-      </div>
+      <Paper sx={{ px: 2, py: 3, textAlign: "center", ...sx }}>
+        <Typography variant="body2" color="error">
+          {error}
+        </Typography>
+      </Paper>
     );
   }
 
   if (!days.length) {
     return (
-      <div
-        className={cn(
-          "rounded-2xl border border-(--app-border) bg-(--app-surface) px-4 py-6 text-center text-sm text-(--app-text-secondary) shadow-(--app-shadow-soft)",
-          className
-        )}
-      >
-        —
-      </div>
+      <Paper sx={{ px: 2, py: 3, textAlign: "center", ...sx }}>
+        <Typography variant="body2" color="text.secondary">
+          —
+        </Typography>
+      </Paper>
     );
   }
 
   return (
-    <div
-      className={cn(
-        "overflow-x-auto rounded-2xl border border-(--app-border) bg-(--app-surface) px-2 py-4 shadow-(--app-shadow-soft)",
-        className
-      )}
-    >
-      <div className="flex min-w-max items-stretch justify-between gap-1 sm:min-w-0 sm:gap-0">
+    <Paper sx={{ px: 1, py: 2, overflow: "auto", ...sx }}>
+      <Stack
+        direction="row"
+        spacing={0}
+        sx={{
+          minWidth: "max-content",
+          alignItems: "stretch",
+          justifyContent: "space-between",
+        }}
+      >
         {days.map((day) => (
-          <div
+          <Stack
             key={day.date}
-            className="flex min-w-[4.5rem] flex-1 flex-col items-center gap-2 px-2 sm:min-w-0"
+            spacing={1}
+            sx={{
+              flex: 1,
+              minWidth: 72,
+              px: 1,
+              alignItems: "center",
+            }}
           >
-            <p className="text-center text-xs font-medium text-(--app-text-secondary)">{day.dayName}</p>
-            <WeatherIcon day={day} />
-            <p className="text-center text-xs font-semibold text-(--app-text-primary)">
+            <Typography variant="caption" sx={{ color: "text.secondary", textAlign: "center" }}>
+              {day.dayName}
+            </Typography>
+            <Box>
+              <WeatherIcon day={day} />
+            </Box>
+            <Typography variant="caption" sx={{ fontWeight: 600, textAlign: "center" }}>
               {day.tempMax}° / {day.tempMin}°
-            </p>
-          </div>
+            </Typography>
+          </Stack>
         ))}
-      </div>
-    </div>
+      </Stack>
+    </Paper>
   );
 }

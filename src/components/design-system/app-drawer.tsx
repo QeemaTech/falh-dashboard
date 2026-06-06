@@ -1,7 +1,7 @@
 import type { PropsWithChildren, ReactNode } from "react";
-import { X } from "lucide-react";
-import { cn } from "../../utils/cn";
-import { AppButton } from "./app-button";
+import { Box, Drawer, IconButton, Stack, Typography } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
+import { Close } from "@mui/icons-material";
 
 type AppDrawerProps = PropsWithChildren<{
   open: boolean;
@@ -13,28 +13,28 @@ type AppDrawerProps = PropsWithChildren<{
 }>;
 
 export function AppDrawer({ open, onClose, title, description, footer, className, children }: AppDrawerProps) {
-  if (!open) return null;
+  const theme = useTheme();
+  const anchor = theme.direction === "rtl" ? "left" : "right";
+
   return (
-    <div className="fixed inset-0 z-50 bg-[var(--app-overlay)] backdrop-blur-sm" onClick={onClose}>
-      <div
-        className={cn(
-          "absolute inset-e-0 top-0 h-full w-full max-w-md border-s border-[var(--app-border)] bg-[var(--app-surface)] p-5 shadow-[0_24px_55px_-30px_rgba(15,23,42,0.38)]",
-          className
-        )}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div>
-            {title ? <h3 className="text-lg font-semibold text-[var(--app-text-primary)]">{title}</h3> : null}
-            {description ? <p className="mt-1 text-sm text-[var(--app-text-secondary)]">{description}</p> : null}
-          </div>
-          <AppButton variant="ghost" className="h-9 w-9 p-0" onClick={onClose}>
-            <X className="size-4" />
-          </AppButton>
-        </div>
-        <div className="h-[calc(100%-7rem)] overflow-auto pe-1">{children}</div>
-        {footer ? <div className="mt-4 flex items-center gap-2">{footer}</div> : null}
-      </div>
-    </div>
+    <Drawer anchor={anchor} open={open} onClose={onClose} className={className}>
+      <Box sx={{ width: { xs: "100vw", sm: 420 }, p: 2.5, height: "100%", display: "flex", flexDirection: "column" }}>
+        <Stack direction="row" sx={{ mb: 2, justifyContent: "space-between", alignItems: "flex-start" }}>
+          <Stack spacing={0.5}>
+            {title ? <Typography variant="h6">{title}</Typography> : null}
+            {description ? (
+              <Typography variant="body2" color="text.secondary">
+                {description}
+              </Typography>
+            ) : null}
+          </Stack>
+          <IconButton aria-label="close" onClick={onClose}>
+            <Close fontSize="small" />
+          </IconButton>
+        </Stack>
+        <Box sx={{ flex: 1, overflow: "auto" }}>{children}</Box>
+        {footer ? <Box sx={{ pt: 2 }}>{footer}</Box> : null}
+      </Box>
+    </Drawer>
   );
 }

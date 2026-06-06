@@ -1,21 +1,32 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import { Search } from "lucide-react";
-import { Button } from "../../components/ui/button";
-import { Card } from "../../components/ui/card";
-import { Input } from "../../components/ui/input";
-import { AppBadge, AppDrawer, AppSelect, AppTable, AppTableCell, AppTableHead, AppTableHeaderCell, AppTableRow } from "../../components/design-system";
+import { Search } from "@mui/icons-material";
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  InputAdornment,
+  MenuItem,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { AppDrawer } from "../../components/design-system";
+import { DataTable, EmptyState, FilterBar, PageHeader } from "../../components/layout";
 import {
   fetchCompanyApplications,
   reviewCompanyApplicationApi,
   type CompanyApplication,
 } from "../../services/admin-api";
 
-function statusBadge(status: string) {
+type CompanyApplicationRow = CompanyApplication & Record<string, unknown>;
+
+function statusChipColor(status: string): "success" | "warning" | "error" | "default" {
   if (status === "APPROVED") return "success";
   if (status === "PENDING") return "warning";
-  return "danger";
+  return "error";
 }
 
 function openReviewForm(app: CompanyApplication) {
@@ -81,7 +92,7 @@ export function CompanyApplicationsPage() {
     },
   });
 
-  const applications = data?.items || [];
+  const applications = (data?.items || []) as CompanyApplicationRow[];
 
   function handleSelectApplication(app: CompanyApplication) {
     const form = openReviewForm(app);
@@ -127,117 +138,149 @@ export function CompanyApplicationsPage() {
     });
   }
 
+  if (isError) {
+    return <EmptyState title="Failed to load applications" description={(error as Error).message} />;
+  }
+
   return (
-    <div className="min-w-0 space-y-4 overflow-x-hidden">
-      <Card className="flex flex-wrap items-center gap-2 p-4">
-        <div className="relative w-72">
-          <Search className="pointer-events-none absolute inset-s-3 top-3 size-4 text-neutral-400" />
-          <Input className="ps-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search applications..." />
-        </div>
-        <AppSelect value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="">All</option>
-          <option value="PENDING">Pending</option>
-          <option value="APPROVED">Approved</option>
-          <option value="REJECTED">Rejected</option>
-        </AppSelect>
-      </Card>
+    <Stack spacing={3} sx={{ minWidth: 0, overflowX: "hidden" }}>
+      <PageHeader title="Company Applications" subtitle="Review and approve company registration requests." />
 
-      {isLoading ? <Card>Loading applications...</Card> : null}
-      {isError ? <Card>Failed: {(error as Error).message}</Card> : null}
-      {!isLoading && !applications.length ? <Card>No applications found.</Card> : null}
+      <FilterBar>
+        <TextField
+          size="small"
+          placeholder="Search applications..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          sx={{ minWidth: { xs: "100%", sm: 288 } }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search fontSize="small" />
+                </InputAdornment>
+              ),
+            },
+          }}
+        />
+        <TextField
+          select
+          label="Status"
+          size="small"
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          sx={{ minWidth: 160 }}
+        >
+          <MenuItem value="">All</MenuItem>
+          <MenuItem value="PENDING">Pending</MenuItem>
+          <MenuItem value="APPROVED">Approved</MenuItem>
+          <MenuItem value="REJECTED">Rejected</MenuItem>
+        </TextField>
+      </FilterBar>
 
-      {applications.length > 0 ? (
-        <AppTable>
-          <AppTableHead>
-            <tr>
-              <AppTableHeaderCell>Company</AppTableHeaderCell>
-              <AppTableHeaderCell>Applicant</AppTableHeaderCell>
-              <AppTableHeaderCell>Phone</AppTableHeaderCell>
-              <AppTableHeaderCell>City</AppTableHeaderCell>
-              <AppTableHeaderCell>Status</AppTableHeaderCell>
-              <AppTableHeaderCell>Actions</AppTableHeaderCell>
-            </tr>
-          </AppTableHead>
-          <tbody>
-            {applications.map((app) => (
-              <AppTableRow key={app.id}>
-                <AppTableCell className="font-medium">{app.companyName}</AppTableCell>
-                <AppTableCell>{app.applicantName}</AppTableCell>
-                <AppTableCell>{app.phone}</AppTableCell>
-                <AppTableCell>{app.city}</AppTableCell>
-                <AppTableCell>
-                  <AppBadge variant={statusBadge(app.status) as "success" | "warning" | "danger"}>{app.status}</AppBadge>
-                </AppTableCell>
-                <AppTableCell>
-                  <Button variant="ghost" onClick={() => handleSelectApplication(app)}>
-                    Review
-                  </Button>
-                </AppTableCell>
-              </AppTableRow>
-            ))}
-          </tbody>
-        </AppTable>
-      ) : null}
+      <DataTable<CompanyApplicationRow>
+        loading={isLoading}
+        emptyMessage="No applications found."
+        getRowKey={(row) => row.id}
+        columns={[
+          {
+            key: "companyName",
+            label: "Company",
+            render: (row) => (
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                {row.companyName}
+              </Typography>
+            ),
+          },
+          { key: "applicantName", label: "Applicant" },
+          { key: "phone", label: "Phone" },
+          { key: "city", label: "City" },
+          {
+            key: "status",
+            label: "Status",
+            render: (row) => <Chip label={row.status} color={statusChipColor(row.status)} size="small" />,
+          },
+          {
+            key: "id",
+            label: "Actions",
+            render: (row) => (
+              <Button size="small" onClick={() => handleSelectApplication(row)}>
+                Review
+              </Button>
+            ),
+          },
+        ]}
+        data={applications}
+      />
 
       <AppDrawer open={Boolean(selected)} onClose={() => setSelected(null)} title="Review Application">
         {selected ? (
-          <div className="space-y-3 text-sm">
-            <p><span className="font-medium">Company:</span> {selected.companyName}</p>
-            <p><span className="font-medium">Applicant:</span> {selected.applicantName}</p>
-            <p><span className="font-medium">Phone:</span> {selected.phone}</p>
-            <p><span className="font-medium">Description:</span> {selected.description || "-"}</p>
+          <Stack spacing={2}>
+            <Typography variant="body2">
+              <Box component="span" sx={{ fontWeight: 600 }}>Company:</Box> {selected.companyName}
+            </Typography>
+            <Typography variant="body2">
+              <Box component="span" sx={{ fontWeight: 600 }}>Applicant:</Box> {selected.applicantName}
+            </Typography>
+            <Typography variant="body2">
+              <Box component="span" sx={{ fontWeight: 600 }}>Phone:</Box> {selected.phone}
+            </Typography>
+            <Typography variant="body2">
+              <Box component="span" sx={{ fontWeight: 600 }}>Description:</Box> {selected.description || "-"}
+            </Typography>
 
-            <div>
-              <label className="mb-1 block font-medium">Product quota on approval</label>
-              <Input
-                type="number"
-                min={1}
-                step={1}
-                inputMode="numeric"
-                className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-auto [&::-webkit-outer-spin-button]:appearance-auto"
-                value={maxProducts}
-                onChange={(e) => setMaxProducts(e.target.value)}
-              />
-            </div>
+            <TextField
+              label="Product quota on approval"
+              type="number"
+              size="small"
+              fullWidth
+              slotProps={{ htmlInput: {  min: 1, step: 1  } }}
+              value={maxProducts}
+              onChange={(e) => setMaxProducts(e.target.value)}
+            />
 
-            <div>
-              <label className="mb-1 block font-medium">Company login email</label>
-              <Input
-                type="email"
-                autoComplete="off"
-                placeholder="company@example.com"
-                value={companyEmail}
-                onChange={(e) => setCompanyEmail(e.target.value)}
-              />
-            </div>
+            <TextField
+              label="Company login email"
+              type="email"
+              size="small"
+              fullWidth
+              autoComplete="off"
+              placeholder="company@example.com"
+              value={companyEmail}
+              onChange={(e) => setCompanyEmail(e.target.value)}
+            />
 
-            <div>
-              <label className="mb-1 block font-medium">Company login password</label>
-              <Input
-                type="password"
-                autoComplete="new-password"
-                placeholder="Min. 6 characters"
-                value={companyPassword}
-                onChange={(e) => setCompanyPassword(e.target.value)}
-              />
-            </div>
+            <TextField
+              label="Company login password"
+              type="password"
+              size="small"
+              fullWidth
+              autoComplete="new-password"
+              placeholder="Min. 6 characters"
+              value={companyPassword}
+              onChange={(e) => setCompanyPassword(e.target.value)}
+            />
 
-            <div>
-              <label className="mb-1 block font-medium">Admin note</label>
-              <Input value={adminNote} onChange={(e) => setAdminNote(e.target.value)} />
-            </div>
+            <TextField
+              label="Admin note"
+              size="small"
+              fullWidth
+              value={adminNote}
+              onChange={(e) => setAdminNote(e.target.value)}
+            />
 
-            {formError ? <p className="text-sm text-red-600">{formError}</p> : null}
+            {formError ? <Alert severity="error">{formError}</Alert> : null}
 
-            <div className="flex gap-2 pt-2">
+            <Stack direction="row" spacing={1} sx={{ pt: 1 }}>
               <Button
+                variant="contained"
                 disabled={selected.status !== "PENDING" || reviewMutation.isPending}
                 onClick={handleApprove}
               >
                 Approve & Create Login
               </Button>
               <Button
-                variant="outline"
+                variant="outlined"
                 disabled={selected.status !== "PENDING" || reviewMutation.isPending}
                 onClick={() => {
                   setFormError("");
@@ -246,13 +289,13 @@ export function CompanyApplicationsPage() {
               >
                 Reject
               </Button>
-            </div>
-            <p className="text-xs text-neutral-500">
+            </Stack>
+            <Typography variant="caption" color="text.secondary">
               Enter the email and password the company will use to sign in. Share these credentials with the applicant after approval.
-            </p>
-          </div>
+            </Typography>
+          </Stack>
         ) : null}
       </AppDrawer>
-    </div>
+    </Stack>
   );
 }

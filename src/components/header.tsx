@@ -1,71 +1,77 @@
-import { Bell, Menu } from "lucide-react";
+import { Menu, Notifications } from "@mui/icons-material";
+import {
+  AppBar,
+  Badge,
+  Box,
+  IconButton,
+  Menu as MuiMenu,
+  MenuItem,
+  Stack,
+  Toolbar,
+  Typography,
+  useTheme,
+} from "@mui/material";
 import { SearchBar } from "./search-bar";
 import { UserMenu } from "./user-menu";
 import { useGlobalSearch } from "../hooks/use-global-search";
-import { Button } from "./ui/button";
 import { useUiStore } from "../store/ui-store";
 import { Breadcrumbs } from "./breadcrumbs";
 import { useI18n } from "../hooks/use-i18n";
 import { useDropdown } from "../hooks/use-dropdown";
 
 export function Header() {
+  const theme = useTheme();
   const notifications = useDropdown();
   const userMenu = useDropdown();
   const { search, setSearch } = useGlobalSearch();
   const { sidebarOpen, setSidebarOpen } = useUiStore();
   const { t } = useI18n();
+  const menuAnchorHorizontal = theme.direction === "rtl" ? "left" : "right";
   const notificationItems = [
     t("header.notification.pendingProducts"),
     t("header.notification.newOrders"),
     t("header.notification.serverHealth"),
   ];
 
-  const openNotifications = () => {
-    userMenu.close();
-    notifications.toggle();
-  };
-
   return (
-    <header className="sticky top-0 z-20 border-b border-(--app-border) bg-(--app-header-bg)/95 px-3 py-3 backdrop-blur-xl sm:px-4 lg:px-6">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-1 items-center gap-3">
-          <Button variant="ghost" onClick={() => setSidebarOpen(!sidebarOpen)} className="h-11 w-11 p-0">
-            <Menu className="size-4" />
-          </Button>
-          <SearchBar value={search} onChange={setSearch} />
-        </div>
-        <div className="flex items-center gap-2">
-          <div ref={notifications.containerRef} className="relative">
-            <Button
-              variant="outline"
-              className="relative h-11 w-11 p-0"
-              onClick={openNotifications}
+    <AppBar position="sticky" color="inherit" sx={{ width: "100%" }}>
+      <Toolbar sx={{ flexDirection: "column", alignItems: "stretch", py: 1, gap: 0.75, minHeight: 56 }}>
+        <Stack direction="row" spacing={1.5} sx={{ width: "100%", alignItems: "center" }}>
+          <IconButton edge="start" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label="menu">
+            <Menu />
+          </IconButton>
+          <Box sx={{ flex: 1, maxWidth: 560 }}>
+            <SearchBar value={search} onChange={setSearch} />
+          </Box>
+          <Box ref={notifications.containerRef}>
+            <IconButton onClick={notifications.toggle} aria-label="notifications">
+              <Badge color="primary" variant="dot">
+                <Notifications />
+              </Badge>
+            </IconButton>
+            <MuiMenu
+              anchorEl={notifications.containerRef.current}
+              open={notifications.open}
+              onClose={notifications.close}
+              anchorOrigin={{ vertical: "bottom", horizontal: menuAnchorHorizontal }}
+              transformOrigin={{ vertical: "top", horizontal: menuAnchorHorizontal }}
             >
-              <Bell className="size-4" />
-              <span className="absolute inset-e-2 top-2 size-2 rounded-full bg-[#23673A]" />
-            </Button>
-            {notifications.open ? (
-              <div className="absolute inset-e-0 z-30 mt-2 w-80 rounded-[20px] border border-(--app-border) bg-(--app-surface) p-2 shadow-(--app-shadow-soft)">
-                <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wider text-(--app-text-secondary)">
+              <Box sx={{ px: 2, py: 1, minWidth: 280 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
                   {t("common.notifications")}
-                </p>
-                <div className="space-y-1">
-                  {notificationItems.map((notification) => (
-                    <div
-                      key={notification}
-                      className="rounded-[14px] px-3 py-2 text-sm text-(--app-text-primary) transition hover:bg-(--app-hover)"
-                    >
-                      {notification}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </div>
+                </Typography>
+              </Box>
+              {notificationItems.map((notification) => (
+                <MenuItem key={notification} onClick={notifications.close}>
+                  <Typography variant="body2">{notification}</Typography>
+                </MenuItem>
+              ))}
+            </MuiMenu>
+          </Box>
           <UserMenu dropdown={userMenu} onOpen={notifications.close} />
-        </div>
-      </div>
-      <Breadcrumbs />
-    </header>
+        </Stack>
+        <Breadcrumbs />
+      </Toolbar>
+    </AppBar>
   );
 }

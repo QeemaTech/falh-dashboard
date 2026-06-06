@@ -1,8 +1,16 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
-import { AppDrawer, AppSelect } from "../../components/design-system";
+import {
+  Button,
+  Checkbox,
+  FormControlLabel,
+  Grid,
+  MenuItem,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { AppDrawer } from "../../components/design-system";
 import {
   createAdminProductApi,
   fetchAdminCategories,
@@ -152,102 +160,77 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
     onError: (err: unknown) => setError(getApiErrorMessage(err, "Failed to save product")),
   });
 
-  const companyCategories = categories;
-
   return (
     <AppDrawer
       open={open}
       onClose={onClose}
       title={isEdit ? "Edit Product" : "Add Product"}
       footer={
-        <>
+        <Stack direction="row" spacing={1}>
           <Button
+            variant="contained"
             disabled={saveMutation.isPending || (!canAdd && scope === "company" && !isEdit && !saveAsDraft)}
             onClick={() => saveMutation.mutate()}
           >
             {saveMutation.isPending ? "Saving..." : isEdit ? "Save Changes" : "Create Product"}
           </Button>
-          <Button variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-        </>
+          <Button onClick={onClose}>Cancel</Button>
+        </Stack>
       }
     >
-      <div className="space-y-3 text-sm">
-        {error ? <p className="text-red-500">{error}</p> : null}
-        <div>
-          <label className="font-medium">Title (min 2 characters)</label>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} />
-        </div>
-        <div>
-          <label className="font-medium">Description (min 5 characters)</label>
-          <Input value={description} onChange={(e) => setDescription(e.target.value)} />
-        </div>
-        <div>
-          <label className="font-medium">Category</label>
-          <AppSelect value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-            <option value="">Select category</option>
-            {companyCategories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.nameAr || cat.nameEn || cat.id}
-              </option>
-            ))}
-          </AppSelect>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="font-medium">Quantity</label>
-            <Input type="number" min={0} value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} />
-          </div>
-          <div>
-            <label className="font-medium">Unit</label>
-            <Input value={unit} onChange={(e) => setUnit(e.target.value)} />
-          </div>
-        </div>
-        <div>
-          <label className="font-medium">Price (EGP)</label>
-          <Input type="number" min={0} value={price} onChange={(e) => setPrice(Number(e.target.value))} />
-        </div>
-        <div>
-          <label className="font-medium">City</label>
-          <Input value={city} onChange={(e) => setCity(e.target.value)} />
-        </div>
-        <div>
-          <label className="font-medium">Target</label>
-          <AppSelect value={target} onChange={(e) => setTarget(e.target.value as "LOCAL" | "EXPORT")}>
-            <option value="LOCAL">Local</option>
-            <option value="EXPORT">Export</option>
-          </AppSelect>
-        </div>
-        <div>
-          <label className="font-medium">Image URLs (comma-separated)</label>
-          <Input value={imagesText} onChange={(e) => setImagesText(e.target.value)} placeholder="/uploads/a.jpg, /uploads/b.jpg" />
-        </div>
+      <Stack spacing={2}>
+        {error ? (
+          <Typography variant="body2" color="error">
+            {error}
+          </Typography>
+        ) : null}
+        <TextField size="small" fullWidth label="Title (min 2 characters)" value={title} onChange={(e) => setTitle(e.target.value)} />
+        <TextField size="small" fullWidth label="Description (min 5 characters)" value={description} onChange={(e) => setDescription(e.target.value)} />
+        <TextField select size="small" fullWidth label="Category" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+          <MenuItem value="">Select category</MenuItem>
+          {categories.map((cat) => (
+            <MenuItem key={cat.id} value={cat.id}>
+              {cat.nameAr || cat.nameEn || cat.id}
+            </MenuItem>
+          ))}
+        </TextField>
+        <Grid container spacing={2}>
+          <Grid size={6}>
+            <TextField size="small" fullWidth type="number" label="Quantity" value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} slotProps={{ htmlInput: { min: 0 } }} />
+          </Grid>
+          <Grid size={6}>
+            <TextField size="small" fullWidth label="Unit" value={unit} onChange={(e) => setUnit(e.target.value)} />
+          </Grid>
+        </Grid>
+        <TextField size="small" fullWidth type="number" label="Price (EGP)" value={price} onChange={(e) => setPrice(Number(e.target.value))} slotProps={{ htmlInput: { min: 0 } }} />
+        <TextField size="small" fullWidth label="City" value={city} onChange={(e) => setCity(e.target.value)} />
+        <TextField select size="small" fullWidth label="Target" value={target} onChange={(e) => setTarget(e.target.value as "LOCAL" | "EXPORT")}>
+          <MenuItem value="LOCAL">Local</MenuItem>
+          <MenuItem value="EXPORT">Export</MenuItem>
+        </TextField>
+        <TextField size="small" fullWidth label="Image URLs (comma-separated)" value={imagesText} onChange={(e) => setImagesText(e.target.value)} placeholder="/uploads/a.jpg, /uploads/b.jpg" />
         {scope === "admin" && !isEdit ? (
-          <div>
-            <label className="font-medium">Owner Company (optional)</label>
-            <AppSelect value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
-              <option value="">Global / Marketplace (no company)</option>
-              {(companiesData?.items || []).map((company) => (
-                <option key={company.id} value={company.id}>
-                  {company.name}
-                </option>
-              ))}
-            </AppSelect>
-          </div>
+          <TextField select size="small" fullWidth label="Owner Company (optional)" value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
+            <MenuItem value="">Global / Marketplace (no company)</MenuItem>
+            {(companiesData?.items || []).map((company) => (
+              <MenuItem key={company.id} value={company.id}>
+                {company.name}
+              </MenuItem>
+            ))}
+          </TextField>
         ) : null}
         {scope === "admin" ? (
-          <label className="flex items-center gap-2">
-            <input type="checkbox" checked={publishActive} onChange={(e) => setPublishActive(e.target.checked)} />
-            Publish immediately (Approved / Active)
-          </label>
+          <FormControlLabel
+            control={<Checkbox checked={publishActive} onChange={(e) => setPublishActive(e.target.checked)} />}
+            label="Publish immediately (Approved / Active)"
+          />
         ) : (
-          <label className="flex items-center gap-2">
-            <input type="checkbox" checked={saveAsDraft} onChange={(e) => setSaveAsDraft(e.target.checked)} />
-            Save as draft (does not use quota)
-          </label>
+          <FormControlLabel
+            control={<Checkbox checked={saveAsDraft} onChange={(e) => setSaveAsDraft(e.target.checked)} />}
+            label="Save as draft (does not use quota)"
+          />
         )}
-      </div>
+      </Stack>
     </AppDrawer>
   );
 }

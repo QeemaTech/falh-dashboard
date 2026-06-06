@@ -1,9 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ImageUp, Loader2, Palette, Save } from "lucide-react";
-import { Card } from "../../components/ui/card";
-import { Button } from "../../components/ui/button";
+import { Image, Palette, Save } from "@mui/icons-material";
+import {
+  Box,
+  Button,
+  Checkbox,
+  CircularProgress,
+  FormControlLabel,
+  Grid,
+  Paper,
+  Stack,
+  ToggleButton,
+  ToggleButtonGroup,
+  Typography,
+} from "@mui/material";
 import { toast } from "../../components/ui/sonner";
+import { PageSection } from "../../components/layout";
 import {
   fetchAppearanceSettings,
   updateAppearanceSettingsApi,
@@ -31,6 +43,14 @@ const initialAppearance: AppearanceSettings = {
   colorMode: "system",
   darkModeEnabled: true,
   lightModeEnabled: true,
+};
+
+const themeAccentColors: Record<string, string> = {
+  emerald: "#23673A",
+  blue: "#1976d2",
+  amber: "#ed6c02",
+  violet: "#7b1fa2",
+  rose: "#e91e63",
 };
 
 export function AppearanceSettingsPage() {
@@ -77,156 +97,258 @@ export function AppearanceSettingsPage() {
     [files, form]
   );
 
-  const modePreviewClass =
-    form.colorMode === "dark" ? "bg-neutral-900 text-white" : form.colorMode === "light" ? "bg-white text-neutral-900" : "bg-neutral-100 text-neutral-900 dark:bg-neutral-900 dark:text-white";
-  const themeAccent =
-    form.dashboardTheme === "blue"
-      ? "bg-blue-600"
-      : form.dashboardTheme === "amber"
-        ? "bg-amber-500"
-        : form.dashboardTheme === "violet"
-          ? "bg-violet-600"
-          : form.dashboardTheme === "rose"
-            ? "bg-rose-600"
-            : "bg-emerald-700";
+  const previewBg =
+    form.colorMode === "dark" ? "grey.900" : form.colorMode === "light" ? "common.white" : "grey.100";
+  const previewColor =
+    form.colorMode === "dark" ? "common.white" : "grey.900";
+  const themeAccent = themeAccentColors[form.dashboardTheme] || themeAccentColors.emerald;
 
   const isBusy = saveMutation.isPending || uploadMutation.isPending;
 
   return (
-    <div className="space-y-4">
-      <Card className="flex items-center justify-between bg-linear-to-r from-[#23673A] to-[#2f8f52] text-white">
-        <div>
-          <h2 className="text-xl font-semibold">Appearance Management</h2>
-          <p className="text-sm text-white/90">Customize branding, login visuals, and dashboard look with live preview.</p>
-        </div>
-        <Palette className="size-10 opacity-80" />
-      </Card>
+    <Stack spacing={3}>
+      <Paper
+        sx={{
+          p: 2.5,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          background: "linear-gradient(90deg, #23673A 0%, #2f8f52 100%)",
+          color: "common.white",
+        }}
+      >
+        <Box>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            Appearance Management
+          </Typography>
+          <Typography variant="body2" sx={{ opacity: 0.9, mt: 0.5 }}>
+            Customize branding, login visuals, and dashboard look with live preview.
+          </Typography>
+        </Box>
+        <Palette sx={{ fontSize: 40, opacity: 0.8 }} />
+      </Paper>
 
-      <div className="grid gap-4 lg:grid-cols-12">
-        <Card className="space-y-3 lg:col-span-7">
-          <h3 className="font-semibold">Appearance Settings</h3>
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, lg: 7 }}>
+          <Paper sx={{ p: 2.5 }}>
+            <Stack spacing={3}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                Appearance Settings
+              </Typography>
 
-          <div>
-            <p className="mb-1 text-xs text-neutral-500">Dashboard Theme</p>
-            <div className="flex flex-wrap gap-2">
-              {themes.map((theme) => (
-                <button
-                  key={theme}
-                  type="button"
-                  onClick={() => setForm((prev) => ({ ...prev, dashboardTheme: theme }))}
-                  className={`rounded-lg border px-3 py-2 text-sm capitalize ${form.dashboardTheme === theme ? "border-[#23673A] bg-[#23673A]/10" : ""}`}
+              <PageSection title="Dashboard Theme">
+                <ToggleButtonGroup
+                  size="small"
+                  value={form.dashboardTheme}
+                  exclusive
+                  onChange={(_e, value) => {
+                    if (value) setForm((prev) => ({ ...prev, dashboardTheme: value }));
+                  }}
+                  sx={{ flexWrap: "wrap" }}
                 >
-                  {theme}
-                </button>
-              ))}
-            </div>
-          </div>
+                  {themes.map((theme) => (
+                    <ToggleButton key={theme} value={theme} sx={{ textTransform: "capitalize" }}>
+                      {theme}
+                    </ToggleButton>
+                  ))}
+                </ToggleButtonGroup>
+              </PageSection>
 
-          <div>
-            <p className="mb-1 text-xs text-neutral-500">Color Mode</p>
-            <div className="flex gap-2">
-              {(["light", "dark", "system"] as const).map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => setForm((prev) => ({ ...prev, colorMode: mode }))}
-                  className={`rounded-lg border px-3 py-2 text-sm capitalize ${form.colorMode === mode ? "border-[#23673A] bg-[#23673A]/10" : ""}`}
+              <PageSection title="Color Mode">
+                <ToggleButtonGroup
+                  size="small"
+                  value={form.colorMode}
+                  exclusive
+                  onChange={(_e, value) => {
+                    if (value) setForm((prev) => ({ ...prev, colorMode: value }));
+                  }}
                 >
-                  {mode}
-                </button>
-              ))}
-            </div>
-          </div>
+                  {(["light", "dark", "system"] as const).map((mode) => (
+                    <ToggleButton key={mode} value={mode} sx={{ textTransform: "capitalize" }}>
+                      {mode}
+                    </ToggleButton>
+                  ))}
+                </ToggleButtonGroup>
+              </PageSection>
 
-          <div className="flex flex-wrap gap-4">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={form.darkModeEnabled}
-                onChange={(e) => setForm((prev) => ({ ...prev, darkModeEnabled: e.target.checked }))}
-              />
-              Enable Dark Mode
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={form.lightModeEnabled}
-                onChange={(e) => setForm((prev) => ({ ...prev, lightModeEnabled: e.target.checked }))}
-              />
-              Enable Light Mode
-            </label>
-          </div>
+              <Stack direction="row" spacing={2} sx={{ flexWrap: "wrap" }}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={form.darkModeEnabled}
+                      onChange={(e) => setForm((prev) => ({ ...prev, darkModeEnabled: e.target.checked }))}
+                    />
+                  }
+                  label="Enable Dark Mode"
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={form.lightModeEnabled}
+                      onChange={(e) => setForm((prev) => ({ ...prev, lightModeEnabled: e.target.checked }))}
+                    />
+                  }
+                  label="Enable Light Mode"
+                />
+              </Stack>
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            {(
-              [
-                ["logo", "Change Logo"],
-                ["loginLogo", "Change Login Logo"],
-                ["loginBackground", "Change Login Background"],
-              ] as Array<[AssetKey, string]>
-            ).map(([key, label]) => (
-              <div key={key} className="space-y-2 rounded-xl border p-3">
-                <div className="flex h-24 items-center justify-center overflow-hidden rounded-lg bg-neutral-100 dark:bg-neutral-800">
-                  {previews[key] ? <img src={previews[key]} alt={label} className="h-full w-full object-cover" /> : <ImageUp className="size-5 text-neutral-400" />}
-                </div>
-                <label className="block">
-                  <span className="mb-1 block text-xs text-neutral-500">{label}</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="w-full text-xs"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      setFiles((prev) => ({ ...prev, [key]: file }));
-                    }}
-                  />
-                </label>
-              </div>
-            ))}
-          </div>
-        </Card>
+              <Grid container spacing={2}>
+                {(
+                  [
+                    ["logo", "Change Logo"],
+                    ["loginLogo", "Change Login Logo"],
+                    ["loginBackground", "Change Login Background"],
+                  ] as Array<[AssetKey, string]>
+                ).map(([key, label]) => (
+                  <Grid key={key} size={{ xs: 12, sm: 4 }}>
+                    <Paper variant="outlined" sx={{ p: 1.5 }}>
+                      <Stack spacing={1.5}>
+                        <Box
+                          sx={{
+                            height: 96,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            borderRadius: 1,
+                            bgcolor: "action.hover",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {previews[key] ? (
+                            <Box
+                              component="img"
+                              src={previews[key]}
+                              alt={label}
+                              sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+                            />
+                          ) : (
+                            <Image color="disabled" />
+                          )}
+                        </Box>
+                        <Typography variant="caption" color="text.secondary">
+                          {label}
+                        </Typography>
+                        <Button variant="outlined" component="label" size="small" fullWidth>
+                          Choose file
+                          <input
+                            type="file"
+                            accept="image/*"
+                            hidden
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              setFiles((prev) => ({ ...prev, [key]: file }));
+                            }}
+                          />
+                        </Button>
+                      </Stack>
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
+            </Stack>
+          </Paper>
+        </Grid>
 
-        <Card className="space-y-3 lg:col-span-5">
-          <h3 className="font-semibold">Live Preview</h3>
-          <div className={`overflow-hidden rounded-xl border ${modePreviewClass}`}>
-            <div className={`h-2 ${themeAccent}`} />
-            <div className="space-y-3 p-3">
-              <div className="flex items-center gap-2">
-                <div className="size-8 overflow-hidden rounded-md bg-neutral-200">
-                  {previews.logo ? <img src={previews.logo} alt="Logo preview" className="h-full w-full object-cover" /> : null}
-                </div>
-                <div className="text-sm font-medium">Dashboard Header</div>
-              </div>
-              <div
-                className="rounded-lg border bg-center bg-cover p-3"
-                style={{ backgroundImage: previews.loginBackground ? `url(${previews.loginBackground})` : undefined }}
+        <Grid size={{ xs: 12, lg: 5 }}>
+          <Paper sx={{ p: 2.5 }}>
+            <Stack spacing={2}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                Live Preview
+              </Typography>
+              <Paper
+                variant="outlined"
+                sx={{
+                  overflow: "hidden",
+                  bgcolor: previewBg,
+                  color: previewColor,
+                }}
               >
-                <div className="rounded-md bg-black/40 p-3 text-white">
-                  <div className="mb-2 h-8 w-24 overflow-hidden rounded bg-white/20">
-                    {previews.loginLogo ? <img src={previews.loginLogo} alt="Login logo preview" className="h-full w-full object-cover" /> : null}
-                  </div>
-                  <p className="text-xs">Login screen preview</p>
-                </div>
-              </div>
-              <p className="text-xs opacity-80">
-                Mode: {form.colorMode} | Theme: {form.dashboardTheme}
-              </p>
-            </div>
-          </div>
-        </Card>
-      </div>
+                <Box sx={{ height: 8, bgcolor: themeAccent }} />
+                <Stack spacing={2} sx={{ p: 2 }}>
+                  <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                    <Box
+                      sx={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 1,
+                        bgcolor: "grey.300",
+                        overflow: "hidden",
+                      }}
+                    >
+                      {previews.logo ? (
+                        <Box
+                          component="img"
+                          src={previews.logo}
+                          alt="Logo preview"
+                          sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+                      ) : null}
+                    </Box>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      Dashboard Header
+                    </Typography>
+                  </Stack>
+                  <Box
+                    sx={{
+                      borderRadius: 1,
+                      border: 1,
+                      borderColor: "divider",
+                      backgroundImage: previews.loginBackground ? `url(${previews.loginBackground})` : undefined,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                      p: 1.5,
+                    }}
+                  >
+                    <Box sx={{ borderRadius: 1, bgcolor: "rgba(0,0,0,0.4)", p: 1.5, color: "common.white" }}>
+                      <Box
+                        sx={{
+                          mb: 1,
+                          height: 32,
+                          width: 96,
+                          borderRadius: 1,
+                          bgcolor: "rgba(255,255,255,0.2)",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {previews.loginLogo ? (
+                          <Box
+                            component="img"
+                            src={previews.loginLogo}
+                            alt="Login logo preview"
+                            sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+                          />
+                        ) : null}
+                      </Box>
+                      <Typography variant="caption">Login screen preview</Typography>
+                    </Box>
+                  </Box>
+                  <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                    Mode: {form.colorMode} | Theme: {form.dashboardTheme}
+                  </Typography>
+                </Stack>
+              </Paper>
+            </Stack>
+          </Paper>
+        </Grid>
+      </Grid>
 
-      <Card className="flex justify-end gap-2">
-        <Button variant="outline" onClick={() => uploadMutation.mutate(files)} disabled={isBusy}>
-          {uploadMutation.isPending ? <Loader2 className="me-2 size-4 animate-spin" /> : null}
-          Upload Assets
-        </Button>
-        <Button onClick={() => saveMutation.mutate(form)} disabled={isBusy}>
-          {saveMutation.isPending ? <Loader2 className="me-2 size-4 animate-spin" /> : <Save className="me-2 size-4" />}
-          Save Appearance
-        </Button>
-      </Card>
-    </div>
+      <Paper sx={{ p: 2 }}>
+        <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
+          <Button variant="outlined" onClick={() => uploadMutation.mutate(files)} disabled={isBusy}>
+            {uploadMutation.isPending ? <CircularProgress size={18} sx={{ mr: 1 }} /> : null}
+            Upload Assets
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => saveMutation.mutate(form)}
+            disabled={isBusy}
+            startIcon={saveMutation.isPending ? <CircularProgress size={16} color="inherit" /> : <Save />}
+          >
+            Save Appearance
+          </Button>
+        </Stack>
+      </Paper>
+    </Stack>
   );
 }
