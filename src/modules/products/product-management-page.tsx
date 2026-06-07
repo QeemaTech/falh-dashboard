@@ -5,6 +5,7 @@ import {
   Box,
   Button,
   Checkbox,
+  Chip,
   CircularProgress,
   IconButton,
   InputAdornment,
@@ -17,8 +18,16 @@ import {
 import { utils as XLSXUtils, writeFile as XLSXWriteFile } from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { AppBadge, AppDrawer, AppTable, AppTableCell, AppTableHead, AppTableHeaderCell, AppTableRow } from "../../components/design-system";
+import {
+  AppTable,
+  AppTableCell,
+  AppTableHead,
+  AppTableHeaderCell,
+  AppTableRow,
+  AppDrawer,
+} from "../../components/design-system";
 import { EmptyState, FilterBar, PageHeader } from "../../components/layout";
+import { useI18n } from "../../hooks/use-i18n";
 import {
   bulkReviewProductsApi,
   deleteProductApi,
@@ -33,19 +42,31 @@ type Props = {
   pendingOnly?: boolean;
 };
 
-function badgeClass(status: string) {
+type ProductStatus = AdminProduct["status"];
+
+function statusChipColor(status: string): "success" | "warning" | "error" | "default" {
   if (status === "ACTIVE") return "success";
   if (status === "PENDING") return "warning";
-  if (status === "REJECTED") return "danger";
-  if (status === "DRAFT") return "neutral";
-  return "neutral";
+  if (status === "REJECTED") return "error";
+  return "default";
 }
 
 function canModerate(status: string) {
   return status === "PENDING";
 }
 
+function categoryLabel(
+  product: AdminProduct,
+  language: "ar" | "en"
+) {
+  const cat = product.category;
+  if (!cat) return "-";
+  return language === "ar" ? cat.nameAr || cat.nameEn || "-" : cat.nameEn || cat.nameAr || "-";
+}
+
 export function ProductManagementPage({ pendingOnly = false }: Props) {
+  const { t, language } = useI18n();
+  const locale = language === "ar" ? "ar-EG" : "en-US";
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState(pendingOnly ? "PENDING" : "");
@@ -57,6 +78,9 @@ export function ProductManagementPage({ pendingOnly = false }: Props) {
   const [rejectNote, setRejectNote] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const limit = 20;
+
+  const statusLabel = (value: ProductStatus) =>
+    t(`products.status.${value}` as "products.status.PENDING");
 
   const { data, isLoading, isError, error, isFetching } = useQuery({
     queryKey: ["admin-products", search, status, page],
@@ -107,17 +131,17 @@ export function ProductManagementPage({ pendingOnly = false }: Props) {
 
   const exportExcel = () => {
     const rows = (selectedProducts.length ? selectedProducts : products).map((product) => ({
-      Title: product.title,
-      Category: product.category?.nameAr || product.category?.nameEn || "-",
-      Owner: product.company?.name || product.user?.name || "Global",
-      Status: product.status,
-      Price: product.price ?? "-",
-      Location: product.city || "-",
-      "Created Date": new Date(product.createdAt).toLocaleString(),
+      [t("products.col.title")]: product.title,
+      [t("products.col.category")]: categoryLabel(product, language),
+      [t("products.col.owner")]: product.company?.name || product.user?.name || t("products.globalOwner"),
+      [t("products.col.status")]: statusLabel(product.status),
+      [t("products.col.price")]: product.price ?? "-",
+      [t("products.col.location")]: product.city || "-",
+      [t("products.col.created")]: new Date(product.createdAt).toLocaleString(locale),
     }));
     const ws = XLSXUtils.json_to_sheet(rows);
     const wb = XLSXUtils.book_new();
-    XLSXUtils.book_append_sheet(wb, ws, "Products");
+    XLSXUtils.book_append_sheet(wb, ws, t("products.title"));
     XLSXWriteFile(wb, "products.xlsx");
   };
 
@@ -125,15 +149,23 @@ export function ProductManagementPage({ pendingOnly = false }: Props) {
     const pdf = new jsPDF();
     const rows = (selectedProducts.length ? selectedProducts : products).map((product) => [
       product.title,
-      product.category?.nameAr || product.category?.nameEn || "-",
-      product.company?.name || product.user?.name || "Global",
-      product.status,
+      categoryLabel(product, language),
+      product.company?.name || product.user?.name || t("products.globalOwner"),
+      statusLabel(product.status),
       product.price ?? "-",
       product.city || "-",
-      new Date(product.createdAt).toLocaleDateString(),
+      new Date(product.createdAt).toLocaleDateString(locale),
     ]);
     autoTable(pdf, {
-      head: [["Title", "Category", "Owner", "Status", "Price", "Location", "Created Date"]],
+      head: [[
+        t("products.col.title"),
+        t("products.col.category"),
+        t("products.col.owner"),
+        t("products.col.status"),
+        t("products.col.price"),
+        t("products.col.location"),
+        t("products.col.created"),
+      ]],
       body: rows,
       styles: { fontSize: 8 },
     });
@@ -162,63 +194,132 @@ export function ProductManagementPage({ pendingOnly = false }: Props) {
   return (
     <Stack spacing={3}>
       <PageHeader
-        title={pendingOnly ? "Pending Products" : "Products"}
-        subtitle="Manage catalog items, moderation, and exports"
+        title={pendingOnly ? t("products.pendingTitle") : t("products.title")}
+        subtitle={pendingOnly ? t("products.pendingSubtitle") : t("products.subtitle")}
         action={
-          <Button variant="contained" startIcon={<Add />} onClick={() => { setEditProduct(null); setFormOpen(true); }}>
-            Add Product
-          </Button>
+          !pendingOnly ? (
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={() => {
+                setEditProduct(null);
+                setFormOpen(true);
+              }}
+            >
+              {t("products.add")}
+            </Button>
+          ) : undefined
         }
       />
 
       <FilterBar>
         <TextField
           size="small"
-          placeholder="Search products..."
+          placeholder={t("products.search")}
           value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
           sx={{ minWidth: { xs: "100%", sm: 260 } }}
-          slotProps={{ input: { startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment> } }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search fontSize="small" />
+                </InputAdornment>
+              ),
+            },
+          }}
         />
         <TextField
           select
-          label="Status"
+          label={t("products.filterStatus")}
           size="small"
           value={status}
-          onChange={(e) => { setStatus(e.target.value); setPage(1); }}
+          onChange={(e) => {
+            setStatus(e.target.value);
+            setPage(1);
+          }}
           sx={{ minWidth: 180 }}
-          slotProps={{ input: { startAdornment: <InputAdornment position="start"><Tune fontSize="small" /></InputAdornment> } }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Tune fontSize="small" />
+                </InputAdornment>
+              ),
+            },
+          }}
         >
-          <MenuItem value="">All Statuses</MenuItem>
-          <MenuItem value="DRAFT">Draft</MenuItem>
-          <MenuItem value="PENDING">Pending</MenuItem>
-          <MenuItem value="ACTIVE">Approved</MenuItem>
-          <MenuItem value="REJECTED">Rejected</MenuItem>
-          <MenuItem value="SOLD">Sold</MenuItem>
-          <MenuItem value="EXPIRED">Expired</MenuItem>
+          <MenuItem value="">{t("products.allStatuses")}</MenuItem>
+          <MenuItem value="DRAFT">{t("products.status.DRAFT")}</MenuItem>
+          <MenuItem value="PENDING">{t("products.status.PENDING")}</MenuItem>
+          <MenuItem value="ACTIVE">{t("products.status.ACTIVE")}</MenuItem>
+          <MenuItem value="REJECTED">{t("products.status.REJECTED")}</MenuItem>
+          <MenuItem value="SOLD">{t("products.status.SOLD")}</MenuItem>
+          <MenuItem value="EXPIRED">{t("products.status.EXPIRED")}</MenuItem>
         </TextField>
-        <Stack direction="row" spacing={1} sx={{ ml: { sm: "auto" }, flexWrap: "wrap" }}>
-          <Button variant="outlined" startIcon={<Download />} onClick={exportExcel}>Export Excel</Button>
-          <Button variant="outlined" startIcon={<Download />} onClick={exportPdf}>Export PDF</Button>
+        <Stack direction="row" spacing={1} sx={{ marginInlineStart: { sm: "auto" }, flexWrap: "wrap" }}>
+          <Button variant="outlined" startIcon={<Download />} onClick={exportExcel}>
+            {t("products.exportExcel")}
+          </Button>
+          <Button variant="outlined" startIcon={<Download />} onClick={exportPdf}>
+            {t("products.exportPdf")}
+          </Button>
         </Stack>
       </FilterBar>
 
       <Paper sx={{ p: 2 }}>
         <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", alignItems: "center" }}>
-          <Button variant="outlined" size="small" onClick={() => runBulk("approve")} disabled={!selected.length || bulkMutation.isPending}>Bulk Approve</Button>
-          <Button variant="outlined" size="small" onClick={() => runBulk("reject")} disabled={!selected.length || bulkMutation.isPending}>Bulk Reject</Button>
-          <Button variant="outlined" size="small" color="error" onClick={() => runBulk("delete")} disabled={!selected.length || deleteMutation.isPending}>Bulk Delete</Button>
-          <TextField size="small" placeholder="Reject note (bulk)" value={rejectNote} onChange={(e) => setRejectNote(e.target.value)} sx={{ minWidth: 200 }} />
-          <Typography variant="caption" color="text.secondary">{selected.length} selected</Typography>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => runBulk("approve")}
+            disabled={!selected.length || bulkMutation.isPending}
+          >
+            {t("products.bulkApprove")}
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => runBulk("reject")}
+            disabled={!selected.length || bulkMutation.isPending}
+          >
+            {t("products.bulkReject")}
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            color="error"
+            onClick={() => runBulk("delete")}
+            disabled={!selected.length || deleteMutation.isPending}
+          >
+            {t("products.bulkDelete")}
+          </Button>
+          <TextField
+            size="small"
+            placeholder={t("products.rejectNote")}
+            value={rejectNote}
+            onChange={(e) => setRejectNote(e.target.value)}
+            sx={{ minWidth: 200 }}
+          />
+          <Typography variant="caption" color="text.secondary">
+            {selected.length} {t("products.selectedCount")}
+          </Typography>
         </Stack>
       </Paper>
 
       {isLoading ? (
-        <Stack sx={{ py: 4, alignItems: "center" }}><CircularProgress size={28} /></Stack>
+        <Stack sx={{ py: 4, alignItems: "center" }}>
+          <CircularProgress size={28} />
+        </Stack>
       ) : null}
-      {isError ? <EmptyState title="Failed to load products" description={(error as Error).message} /> : null}
+      {isError ? (
+        <EmptyState title={t("products.loadFailed")} description={(error as Error).message} />
+      ) : null}
       {!isLoading && !isError && !products.length ? (
-        <EmptyState title="No products found" description="Try adjusting your search or filters." />
+        <EmptyState title={t("products.empty")} description={t("products.emptyHint")} />
       ) : null}
 
       {!isLoading && !isError && products.length > 0 ? (
@@ -233,48 +334,99 @@ export function ProductManagementPage({ pendingOnly = false }: Props) {
                     onChange={(e) => setSelected(e.target.checked ? products.map((p) => p.id) : [])}
                   />
                 </AppTableHeaderCell>
-                <AppTableHeaderCell>Images</AppTableHeaderCell>
-                <AppTableHeaderCell>Title</AppTableHeaderCell>
-                <AppTableHeaderCell>Category</AppTableHeaderCell>
-                <AppTableHeaderCell>Owner</AppTableHeaderCell>
-                <AppTableHeaderCell>Status</AppTableHeaderCell>
-                <AppTableHeaderCell>Price</AppTableHeaderCell>
-                <AppTableHeaderCell>Location</AppTableHeaderCell>
-                <AppTableHeaderCell>Created Date</AppTableHeaderCell>
-                <AppTableHeaderCell>Actions</AppTableHeaderCell>
+                <AppTableHeaderCell>{t("products.col.images")}</AppTableHeaderCell>
+                <AppTableHeaderCell>{t("products.col.title")}</AppTableHeaderCell>
+                <AppTableHeaderCell>{t("products.col.category")}</AppTableHeaderCell>
+                <AppTableHeaderCell>{t("products.col.owner")}</AppTableHeaderCell>
+                <AppTableHeaderCell>{t("products.col.status")}</AppTableHeaderCell>
+                <AppTableHeaderCell>{t("products.col.price")}</AppTableHeaderCell>
+                <AppTableHeaderCell>{t("products.col.location")}</AppTableHeaderCell>
+                <AppTableHeaderCell>{t("products.col.created")}</AppTableHeaderCell>
+                <AppTableHeaderCell>{t("products.col.actions")}</AppTableHeaderCell>
               </tr>
             </AppTableHead>
             <tbody>
               {products.map((product) => (
                 <AppTableRow key={product.id}>
                   <AppTableCell>
-                    <Checkbox size="small" checked={selected.includes(product.id)} onChange={() => toggleSelect(product.id)} />
+                    <Checkbox
+                      size="small"
+                      checked={selected.includes(product.id)}
+                      onChange={() => toggleSelect(product.id)}
+                    />
                   </AppTableCell>
                   <AppTableCell>
                     {product.images?.[0]?.path ? (
-                      <Box component="img" src={resolveAssetUrl(product.images[0].path)} alt={product.title} sx={{ height: 40, width: 40, borderRadius: 1, objectFit: "cover" }} />
+                      <Box
+                        component="img"
+                        src={resolveAssetUrl(product.images[0].path)}
+                        alt={product.title}
+                        sx={{ height: 40, width: 40, borderRadius: 1, objectFit: "cover" }}
+                      />
                     ) : (
                       <Box sx={{ height: 40, width: 40, borderRadius: 1, bgcolor: "action.hover" }} />
                     )}
                   </AppTableCell>
                   <AppTableCell className="font-medium">{product.title}</AppTableCell>
-                  <AppTableCell>{product.category?.nameAr || product.category?.nameEn || "-"}</AppTableCell>
-                  <AppTableCell>{product.company?.name || product.user?.name || "Global"}</AppTableCell>
+                  <AppTableCell>{categoryLabel(product, language)}</AppTableCell>
                   <AppTableCell>
-                    <AppBadge variant={badgeClass(product.status) as "success" | "warning" | "danger" | "neutral"}>
-                      {product.status}
-                    </AppBadge>
+                    {product.company?.name || product.user?.name || t("products.globalOwner")}
                   </AppTableCell>
-                  <AppTableCell>{product.price ? `EGP ${product.price}` : "-"}</AppTableCell>
-                  <AppTableCell>{product.city || "-"}</AppTableCell>
-                  <AppTableCell>{new Date(product.createdAt).toLocaleDateString()}</AppTableCell>
                   <AppTableCell>
-                    <Stack direction="row" spacing={0.5}>
-                      <IconButton size="small" onClick={() => setDrawerProduct(product)} title="View"><Visibility fontSize="small" /></IconButton>
-                      <IconButton size="small" onClick={() => { setEditProduct(product); setFormOpen(true); }} title="Edit"><Edit fontSize="small" /></IconButton>
-                      <Button size="small" disabled={!canModerate(product.status)} onClick={() => approveMutation.mutate(product.id)}>Approve</Button>
-                      <Button size="small" disabled={!canModerate(product.status)} onClick={() => rejectMutation.mutate({ id: product.id, adminNote: rejectNote })}>Reject</Button>
-                      <IconButton size="small" color="error" onClick={() => setConfirmDeleteId(product.id)}><Delete fontSize="small" /></IconButton>
+                    <Chip
+                      size="small"
+                      label={statusLabel(product.status)}
+                      color={statusChipColor(product.status)}
+                      variant="outlined"
+                    />
+                  </AppTableCell>
+                  <AppTableCell>
+                    {product.price ? `${t("market.currency")} ${product.price}` : "-"}
+                  </AppTableCell>
+                  <AppTableCell>{product.city || "-"}</AppTableCell>
+                  <AppTableCell>{new Date(product.createdAt).toLocaleDateString(locale)}</AppTableCell>
+                  <AppTableCell>
+                    <Stack direction="row" spacing={0.5} sx={{ flexWrap: "wrap", gap: 0.5 }}>
+                      <IconButton
+                        size="small"
+                        onClick={() => setDrawerProduct(product)}
+                        title={t("products.view")}
+                      >
+                        <Visibility fontSize="small" />
+                      </IconButton>
+                      {!pendingOnly ? (
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            setEditProduct(product);
+                            setFormOpen(true);
+                          }}
+                          title={t("products.edit")}
+                        >
+                          <Edit fontSize="small" />
+                        </IconButton>
+                      ) : null}
+                      <Button
+                        size="small"
+                        color="success"
+                        disabled={!canModerate(product.status)}
+                        onClick={() => approveMutation.mutate(product.id)}
+                      >
+                        {t("products.approve")}
+                      </Button>
+                      <Button
+                        size="small"
+                        color="error"
+                        disabled={!canModerate(product.status)}
+                        onClick={() => rejectMutation.mutate({ id: product.id, adminNote: rejectNote })}
+                      >
+                        {t("products.reject")}
+                      </Button>
+                      {!pendingOnly ? (
+                        <IconButton size="small" color="error" onClick={() => setConfirmDeleteId(product.id)}>
+                          <Delete fontSize="small" />
+                        </IconButton>
+                      ) : null}
                     </Stack>
                   </AppTableCell>
                 </AppTableRow>
@@ -284,11 +436,26 @@ export function ProductManagementPage({ pendingOnly = false }: Props) {
 
           <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
             <Typography variant="body2" color="text.secondary">
-              Page {page} of {totalPages} {isFetching ? "(refreshing...)" : ""}
+              {t("products.page")} {page} {t("products.of")} {totalPages}{" "}
+              {isFetching ? `(${t("products.refreshing")})` : ""}
             </Typography>
             <Stack direction="row" spacing={1}>
-              <Button variant="outlined" size="small" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>Previous</Button>
-              <Button variant="outlined" size="small" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>Next</Button>
+              <Button
+                variant="outlined"
+                size="small"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                {t("products.previous")}
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                disabled={page >= totalPages}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                {t("products.next")}
+              </Button>
             </Stack>
           </Stack>
         </>
@@ -297,13 +464,31 @@ export function ProductManagementPage({ pendingOnly = false }: Props) {
       <AppDrawer
         open={Boolean(drawerProduct)}
         onClose={() => setDrawerProduct(null)}
-        title="Product Details"
+        title={t("products.detailsTitle")}
         footer={
           drawerProduct ? (
             <Stack direction="row" spacing={1}>
-              <Button variant="contained" disabled={!canModerate(drawerProduct.status)} onClick={() => { approveMutation.mutate(drawerProduct.id); setDrawerProduct(null); }}>Approve</Button>
-              <Button variant="outlined" disabled={!canModerate(drawerProduct.status)} onClick={() => { rejectMutation.mutate({ id: drawerProduct.id, adminNote: rejectNote }); setDrawerProduct(null); }}>Reject</Button>
-              <Button onClick={() => setDrawerProduct(null)}>Close</Button>
+              <Button
+                variant="contained"
+                disabled={!canModerate(drawerProduct.status)}
+                onClick={() => {
+                  approveMutation.mutate(drawerProduct.id);
+                  setDrawerProduct(null);
+                }}
+              >
+                {t("products.approve")}
+              </Button>
+              <Button
+                variant="outlined"
+                disabled={!canModerate(drawerProduct.status)}
+                onClick={() => {
+                  rejectMutation.mutate({ id: drawerProduct.id, adminNote: rejectNote });
+                  setDrawerProduct(null);
+                }}
+              >
+                {t("products.reject")}
+              </Button>
+              <Button onClick={() => setDrawerProduct(null)}>{t("products.close")}</Button>
             </Stack>
           ) : null
         }
@@ -313,18 +498,64 @@ export function ProductManagementPage({ pendingOnly = false }: Props) {
             {drawerProduct.images?.length ? (
               <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
                 {drawerProduct.images.map((img) => (
-                  <Box key={img.id} component="img" src={resolveAssetUrl(img.path)} alt="" sx={{ height: 80, width: 80, borderRadius: 1, objectFit: "cover" }} />
+                  <Box
+                    key={img.id}
+                    component="img"
+                    src={resolveAssetUrl(img.path)}
+                    alt=""
+                    sx={{ height: 80, width: 80, borderRadius: 1, objectFit: "cover" }}
+                  />
                 ))}
               </Stack>
             ) : null}
-            <Typography variant="body2"><strong>Title:</strong> {drawerProduct.title}</Typography>
-            <Typography variant="body2"><strong>Category:</strong> {drawerProduct.category?.nameAr || drawerProduct.category?.nameEn || "-"}</Typography>
-            <Typography variant="body2"><strong>Owner:</strong> {drawerProduct.company?.name || drawerProduct.user?.name || "Global"}</Typography>
-            <Typography variant="body2"><strong>Status:</strong> {drawerProduct.status}</Typography>
-            <Typography variant="body2"><strong>Price:</strong> {drawerProduct.price ? `EGP ${drawerProduct.price}` : "-"}</Typography>
-            <Typography variant="body2"><strong>Location:</strong> {drawerProduct.city || "-"}</Typography>
-            <Typography variant="body2"><strong>Created:</strong> {new Date(drawerProduct.createdAt).toLocaleString()}</Typography>
-            <Typography variant="body2"><strong>Description:</strong> {drawerProduct.description || "-"}</Typography>
+            <Typography variant="body2">
+              <Box component="span" sx={{ fontWeight: 600 }}>
+                {t("products.field.title")}:
+              </Box>{" "}
+              {drawerProduct.title}
+            </Typography>
+            <Typography variant="body2">
+              <Box component="span" sx={{ fontWeight: 600 }}>
+                {t("products.field.category")}:
+              </Box>{" "}
+              {categoryLabel(drawerProduct, language)}
+            </Typography>
+            <Typography variant="body2">
+              <Box component="span" sx={{ fontWeight: 600 }}>
+                {t("products.field.owner")}:
+              </Box>{" "}
+              {drawerProduct.company?.name || drawerProduct.user?.name || t("products.globalOwner")}
+            </Typography>
+            <Typography variant="body2">
+              <Box component="span" sx={{ fontWeight: 600 }}>
+                {t("products.field.status")}:
+              </Box>{" "}
+              {statusLabel(drawerProduct.status)}
+            </Typography>
+            <Typography variant="body2">
+              <Box component="span" sx={{ fontWeight: 600 }}>
+                {t("products.field.price")}:
+              </Box>{" "}
+              {drawerProduct.price ? `${t("market.currency")} ${drawerProduct.price}` : "-"}
+            </Typography>
+            <Typography variant="body2">
+              <Box component="span" sx={{ fontWeight: 600 }}>
+                {t("products.field.location")}:
+              </Box>{" "}
+              {drawerProduct.city || "-"}
+            </Typography>
+            <Typography variant="body2">
+              <Box component="span" sx={{ fontWeight: 600 }}>
+                {t("products.field.created")}:
+              </Box>{" "}
+              {new Date(drawerProduct.createdAt).toLocaleString(locale)}
+            </Typography>
+            <Typography variant="body2">
+              <Box component="span" sx={{ fontWeight: 600 }}>
+                {t("products.field.description")}:
+              </Box>{" "}
+              {drawerProduct.description || "-"}
+            </Typography>
           </Stack>
         ) : null}
       </AppDrawer>
@@ -332,24 +563,35 @@ export function ProductManagementPage({ pendingOnly = false }: Props) {
       <AppDrawer
         open={Boolean(confirmDeleteId)}
         onClose={() => setConfirmDeleteId(null)}
-        title="Confirm Delete"
+        title={t("products.confirmDelete")}
         footer={
           <Stack direction="row" spacing={1}>
-            <Button variant="contained" color="error" onClick={() => confirmDeleteId && deleteMutation.mutate(confirmDeleteId)}>Delete</Button>
-            <Button onClick={() => setConfirmDeleteId(null)}>Cancel</Button>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={() => confirmDeleteId && deleteMutation.mutate(confirmDeleteId)}
+            >
+              {t("products.delete")}
+            </Button>
+            <Button onClick={() => setConfirmDeleteId(null)}>{t("products.cancel")}</Button>
           </Stack>
         }
       >
-        <Typography variant="body2">This permanently removes the product from all lists.</Typography>
+        <Typography variant="body2">{t("products.confirmDeleteMsg")}</Typography>
       </AppDrawer>
 
-      <ProductFormDrawer
-        open={formOpen}
-        onClose={() => { setFormOpen(false); setEditProduct(null); }}
-        onSuccess={invalidate}
-        scope="admin"
-        product={editProduct}
-      />
+      {!pendingOnly ? (
+        <ProductFormDrawer
+          open={formOpen}
+          onClose={() => {
+            setFormOpen(false);
+            setEditProduct(null);
+          }}
+          onSuccess={invalidate}
+          scope="admin"
+          product={editProduct}
+        />
+      ) : null}
     </Stack>
   );
 }

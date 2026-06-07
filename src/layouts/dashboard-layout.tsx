@@ -7,7 +7,6 @@ import { useUiStore } from "../store/ui-store";
 export function DashboardLayout() {
   const { direction, sidebarOpen } = useUiStore();
   const drawerWidth = sidebarOpen ? SIDEBAR_WIDTH_OPEN : SIDEBAR_WIDTH_COLLAPSED;
-  const isRtl = direction === "rtl";
 
   return (
     <Box dir={direction} sx={{ display: "flex", minHeight: "100vh", bgcolor: "background.default" }}>
@@ -17,8 +16,7 @@ export function DashboardLayout() {
         sx={{
           flex: 1,
           minWidth: 0,
-          ml: { lg: isRtl ? 0 : `${drawerWidth}px` },
-          mr: { lg: isRtl ? `${drawerWidth}px` : 0 },
+          marginInlineStart: { lg: `${drawerWidth}px` },
           display: "flex",
           flexDirection: "column",
           transition: (theme) =>

@@ -3,20 +3,21 @@ import {
   AdminPanelSettings,
   Campaign,
   Category,
+  CorporateFare,
   Dashboard,
+  HowToReg,
   Inventory2,
   Notifications,
+  PendingActions,
   People,
   Settings,
   ShoppingCart,
   ShowChart,
   SmartToy,
-  Business,
   WbSunny,
 } from "@mui/icons-material";
 import {
   Box,
-  Divider,
   Drawer,
   List,
   ListItemButton,
@@ -46,11 +47,10 @@ const sections: Array<{ titleKey: string; items: NavItem[] }> = [
     titleKey: "nav.section.management",
     items: [
       { to: "/users", labelKey: "nav.users", icon: People },
-      { to: "/companies", labelKey: "nav.companies", icon: Business },
-      { to: "/join-requests", labelKey: "nav.joinRequests", icon: Business },
-      { to: "/company-applications", labelKey: "nav.companyApplications", icon: Business },
+      { to: "/companies", labelKey: "nav.companies", icon: CorporateFare },
+      { to: "/join-requests", labelKey: "nav.joinRequests", icon: HowToReg },
       { to: "/products", labelKey: "nav.products", icon: Inventory2 },
-      { to: "/pending-products", labelKey: "nav.pendingProducts", icon: Inventory2 },
+      { to: "/pending-products", labelKey: "nav.pendingProducts", icon: PendingActions },
       { to: "/categories", labelKey: "nav.categories", icon: Category },
       { to: "/orders", labelKey: "nav.orders", icon: ShoppingCart },
     ],
@@ -80,35 +80,39 @@ const sections: Array<{ titleKey: string; items: NavItem[] }> = [
   },
 ];
 
+const sidebarScrollSx = {
+  flex: 1,
+  minHeight: 0,
+  overflowY: "auto",
+  overflowX: "hidden",
+  scrollbarWidth: "none",
+  msOverflowStyle: "none",
+  "&::-webkit-scrollbar": { display: "none" },
+} as const;
+
 function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const { sidebarOpen } = useUiStore();
   const { t } = useI18n();
   const location = useLocation();
 
   return (
-    <Stack spacing={1.5} sx={{ px: 1, py: 1 }}>
-      <Stack
-        direction="row"
-        spacing={sidebarOpen ? 1.5 : 0}
-        sx={{
-          mx: 0.5,
-          p: 1.5,
-          borderRadius: 3,
-          bgcolor: "action.hover",
-          alignItems: "center",
-          justifyContent: sidebarOpen ? "flex-start" : "center",
-        }}
-      >
-        <AppLogo size={sidebarOpen ? 36 : 32} showLabel={sidebarOpen} />
-      </Stack>
-
+    <Stack spacing={0.75} sx={{ px: 0.75, py: 0.75 }}>
       {sections.map((section) => (
         <Box key={section.titleKey}>
           {sidebarOpen ? (
             <Typography
               variant="caption"
               color="text.secondary"
-              sx={{ px: 1.5, py: 0.5, display: "block", fontWeight: 700, letterSpacing: 1.2 }}
+              sx={{
+                px: 1,
+                pt: 0.75,
+                pb: 0.25,
+                display: "block",
+                fontWeight: 700,
+                fontSize: "0.65rem",
+                letterSpacing: 0.8,
+                textTransform: "uppercase",
+              }}
             >
               {t(section.titleKey)}
             </Typography>
@@ -125,17 +129,37 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                   onClick={onNavigate}
                   selected={active}
                   sx={{
-                    mb: 0.5,
-                    borderRadius: 2,
+                    mb: 0.25,
+                    borderRadius: 1.5,
                     justifyContent: sidebarOpen ? "initial" : "center",
-                    px: sidebarOpen ? 1.5 : 1,
-                    minHeight: 44,
+                    px: sidebarOpen ? 1.25 : 0.75,
+                    py: 0.5,
+                    minHeight: 36,
+                    "&.Mui-selected": {
+                      bgcolor: "primary.main",
+                      color: "primary.contrastText",
+                      "& .MuiListItemIcon-root": { color: "inherit" },
+                      "&:hover": { bgcolor: "primary.dark" },
+                    },
                   }}
                 >
-                  <ListItemIcon sx={{ minWidth: sidebarOpen ? 36 : 0, justifyContent: "center" }}>
-                    <Icon fontSize="small" />
+                  <ListItemIcon
+                    sx={{
+                      minWidth: sidebarOpen ? 32 : 0,
+                      justifyContent: "center",
+                      color: active ? "inherit" : "text.secondary",
+                    }}
+                  >
+                    <Icon sx={{ fontSize: 18 }} />
                   </ListItemIcon>
-                  {sidebarOpen ? <ListItemText primary={t(item.labelKey)} /> : null}
+                  {sidebarOpen ? (
+                    <ListItemText
+                      primary={t(item.labelKey)}
+                      slotProps={{
+                        primary: { sx: { fontSize: "0.8125rem", fontWeight: active ? 600 : 500 } },
+                      }}
+                    />
+                  ) : null}
                 </ListItemButton>
               );
             })}
@@ -146,18 +170,59 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
+function SidebarShell({
+  onNavigate,
+  mobile,
+}: {
+  onNavigate?: () => void;
+  mobile?: boolean;
+}) {
+  const { sidebarOpen } = useUiStore();
+
+  return (
+    <Box
+      sx={{
+        height: mobile ? "100%" : "100vh",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        bgcolor: "background.paper",
+      }}
+    >
+      <Box
+        sx={{
+          flexShrink: 0,
+          px: sidebarOpen ? 1.25 : 0.75,
+          py: 1.25,
+          borderBottom: 1,
+          borderColor: "divider",
+        }}
+      >
+        <Stack
+          direction="row"
+          spacing={sidebarOpen ? 1 : 0}
+          sx={{
+            alignItems: "center",
+            justifyContent: sidebarOpen ? "flex-start" : "center",
+          }}
+        >
+          <AppLogo size={sidebarOpen ? 32 : 28} showLabel={sidebarOpen} />
+        </Stack>
+      </Box>
+
+      <Box sx={sidebarScrollSx}>
+        <SidebarNav onNavigate={onNavigate} />
+      </Box>
+    </Box>
+  );
+}
+
 export function Sidebar() {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up("lg"));
   const { sidebarOpen, setSidebarOpen, direction } = useUiStore();
   const drawerWidth = sidebarOpen ? SIDEBAR_WIDTH_OPEN : SIDEBAR_WIDTH_COLLAPSED;
   const anchor = direction === "rtl" ? "right" : "left";
-
-  const paper = (
-    <Box sx={{ height: "100%", overflow: "auto" }}>
-      <SidebarNav onNavigate={() => !isDesktop && setSidebarOpen(false)} />
-    </Box>
-  );
 
   if (!isDesktop) {
     return (
@@ -166,42 +231,40 @@ export function Sidebar() {
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         ModalProps={{ keepMounted: true }}
-        sx={{ "& .MuiDrawer-paper": { width: SIDEBAR_WIDTH_OPEN } }}
+        sx={{ "& .MuiDrawer-paper": { width: SIDEBAR_WIDTH_OPEN, overflow: "hidden" } }}
       >
-        {paper}
+        <SidebarShell mobile onNavigate={() => setSidebarOpen(false)} />
       </Drawer>
     );
   }
 
   return (
-    <Drawer
-      variant="permanent"
-      anchor={anchor}
-      open
+    <Box
+      component="nav"
+      aria-label="sidebar"
       sx={{
         width: 0,
         flexShrink: 0,
         display: { xs: "none", lg: "block" },
-        "& .MuiDrawer-paper": {
-          width: drawerWidth,
-          boxSizing: "border-box",
+      }}
+    >
+      <Box
+        sx={{
           position: "fixed",
           top: 0,
+          insetInlineStart: 0,
+          width: drawerWidth,
           height: "100vh",
-          overflowY: "auto",
+          overflow: "hidden",
           zIndex: (theme) => theme.zIndex.drawer,
-          border: "none",
-          bgcolor: "background.paper",
-          borderRight: direction === "rtl" ? "none" : 1,
-          borderLeft: direction === "rtl" ? 1 : "none",
+          borderInlineEnd: 1,
           borderColor: "divider",
           transition: (theme) =>
             theme.transitions.create("width", { duration: theme.transitions.duration.shortest }),
-        },
-      }}
-    >
-      <Divider />
-      {paper}
-    </Drawer>
+        }}
+      >
+        <SidebarShell />
+      </Box>
+    </Box>
   );
 }

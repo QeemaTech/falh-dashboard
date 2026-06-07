@@ -260,8 +260,37 @@ export type AdminCompany = {
   revenue: number;
   maxProducts: number;
   createdAt: string;
-  user?: { id: string; name?: string; email?: string };
+  description?: string;
+  commercialReg?: string;
+  businessLicense?: string;
+  applicantName?: string;
+  email_public?: string;
+  user?: { id: string; name?: string; email?: string; phone?: string; status?: string };
+  joinApplication?: {
+    id: string;
+    status: string;
+    fullName?: string;
+    email?: string;
+    description?: string;
+    commercialReg?: string;
+    businessLicense?: string;
+  } | null;
 };
+
+export async function fetchAdminCompanyDetails(companyId: string) {
+  const { data } = await http.get<ApiResponse<AdminCompany>>(`/admin/companies/${companyId}`);
+  return data.data;
+}
+
+export async function approveCompanyWithCredentialsApi(
+  companyId: string,
+  payload: { email: string; password: string; maxProducts: number; adminNote?: string }
+) {
+  const { data } = await http.patch<
+    ApiResponse<{ credentials?: { email: string; password: string } }>
+  >(`/admin/companies/${companyId}/approve`, payload);
+  return data.data;
+}
 
 export async function fetchAdminCompanies(params: {
   page: number;
@@ -323,8 +352,10 @@ export async function assignCompanyProductLimitApi(companyId: string, maxProduct
 }
 
 export async function resetCompanyPasswordApi(companyId: string, newPassword?: string) {
-  const { data } = await http.post(`/admin/companies/${companyId}/reset-password`, { newPassword });
-  return data;
+  const { data } = await http.post<
+    ApiResponse<{ companyId: string; userId: string; generatedPassword: string }>
+  >(`/admin/companies/${companyId}/reset-password`, { newPassword });
+  return data.data;
 }
 
 export type AdminCategory = {
@@ -768,6 +799,7 @@ export type JoinUsApplicationListItem = {
   applicantName: string;
   companyName?: string;
   phone: string;
+  email?: string;
   city: string;
   status: string;
   createdAt: string;

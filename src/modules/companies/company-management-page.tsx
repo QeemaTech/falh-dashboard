@@ -1,21 +1,28 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Business, Key, Search, Tune } from "@mui/icons-material";
+import axios from "axios";
+import { Business, ContentCopy, Key, Search, Tune } from "@mui/icons-material";
 import {
+  Alert,
   Box,
   Button,
   Chip,
   CircularProgress,
   Grid,
+  IconButton,
   InputAdornment,
+  Link,
   MenuItem,
+  Paper,
   Stack,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import {
   AppStatCard,
   AppDrawer,
+  AppModal,
   AppTable,
   AppTableCell,
   AppTableHead,
@@ -25,12 +32,17 @@ import {
 import { EmptyState, FilterBar, PageHeader } from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
 import {
+  approveCompanyWithCredentialsApi,
   assignCompanyProductLimitApi,
   fetchAdminCompanies,
+  fetchAdminCompanyDetails,
   resetCompanyPasswordApi,
   setCompanyStatusApi,
   type AdminCompany,
 } from "../../services/admin-api";
+import { resolveAssetUrl } from "../../utils/asset-url";
+import { generatePassword } from "../../utils/generate-password";
+import { prefillCompanyLoginEmail } from "../../utils/company-approval-email";
 import { toast } from "../../components/ui/sonner";
 
 type CompanyStatus = AdminCompany["status"];
@@ -42,27 +54,103 @@ function statusChipColor(status: CompanyStatus): "success" | "warning" | "error"
   return "default";
 }
 
+const companyActionKeySlotSx = { width: 28, height: 28 } as const;
+
+function companyActionsGridSx(language: "ar" | "en") {
+  const primaryCol = language === "ar" ? "116px" : "84px";
+  const secondaryCol = language === "ar" ? "96px" : "92px";
+  return {
+    display: "grid",
+    gridTemplateColumns: `${primaryCol} 28px ${secondaryCol}`,
+    columnGap: 1,
+    alignItems: "center",
+    width: "max-content",
+  } as const;
+}
+
+const companyActionPrimaryBtnSx = {
+  width: "100%",
+  minWidth: 0,
+  justifySelf: "stretch",
+  px: 0.75,
+  whiteSpace: "nowrap",
+} as const;
+
+const companyActionSecondaryBtnSx = {
+  width: "100%",
+  minWidth: 0,
+  justifySelf: "stretch",
+  whiteSpace: "nowrap",
+} as const;
+
+function DetailLine({ label, value }: { label: string; value?: string | null }) {
+  if (!value) return null;
+  return (
+    <Typography variant="body2">
+      <Box component="span" sx={{ fontWeight: 600 }}>
+        {label}:
+      </Box>{" "}
+      {value}
+    </Typography>
+  );
+}
+
+function AssetLink({ path, label }: { path?: string; label: string }) {
+  if (!path) return <span>-</span>;
+  return (
+    <Link href={resolveAssetUrl(path)} target="_blank" rel="noreferrer">
+      {label}
+    </Link>
+  );
+}
+
 export function CompanyManagementPage() {
   const { t, language } = useI18n();
   const queryClient = useQueryClient();
   const locale = language === "ar" ? "ar-EG" : "en-US";
 
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState("");
   const [selectedCompany, setSelectedCompany] = useState<AdminCompany | null>(null);
+  const [reviewCompanyId, setReviewCompanyId] = useState<string | null>(null);
   const [newLimit, setNewLimit] = useState<number>(10);
+  const [maxProducts, setMaxProducts] = useState("10");
+  const [companyEmail, setCompanyEmail] = useState("");
+  const [companyPassword, setCompanyPassword] = useState("");
+  const [adminNote, setAdminNote] = useState("");
+  const [formError, setFormError] = useState("");
+  const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null);
+  const [resetPasswordCompany, setResetPasswordCompany] = useState<AdminCompany | null>(null);
+  const [resetPasswordInput, setResetPasswordInput] = useState("");
+  const [resetPasswordResult, setResetPasswordResult] = useState<{
+    email: string;
+    password: string;
+  } | null>(null);
 
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["admin-companies", search, status],
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 350);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
+  const { data, isLoading, isError, error, isFetching } = useQuery({
+    queryKey: ["admin-companies", debouncedSearch, status],
     queryFn: () =>
       fetchAdminCompanies({
         page: 1,
         limit: 50,
-        search: search || undefined,
+        search: debouncedSearch || undefined,
         status: status || undefined,
         sortBy: "createdAt",
         sortOrder: "desc",
       }),
+    placeholderData: (previousData) => previousData,
+  });
+
+  const { data: reviewDetail, isLoading: reviewLoading } = useQuery({
+    queryKey: ["admin-company-details", reviewCompanyId],
+    queryFn: () => fetchAdminCompanyDetails(reviewCompanyId!),
+    enabled: Boolean(reviewCompanyId),
   });
 
   const companies = data?.items || [];
@@ -71,48 +159,189 @@ export function CompanyManagementPage() {
     [companies]
   );
 
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["admin-companies"] });
+    queryClient.invalidateQueries({ queryKey: ["join-us-applications"] });
+    queryClient.invalidateQueries({ queryKey: ["users"] });
+  };
+
+  const approveMutation = useMutation({
+    mutationFn: (payload: { companyId: string; email: string; password: string; maxProducts: number; adminNote?: string }) =>
+      approveCompanyWithCredentialsApi(payload.companyId, {
+        email: payload.email,
+        password: payload.password,
+        maxProducts: payload.maxProducts,
+        adminNote: payload.adminNote,
+      }),
+    onSuccess: (result) => {
+      invalidate();
+      const creds = result?.credentials;
+      if (creds) {
+        setCredentials({ email: creds.email, password: creds.password });
+      } else {
+        closeReview();
+      }
+      toast.success(t("companies.approveSuccess"));
+      setFormError("");
+    },
+    onError: (err: unknown) => {
+      const message =
+        axios.isAxiosError(err) &&
+        err.response?.data &&
+        typeof err.response.data === "object" &&
+        "message" in err.response.data
+          ? String((err.response.data as { message: string }).message)
+          : err instanceof Error
+            ? err.message
+            : t("companies.reviewFailed");
+      setFormError(message);
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: ({ companyId, adminNote: note }: { companyId: string; adminNote?: string }) =>
+      setCompanyStatusApi(companyId, "reject", note),
+    onSuccess: () => {
+      invalidate();
+      closeReview();
+      toast.success(t("companies.rejectSuccess"));
+    },
+  });
+
   const statusMutation = useMutation({
     mutationFn: ({
       companyId,
       action,
-      adminNote,
+      adminNote: note,
     }: {
       companyId: string;
-      action: "approve" | "reject" | "suspend" | "unsuspend";
+      action: "suspend" | "unsuspend";
       adminNote?: string;
-    }) => setCompanyStatusApi(companyId, action, adminNote),
+    }) => setCompanyStatusApi(companyId, action, note),
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["admin-companies"] });
-      const key =
-        variables.action === "approve"
-          ? "companies.approveSuccess"
-          : variables.action === "reject"
-            ? "companies.rejectSuccess"
-            : variables.action === "suspend"
-              ? "companies.suspendSuccess"
-              : "companies.unsuspendSuccess";
-      toast.success(t(key));
+      invalidate();
+      toast.success(
+        variables.action === "suspend" ? t("companies.suspendSuccess") : t("companies.unsuspendSuccess")
+      );
     },
   });
 
   const limitMutation = useMutation({
-    mutationFn: ({ companyId, maxProducts }: { companyId: string; maxProducts: number }) =>
-      assignCompanyProductLimitApi(companyId, maxProducts),
+    mutationFn: ({ companyId, maxProducts: limit }: { companyId: string; maxProducts: number }) =>
+      assignCompanyProductLimitApi(companyId, limit),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-companies"] });
+      invalidate();
       toast.success(t("companies.limitSuccess"));
     },
   });
 
   const resetPasswordMutation = useMutation({
-    mutationFn: ({ companyId }: { companyId: string }) => resetCompanyPasswordApi(companyId),
-    onSuccess: () => toast.success(t("companies.passwordResetSuccess")),
+    mutationFn: ({ companyId, newPassword }: { companyId: string; newPassword: string }) =>
+      resetCompanyPasswordApi(companyId, newPassword),
+    onSuccess: (result) => {
+      setResetPasswordResult({
+        email: resetPasswordCompany?.user?.email || prefillCompanyLoginEmail(resetPasswordCompany?.email_public) || "-",
+        password: result.generatedPassword,
+      });
+      toast.success(t("companies.passwordResetDone"));
+    },
+    onError: (err: unknown) => {
+      const message =
+        axios.isAxiosError(err) &&
+        err.response?.data &&
+        typeof err.response.data === "object" &&
+        "message" in err.response.data
+          ? String((err.response.data as { message: string }).message)
+          : err instanceof Error
+            ? err.message
+            : t("companies.reviewFailed");
+      toast.error(message);
+    },
   });
 
   const statusLabel = (value: CompanyStatus) =>
     t(`companies.status.${value}` as "companies.status.PENDING");
 
-  if (isLoading) {
+  useEffect(() => {
+    if (!reviewDetail || reviewDetail.status !== "PENDING" || credentials) return;
+    const suggested = prefillCompanyLoginEmail(
+      reviewDetail.joinApplication?.email,
+      reviewDetail.email_public,
+      reviewDetail.user?.email
+    );
+    if (suggested) setCompanyEmail(suggested);
+  }, [reviewDetail, credentials]);
+
+  function openReview(company: AdminCompany) {
+    setReviewCompanyId(company.id);
+    setMaxProducts(String(company.maxProducts || 10));
+    setCompanyEmail(prefillCompanyLoginEmail(company.email_public, company.user?.email));
+    setCompanyPassword(generatePassword());
+    setAdminNote("");
+    setFormError("");
+    setCredentials(null);
+  }
+
+  function closeReview() {
+    setReviewCompanyId(null);
+    setCredentials(null);
+    setFormError("");
+  }
+
+  function openResetPassword(company: AdminCompany) {
+    setResetPasswordCompany(company);
+    setResetPasswordInput(generatePassword());
+    setResetPasswordResult(null);
+  }
+
+  function closeResetPassword() {
+    setResetPasswordCompany(null);
+    setResetPasswordInput("");
+    setResetPasswordResult(null);
+  }
+
+  function submitResetPassword() {
+    if (!resetPasswordCompany) return;
+    const password = resetPasswordInput.trim();
+    if (password.length < 6) {
+      toast.error(t("companies.passwordMin"));
+      return;
+    }
+    resetPasswordMutation.mutate({ companyId: resetPasswordCompany.id, newPassword: password });
+  }
+
+  async function copyResetPassword() {
+    if (!resetPasswordResult?.password) return;
+    await navigator.clipboard.writeText(resetPasswordResult.password);
+    toast.success(t("companies.passwordCopied"));
+  }
+
+  function handleApprove() {
+    if (!reviewCompanyId) return;
+    const quota = Number(maxProducts);
+    const email = companyEmail.trim().toLowerCase();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setFormError(t("companies.invalidEmail"));
+      return;
+    }
+    if (!companyPassword || companyPassword.length < 6) {
+      setFormError(t("companies.passwordMin"));
+      return;
+    }
+    if (!Number.isInteger(quota) || quota < 1) {
+      setFormError(t("companies.quotaMin"));
+      return;
+    }
+    approveMutation.mutate({
+      companyId: reviewCompanyId,
+      email,
+      password: companyPassword,
+      maxProducts: quota,
+      adminNote: adminNote.trim() || undefined,
+    });
+  }
+
+  if (isLoading && !data) {
     return (
       <Stack sx={{ py: 6, alignItems: "center" }}>
         <CircularProgress size={28} />
@@ -121,9 +350,7 @@ export function CompanyManagementPage() {
   }
 
   if (isError) {
-    return (
-      <EmptyState title={t("companies.loadFailed")} description={(error as Error).message} />
-    );
+    return <EmptyState title={t("companies.loadFailed")} description={(error as Error).message} />;
   }
 
   return (
@@ -155,7 +382,7 @@ export function CompanyManagementPage() {
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <AppStatCard
             title={t("companies.statRevenue")}
-            value={`EGP ${totalRevenue.toLocaleString(locale)}`}
+            value={`${t("market.currency")} ${totalRevenue.toLocaleString(locale)}`}
             trend="up"
           />
         </Grid>
@@ -175,6 +402,11 @@ export function CompanyManagementPage() {
                   <Search fontSize="small" />
                 </InputAdornment>
               ),
+              endAdornment: isFetching ? (
+                <InputAdornment position="end">
+                  <CircularProgress size={16} />
+                </InputAdornment>
+              ) : undefined,
             },
           }}
         />
@@ -204,7 +436,10 @@ export function CompanyManagementPage() {
       </FilterBar>
 
       {!companies.length ? (
-        <EmptyState title={t("companies.empty")} description={t("companies.emptyHint")} />
+        <EmptyState
+          title={debouncedSearch || status ? t("companies.noResults") : t("companies.empty")}
+          description={t("companies.emptyHint")}
+        />
       ) : (
         <AppTable>
           <AppTableHead>
@@ -252,7 +487,9 @@ export function CompanyManagementPage() {
                   </Typography>
                 </AppTableCell>
                 <AppTableCell>{company.productsCount}</AppTableCell>
-                <AppTableCell>EGP {Number(company.revenue || 0).toLocaleString(locale)}</AppTableCell>
+                <AppTableCell>
+                  {t("market.currency")} {Number(company.revenue || 0).toLocaleString(locale)}
+                </AppTableCell>
                 <AppTableCell>{Number(company.rating || 0).toFixed(1)}</AppTableCell>
                 <AppTableCell>
                   <Chip
@@ -263,72 +500,68 @@ export function CompanyManagementPage() {
                   />
                 </AppTableCell>
                 <AppTableCell>
-                  <Stack direction="row" spacing={0.5} sx={{ flexWrap: "wrap", gap: 0.5 }}>
-                    {company.status === "PENDING" && (
+                  <Box sx={companyActionsGridSx(language)}>
+                    {company.status === "PENDING" ? (
                       <>
                         <Button
                           size="small"
-                          color="success"
-                          onClick={() =>
-                            statusMutation.mutate({
-                              companyId: company.id,
-                              action: "approve",
-                              adminNote: "Approved",
-                            })
-                          }
+                          variant="contained"
+                          sx={companyActionPrimaryBtnSx}
+                          onClick={() => openReview(company)}
                         >
-                          {t("companies.approve")}
+                          {t("companies.review")}
                         </Button>
+                        <Box aria-hidden sx={companyActionKeySlotSx} />
                         <Button
                           size="small"
+                          variant="outlined"
                           color="error"
+                          sx={companyActionSecondaryBtnSx}
                           onClick={() =>
-                            statusMutation.mutate({
-                              companyId: company.id,
-                              action: "reject",
-                              adminNote: "Rejected",
-                            })
+                            rejectMutation.mutate({ companyId: company.id, adminNote: t("companies.reject") })
                           }
                         >
                           {t("companies.reject")}
                         </Button>
                       </>
-                    )}
-                    {company.status === "APPROVED" && (
-                      <Button
-                        size="small"
-                        color="warning"
-                        onClick={() =>
-                          statusMutation.mutate({
-                            companyId: company.id,
-                            action: "suspend",
-                            adminNote: "Suspended",
-                          })
-                        }
-                      >
-                        {t("companies.suspend")}
-                      </Button>
-                    )}
-                    {company.status === "SUSPENDED" && (
-                      <Button
-                        size="small"
-                        color="success"
-                        onClick={() =>
-                          statusMutation.mutate({
-                            companyId: company.id,
-                            action: "unsuspend",
-                            adminNote: "Unsuspended",
-                          })
-                        }
-                      >
-                        {t("companies.unsuspend")}
-                      </Button>
-                    )}
-                    {(company.status === "APPROVED" || company.status === "SUSPENDED") && (
+                    ) : null}
+                    {company.status === "APPROVED" ? (
                       <>
                         <Button
                           size="small"
+                          variant="text"
+                          color="warning"
+                          sx={companyActionPrimaryBtnSx}
+                          onClick={() =>
+                            statusMutation.mutate({
+                              companyId: company.id,
+                              action: "suspend",
+                              adminNote: "Suspended",
+                            })
+                          }
+                        >
+                          {t("companies.suspend")}
+                        </Button>
+                        <Tooltip title={t("companies.resetPassword")}>
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={() => openResetPassword(company)}
+                            sx={{
+                              border: 1,
+                              borderColor: "divider",
+                              borderRadius: 1,
+                              ...companyActionKeySlotSx,
+                              justifySelf: "center",
+                            }}
+                          >
+                            <Key sx={{ fontSize: 16 }} />
+                          </IconButton>
+                        </Tooltip>
+                        <Button
+                          size="small"
                           variant="outlined"
+                          sx={companyActionSecondaryBtnSx}
                           onClick={() => {
                             setSelectedCompany(company);
                             setNewLimit(company.maxProducts || 10);
@@ -336,22 +569,200 @@ export function CompanyManagementPage() {
                         >
                           {t("companies.setLimit")}
                         </Button>
+                      </>
+                    ) : null}
+                    {company.status === "SUSPENDED" ? (
+                      <>
                         <Button
                           size="small"
-                          title={t("companies.resetPassword")}
-                          onClick={() => resetPasswordMutation.mutate({ companyId: company.id })}
+                          variant="text"
+                          color="success"
+                          sx={companyActionPrimaryBtnSx}
+                          onClick={() =>
+                            statusMutation.mutate({
+                              companyId: company.id,
+                              action: "unsuspend",
+                              adminNote: "Unsuspended",
+                            })
+                          }
                         >
-                          <Key fontSize="small" />
+                          {t("companies.unsuspend")}
+                        </Button>
+                        <Tooltip title={t("companies.resetPassword")}>
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={() => openResetPassword(company)}
+                            sx={{
+                              border: 1,
+                              borderColor: "divider",
+                              borderRadius: 1,
+                              ...companyActionKeySlotSx,
+                              justifySelf: "center",
+                            }}
+                          >
+                            <Key sx={{ fontSize: 16 }} />
+                          </IconButton>
+                        </Tooltip>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          sx={companyActionSecondaryBtnSx}
+                          onClick={() => {
+                            setSelectedCompany(company);
+                            setNewLimit(company.maxProducts || 10);
+                          }}
+                        >
+                          {t("companies.setLimit")}
                         </Button>
                       </>
-                    )}
-                  </Stack>
+                    ) : null}
+                  </Box>
                 </AppTableCell>
               </AppTableRow>
             ))}
           </tbody>
         </AppTable>
       )}
+
+      <AppDrawer
+        open={Boolean(reviewCompanyId)}
+        onClose={closeReview}
+        title={t("companies.reviewTitle")}
+        width={480}
+      >
+        {reviewLoading ? (
+          <Stack sx={{ py: 4, alignItems: "center" }}>
+            <CircularProgress size={28} />
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
+              {t("common.loading")}
+            </Typography>
+          </Stack>
+        ) : null}
+
+        {reviewDetail && !reviewLoading ? (
+          <Stack spacing={2}>
+            <DetailLine label={t("companies.fieldName")} value={reviewDetail.name} />
+            <DetailLine
+              label={t("companies.fieldApplicant")}
+              value={reviewDetail.applicantName || reviewDetail.joinApplication?.fullName}
+            />
+            <DetailLine label={t("companies.col.phone")} value={reviewDetail.phone} />
+            <DetailLine
+              label={t("companies.fieldEmail")}
+              value={reviewDetail.email_public || reviewDetail.joinApplication?.email}
+            />
+            <DetailLine label={t("consultants.col.city")} value={reviewDetail.city} />
+            <DetailLine
+              label={t("companies.fieldDescription")}
+              value={reviewDetail.description || reviewDetail.joinApplication?.description}
+            />
+            <Typography variant="body2">
+              <Box component="span" sx={{ fontWeight: 600 }}>
+                {t("companies.fieldBusinessLicense")}:
+              </Box>{" "}
+              <AssetLink
+                path={reviewDetail.businessLicense || reviewDetail.joinApplication?.businessLicense}
+                label={t("companies.viewFile")}
+              />
+            </Typography>
+            <Typography variant="body2">
+              <Box component="span" sx={{ fontWeight: 600 }}>
+                {t("companies.fieldCommercialReg")}:
+              </Box>{" "}
+              <AssetLink
+                path={reviewDetail.commercialReg || reviewDetail.joinApplication?.commercialReg}
+                label={t("companies.viewFile")}
+              />
+            </Typography>
+
+            {!credentials ? (
+              <>
+                <TextField
+                  label={t("companies.productQuota")}
+                  type="number"
+                  size="small"
+                  fullWidth
+                  slotProps={{ htmlInput: { min: 1 } }}
+                  value={maxProducts}
+                  onChange={(e) => setMaxProducts(e.target.value)}
+                />
+                <TextField
+                  label={t("companies.loginEmail")}
+                  type="email"
+                  size="small"
+                  fullWidth
+                  value={companyEmail}
+                  onChange={(e) => setCompanyEmail(e.target.value)}
+                />
+                <Stack direction="row" spacing={1}>
+                  <TextField
+                    label={t("companies.loginPassword")}
+                    type="text"
+                    size="small"
+                    fullWidth
+                    value={companyPassword}
+                    onChange={(e) => setCompanyPassword(e.target.value)}
+                  />
+                  <Button type="button" variant="outlined" onClick={() => setCompanyPassword(generatePassword())}>
+                    {t("companies.generatePassword")}
+                  </Button>
+                </Stack>
+                <TextField
+                  label={t("companies.adminNote")}
+                  size="small"
+                  fullWidth
+                  value={adminNote}
+                  onChange={(e) => setAdminNote(e.target.value)}
+                />
+              </>
+            ) : null}
+
+            {credentials ? (
+              <Paper variant="outlined" sx={{ p: 2, borderColor: "primary.light" }}>
+                <Typography variant="subtitle2" color="primary.main" gutterBottom>
+                  {t("companies.accountCreated")}
+                </Typography>
+                <Typography variant="body2">
+                  {t("companies.fieldEmail")}: {credentials.email}
+                </Typography>
+                <Typography variant="body2">
+                  {t("companies.loginPassword")}: {credentials.password}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
+                  {t("companies.credentialsHint")}
+                </Typography>
+                <Button sx={{ mt: 1 }} onClick={closeReview}>
+                  {t("companies.close")}
+                </Button>
+              </Paper>
+            ) : null}
+
+            {formError ? <Alert severity="error">{formError}</Alert> : null}
+
+            {!credentials && reviewDetail.status === "PENDING" ? (
+              <Stack direction="row" spacing={1}>
+                <Button variant="contained" disabled={approveMutation.isPending} onClick={handleApprove}>
+                  {t("companies.approve")}
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  disabled={rejectMutation.isPending}
+                  onClick={() =>
+                    rejectMutation.mutate({
+                      companyId: reviewDetail.id,
+                      adminNote: adminNote.trim() || undefined,
+                    })
+                  }
+                >
+                  {t("companies.reject")}
+                </Button>
+              </Stack>
+            ) : null}
+          </Stack>
+        ) : null}
+      </AppDrawer>
 
       <AppDrawer
         open={Boolean(selectedCompany)}
@@ -382,7 +793,7 @@ export function CompanyManagementPage() {
               <Box component="span" sx={{ fontWeight: 600 }}>
                 {t("companies.fieldRevenue")}:
               </Box>{" "}
-              EGP {Number(selectedCompany.revenue || 0).toLocaleString(locale)}
+              {t("market.currency")} {Number(selectedCompany.revenue || 0).toLocaleString(locale)}
             </Typography>
             <Typography variant="body2">
               <Box component="span" sx={{ fontWeight: 600 }}>
@@ -420,6 +831,88 @@ export function CompanyManagementPage() {
           </Stack>
         ) : null}
       </AppDrawer>
+
+      <AppModal
+        open={Boolean(resetPasswordCompany)}
+        onClose={closeResetPassword}
+        title={t("companies.resetPasswordTitle")}
+        description={t("companies.resetPasswordHint")}
+        footer={
+          resetPasswordResult ? (
+            <Button variant="contained" onClick={closeResetPassword}>
+              {t("companies.close")}
+            </Button>
+          ) : (
+            <Stack direction="row" spacing={1}>
+              <Button variant="outlined" onClick={closeResetPassword}>
+                {t("companies.cancel")}
+              </Button>
+              <Button
+                variant="contained"
+                disabled={resetPasswordMutation.isPending}
+                onClick={submitResetPassword}
+              >
+                {t("companies.confirmResetPassword")}
+              </Button>
+            </Stack>
+          )
+        }
+      >
+        {resetPasswordCompany ? (
+          <Stack spacing={2}>
+            <Typography variant="body2">
+              <Box component="span" sx={{ fontWeight: 600 }}>
+                {t("companies.fieldName")}:
+              </Box>{" "}
+              {resetPasswordCompany.name}
+            </Typography>
+            <Typography variant="body2">
+              <Box component="span" sx={{ fontWeight: 600 }}>
+                {t("companies.loginEmail")}:
+              </Box>{" "}
+              {resetPasswordCompany.user?.email ||
+                prefillCompanyLoginEmail(resetPasswordCompany.email_public) ||
+                "-"}
+            </Typography>
+
+            {resetPasswordResult ? (
+              <Paper variant="outlined" sx={{ p: 2, borderColor: "primary.light" }}>
+                <Typography variant="subtitle2" color="primary.main" gutterBottom>
+                  {t("companies.passwordResetDone")}
+                </Typography>
+                <Typography variant="body2" sx={{ fontFamily: "monospace", wordBreak: "break-all" }}>
+                  {resetPasswordResult.password}
+                </Typography>
+                <Button
+                  size="small"
+                  startIcon={<ContentCopy fontSize="small" />}
+                  sx={{ mt: 1.5 }}
+                  onClick={copyResetPassword}
+                >
+                  {t("companies.copyPassword")}
+                </Button>
+              </Paper>
+            ) : (
+              <Stack direction="row" spacing={1}>
+                <TextField
+                  label={t("companies.newPassword")}
+                  size="small"
+                  fullWidth
+                  value={resetPasswordInput}
+                  onChange={(e) => setResetPasswordInput(e.target.value)}
+                />
+                <Button
+                  variant="outlined"
+                  sx={{ flexShrink: 0, alignSelf: "flex-end" }}
+                  onClick={() => setResetPasswordInput(generatePassword())}
+                >
+                  {t("companies.generatePassword")}
+                </Button>
+              </Stack>
+            )}
+          </Stack>
+        ) : null}
+      </AppModal>
     </Stack>
   );
 }

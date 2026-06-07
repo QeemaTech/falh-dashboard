@@ -11,6 +11,7 @@ import {
   Typography,
 } from "@mui/material";
 import { AppDrawer } from "../../components/design-system";
+import { useI18n } from "../../hooks/use-i18n";
 import {
   createAdminProductApi,
   fetchAdminCategories,
@@ -39,6 +40,7 @@ function parseImagesInput(value: string) {
 }
 
 export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, canAdd = true }: Props) {
+  const { t } = useI18n();
   const isEdit = Boolean(product);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -157,14 +159,14 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
       onSuccess();
       onClose();
     },
-    onError: (err: unknown) => setError(getApiErrorMessage(err, "Failed to save product")),
+    onError: (err: unknown) => setError(getApiErrorMessage(err, t("products.form.saveFailed"))),
   });
 
   return (
     <AppDrawer
       open={open}
       onClose={onClose}
-      title={isEdit ? "Edit Product" : "Add Product"}
+      title={isEdit ? t("products.form.editTitle") : t("products.form.addTitle")}
       footer={
         <Stack direction="row" spacing={1}>
           <Button
@@ -172,9 +174,13 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
             disabled={saveMutation.isPending || (!canAdd && scope === "company" && !isEdit && !saveAsDraft)}
             onClick={() => saveMutation.mutate()}
           >
-            {saveMutation.isPending ? "Saving..." : isEdit ? "Save Changes" : "Create Product"}
+            {saveMutation.isPending
+              ? t("products.form.saving")
+              : isEdit
+                ? t("products.form.save")
+                : t("products.form.create")}
           </Button>
-          <Button onClick={onClose}>Cancel</Button>
+          <Button onClick={onClose}>{t("products.cancel")}</Button>
         </Stack>
       }
     >
@@ -184,10 +190,29 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
             {error}
           </Typography>
         ) : null}
-        <TextField size="small" fullWidth label="Title (min 2 characters)" value={title} onChange={(e) => setTitle(e.target.value)} />
-        <TextField size="small" fullWidth label="Description (min 5 characters)" value={description} onChange={(e) => setDescription(e.target.value)} />
-        <TextField select size="small" fullWidth label="Category" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-          <MenuItem value="">Select category</MenuItem>
+        <TextField
+          size="small"
+          fullWidth
+          label={t("products.form.title")}
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
+        <TextField
+          size="small"
+          fullWidth
+          label={t("products.form.description")}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
+        <TextField
+          select
+          size="small"
+          fullWidth
+          label={t("products.form.category")}
+          value={categoryId}
+          onChange={(e) => setCategoryId(e.target.value)}
+        >
+          <MenuItem value="">{t("products.form.selectCategory")}</MenuItem>
           {categories.map((cat) => (
             <MenuItem key={cat.id} value={cat.id}>
               {cat.nameAr || cat.nameEn || cat.id}
@@ -196,22 +221,71 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
         </TextField>
         <Grid container spacing={2}>
           <Grid size={6}>
-            <TextField size="small" fullWidth type="number" label="Quantity" value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} slotProps={{ htmlInput: { min: 0 } }} />
+            <TextField
+              size="small"
+              fullWidth
+              type="number"
+              label={t("products.form.quantity")}
+              value={quantity}
+              onChange={(e) => setQuantity(Number(e.target.value))}
+              slotProps={{ htmlInput: { min: 0 } }}
+            />
           </Grid>
           <Grid size={6}>
-            <TextField size="small" fullWidth label="Unit" value={unit} onChange={(e) => setUnit(e.target.value)} />
+            <TextField
+              size="small"
+              fullWidth
+              label={t("products.form.unit")}
+              value={unit}
+              onChange={(e) => setUnit(e.target.value)}
+            />
           </Grid>
         </Grid>
-        <TextField size="small" fullWidth type="number" label="Price (EGP)" value={price} onChange={(e) => setPrice(Number(e.target.value))} slotProps={{ htmlInput: { min: 0 } }} />
-        <TextField size="small" fullWidth label="City" value={city} onChange={(e) => setCity(e.target.value)} />
-        <TextField select size="small" fullWidth label="Target" value={target} onChange={(e) => setTarget(e.target.value as "LOCAL" | "EXPORT")}>
-          <MenuItem value="LOCAL">Local</MenuItem>
-          <MenuItem value="EXPORT">Export</MenuItem>
+        <TextField
+          size="small"
+          fullWidth
+          type="number"
+          label={t("products.form.price")}
+          value={price}
+          onChange={(e) => setPrice(Number(e.target.value))}
+          slotProps={{ htmlInput: { min: 0 } }}
+        />
+        <TextField
+          size="small"
+          fullWidth
+          label={t("products.form.city")}
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
+        />
+        <TextField
+          select
+          size="small"
+          fullWidth
+          label={t("products.form.target")}
+          value={target}
+          onChange={(e) => setTarget(e.target.value as "LOCAL" | "EXPORT")}
+        >
+          <MenuItem value="LOCAL">{t("products.form.targetLocal")}</MenuItem>
+          <MenuItem value="EXPORT">{t("products.form.targetExport")}</MenuItem>
         </TextField>
-        <TextField size="small" fullWidth label="Image URLs (comma-separated)" value={imagesText} onChange={(e) => setImagesText(e.target.value)} placeholder="/uploads/a.jpg, /uploads/b.jpg" />
+        <TextField
+          size="small"
+          fullWidth
+          label={t("products.form.images")}
+          value={imagesText}
+          onChange={(e) => setImagesText(e.target.value)}
+          placeholder="/uploads/a.jpg, /uploads/b.jpg"
+        />
         {scope === "admin" && !isEdit ? (
-          <TextField select size="small" fullWidth label="Owner Company (optional)" value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
-            <MenuItem value="">Global / Marketplace (no company)</MenuItem>
+          <TextField
+            select
+            size="small"
+            fullWidth
+            label={t("products.form.ownerCompany")}
+            value={companyId}
+            onChange={(e) => setCompanyId(e.target.value)}
+          >
+            <MenuItem value="">{t("products.form.globalOwner")}</MenuItem>
             {(companiesData?.items || []).map((company) => (
               <MenuItem key={company.id} value={company.id}>
                 {company.name}
@@ -222,12 +296,12 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
         {scope === "admin" ? (
           <FormControlLabel
             control={<Checkbox checked={publishActive} onChange={(e) => setPublishActive(e.target.checked)} />}
-            label="Publish immediately (Approved / Active)"
+            label={t("products.form.publishActive")}
           />
         ) : (
           <FormControlLabel
             control={<Checkbox checked={saveAsDraft} onChange={(e) => setSaveAsDraft(e.target.checked)} />}
-            label="Save as draft (does not use quota)"
+            label={t("products.form.saveDraft")}
           />
         )}
       </Stack>

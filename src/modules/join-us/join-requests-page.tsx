@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { Search } from "@mui/icons-material";
@@ -18,6 +18,7 @@ import {
 } from "@mui/material";
 import { AppDrawer } from "../../components/design-system";
 import { DataTable, EmptyState, FilterBar, PageHeader } from "../../components/layout";
+import { useI18n } from "../../hooks/use-i18n";
 import {
   approveJoinUsApplicationApi,
   fetchJoinUsApplicationById,
@@ -27,27 +28,19 @@ import {
   type JoinUsTab,
 } from "../../services/admin-api";
 import { resolveAssetUrl } from "../../utils/asset-url";
+import { generatePassword } from "../../utils/generate-password";
+import { prefillCompanyLoginEmail } from "../../utils/company-approval-email";
 
-const TABS: { id: JoinUsTab; label: string }[] = [
-  { id: "ALL", label: "All" },
-  { id: "COMPANIES", label: "Companies" },
-  { id: "DOCTORS", label: "Doctors" },
-  { id: "ENGINEERS", label: "Engineers" },
-  { id: "CONSULTANTS", label: "Consultants" },
-  { id: "BROKERS", label: "Brokers" },
-  { id: "TRANSPORT", label: "Transport" },
-  { id: "OTHERS", label: "Others" },
+const TAB_IDS: JoinUsTab[] = [
+  "ALL",
+  "COMPANIES",
+  "DOCTORS",
+  "ENGINEERS",
+  "CONSULTANTS",
+  "BROKERS",
+  "TRANSPORT",
+  "OTHERS",
 ];
-
-const TYPE_LABELS: Record<string, string> = {
-  COMPANY: "Company",
-  DOCTOR: "Veterinary Doctor",
-  AGRICULTURAL_ENGINEER: "Agricultural Engineer",
-  CONSULTANT: "Consultant",
-  LAND_BROKER: "Land Broker",
-  TRANSPORT: "Transport Provider",
-  OTHER: "Other",
-};
 
 type JoinRequestRow = JoinUsApplicationListItem & Record<string, unknown>;
 
@@ -55,17 +48,6 @@ function statusChipColor(status: string): "success" | "warning" | "error" | "def
   if (status === "APPROVED") return "success";
   if (status === "PENDING") return "warning";
   return "error";
-}
-
-function generatePassword(length = 12) {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$";
-  let out = "";
-  for (let i = 0; i < length; i += 1) out += chars[Math.floor(Math.random() * chars.length)];
-  return out;
-}
-
-function formatDate(value: string) {
-  return new Date(value).toLocaleString();
 }
 
 function AssetLink({ path, label }: { path?: string; label: string }) {
@@ -79,6 +61,8 @@ function AssetLink({ path, label }: { path?: string; label: string }) {
 }
 
 export function JoinRequestsPage() {
+  const { t, language } = useI18n();
+  const locale = language === "ar" ? "ar-EG" : "en-US";
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("PENDING");
@@ -90,6 +74,17 @@ export function JoinRequestsPage() {
   const [companyPassword, setCompanyPassword] = useState("");
   const [formError, setFormError] = useState("");
   const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null);
+
+  const typeLabel = (type: string) =>
+    t(`joinUs.type.${type}` as "joinUs.type.COMPANY") || type;
+
+  const statusLabel = (value: string) =>
+    t(`joinUs.status.${value}` as "joinUs.status.PENDING") || value;
+
+  const tabLabel = (id: JoinUsTab) => {
+    const key = id.toLowerCase() as "all" | "companies" | "doctors" | "engineers" | "consultants" | "brokers" | "transport" | "others";
+    return t(`joinUs.tab.${key}`);
+  };
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["join-us-applications", search, status, tab],
@@ -127,9 +122,9 @@ export function JoinRequestsPage() {
     onSuccess: (result, variables) => {
       queryClient.invalidateQueries({ queryKey: ["join-us-applications"] });
       queryClient.invalidateQueries({ queryKey: ["join-us-application"] });
-      queryClient.invalidateQueries({ queryKey: ["company-applications"] });
       queryClient.invalidateQueries({ queryKey: ["admin-companies"] });
       queryClient.invalidateQueries({ queryKey: ["admin-service-providers"] });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
       const creds =
         result && typeof result === "object" && "credentials" in result
           ? (result as { credentials?: { email: string; password: string } }).credentials
@@ -144,11 +139,14 @@ export function JoinRequestsPage() {
     },
     onError: (err: unknown) => {
       const message =
-        axios.isAxiosError(err) && err.response?.data && typeof err.response.data === "object" && "message" in err.response.data
+        axios.isAxiosError(err) &&
+        err.response?.data &&
+        typeof err.response.data === "object" &&
+        "message" in err.response.data
           ? String((err.response.data as { message: string }).message)
           : err instanceof Error
             ? err.message
-            : "Review failed";
+            : t("companies.reviewFailed");
       setFormError(message);
     },
   });
@@ -158,11 +156,20 @@ export function JoinRequestsPage() {
   const isCompanyReview = detail?.review.kind === "company";
   const reviewFields = detail?.review.fields || {};
 
+  useEffect(() => {
+    if (!detail || detail.applicationType !== "COMPANY" || credentials) return;
+    const suggested = prefillCompanyLoginEmail(
+      detail.email,
+      reviewFields.email as string | undefined
+    );
+    if (suggested) setCompanyEmail(suggested);
+  }, [detail, credentials, reviewFields.email]);
+
   function openReview(item: JoinUsApplicationListItem) {
     setSelectedId(item.id);
     setMaxProducts("10");
     setAdminNote("");
-    setCompanyEmail("");
+    setCompanyEmail(prefillCompanyLoginEmail(item.email));
     setCompanyPassword(generatePassword());
     setFormError("");
     setCredentials(null);
@@ -174,15 +181,15 @@ export function JoinRequestsPage() {
       const quota = Number(maxProducts);
       const email = companyEmail.trim().toLowerCase();
       if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        setFormError("Enter a valid company login email");
+        setFormError(t("companies.invalidEmail"));
         return;
       }
       if (!companyPassword || companyPassword.length < 6) {
-        setFormError("Password must be at least 6 characters");
+        setFormError(t("companies.passwordMin"));
         return;
       }
       if (!Number.isInteger(quota) || quota < 1) {
-        setFormError("Product quota must be at least 1");
+        setFormError(t("companies.quotaMin"));
         return;
       }
     }
@@ -191,26 +198,23 @@ export function JoinRequestsPage() {
   }
 
   if (isError) {
-    return <EmptyState title="Failed to load join requests" description={(error as Error).message} />;
+    return <EmptyState title={t("joinUs.loadFailed")} description={(error as Error).message} />;
   }
 
   return (
     <Stack spacing={3} sx={{ minWidth: 0, overflowX: "hidden" }}>
-      <PageHeader
-        title="Join Requests"
-        subtitle="Review company and service provider applications from the mobile app."
-      />
+      <PageHeader title={t("joinUs.title")} subtitle={t("joinUs.subtitle")} />
 
       <Paper sx={{ p: 1.5 }}>
-        <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
-          {TABS.map((t) => (
+        <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", gap: 0.75 }}>
+          {TAB_IDS.map((id) => (
             <Chip
-              key={t.id}
-              label={t.label}
+              key={id}
+              label={tabLabel(id)}
               clickable
-              color={tab === t.id ? "primary" : "default"}
-              variant={tab === t.id ? "filled" : "outlined"}
-              onClick={() => setTab(t.id)}
+              color={tab === id ? "primary" : "default"}
+              variant={tab === id ? "filled" : "outlined"}
+              onClick={() => setTab(id)}
               size="small"
             />
           ))}
@@ -220,7 +224,7 @@ export function JoinRequestsPage() {
       <FilterBar>
         <TextField
           size="small"
-          placeholder="Search by name, phone, city..."
+          placeholder={t("joinUs.search")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           sx={{ minWidth: { xs: "100%", sm: 288 } }}
@@ -236,27 +240,27 @@ export function JoinRequestsPage() {
         />
         <TextField
           select
-          label="Status"
+          label={t("joinUs.filterStatus")}
           size="small"
           value={status}
           onChange={(e) => setStatus(e.target.value)}
           sx={{ minWidth: 180 }}
         >
-          <MenuItem value="">All statuses</MenuItem>
-          <MenuItem value="PENDING">Pending</MenuItem>
-          <MenuItem value="APPROVED">Approved</MenuItem>
-          <MenuItem value="REJECTED">Rejected</MenuItem>
+          <MenuItem value="">{t("joinUs.allStatuses")}</MenuItem>
+          <MenuItem value="PENDING">{t("joinUs.status.PENDING")}</MenuItem>
+          <MenuItem value="APPROVED">{t("joinUs.status.APPROVED")}</MenuItem>
+          <MenuItem value="REJECTED">{t("joinUs.status.REJECTED")}</MenuItem>
         </TextField>
       </FilterBar>
 
       <DataTable<JoinRequestRow>
         loading={isLoading}
-        emptyMessage="No join requests found."
+        emptyMessage={t("joinUs.empty")}
         getRowKey={(row) => row.id}
         columns={[
           {
             key: "applicantName",
-            label: "Applicant Name",
+            label: t("joinUs.col.applicant"),
             render: (row) => (
               <Typography variant="body2" sx={{ fontWeight: 600 }}>
                 {row.applicantName}
@@ -265,27 +269,29 @@ export function JoinRequestsPage() {
           },
           {
             key: "applicationType",
-            label: "Type",
-            render: (row) => TYPE_LABELS[row.applicationType] || row.applicationType,
+            label: t("joinUs.col.type"),
+            render: (row) => typeLabel(row.applicationType),
           },
-          { key: "phone", label: "Phone" },
-          { key: "city", label: "City" },
+          { key: "phone", label: t("joinUs.col.phone") },
+          { key: "city", label: t("joinUs.col.city") },
           {
             key: "status",
-            label: "Status",
-            render: (row) => <Chip label={row.status} color={statusChipColor(row.status)} size="small" />,
+            label: t("joinUs.col.status"),
+            render: (row) => (
+              <Chip label={statusLabel(row.status)} color={statusChipColor(row.status)} size="small" />
+            ),
           },
           {
             key: "createdAt",
-            label: "Created At",
-            render: (row) => formatDate(row.createdAt),
+            label: t("joinUs.col.created"),
+            render: (row) => new Date(row.createdAt).toLocaleString(locale),
           },
           {
             key: "id",
-            label: "Actions",
+            label: t("joinUs.col.actions"),
             render: (row) => (
               <Button size="small" onClick={() => openReview(row)}>
-                View
+                {t("joinUs.view")}
               </Button>
             ),
           },
@@ -299,13 +305,14 @@ export function JoinRequestsPage() {
           setSelectedId(null);
           setCredentials(null);
         }}
-        title="Review Join Request"
+        title={t("joinUs.reviewTitle")}
+        width={480}
       >
         {detailLoading ? (
           <Stack sx={{ py: 2, alignItems: "center" }}>
             <CircularProgress size={24} />
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Loading details...
+              {t("common.loading")}
             </Typography>
           </Stack>
         ) : null}
@@ -313,63 +320,85 @@ export function JoinRequestsPage() {
           <Stack spacing={2}>
             <Typography variant="body2">
               <Box component="span" sx={{ fontWeight: 600 }}>
-                Type:
+                {t("joinUs.fieldType")}:
               </Box>{" "}
-              {TYPE_LABELS[detail.applicationType] || detail.applicationType}
+              {typeLabel(detail.applicationType)}
             </Typography>
             <Typography variant="body2">
               <Box component="span" sx={{ fontWeight: 600 }}>
-                Status:
+                {t("joinUs.fieldStatus")}:
               </Box>{" "}
-              {detail.status}
+              {statusLabel(detail.status)}
             </Typography>
 
             {isCompanyReview ? (
               <>
                 <Typography variant="body2">
-                  <Box component="span" sx={{ fontWeight: 600 }}>Company Name:</Box>{" "}
+                  <Box component="span" sx={{ fontWeight: 600 }}>
+                    {t("joinUs.fieldCompanyName")}:
+                  </Box>{" "}
                   {String(reviewFields.companyName || detail.companyName || "-")}
                 </Typography>
                 <Typography variant="body2">
-                  <Box component="span" sx={{ fontWeight: 600 }}>Applicant Name:</Box>{" "}
+                  <Box component="span" sx={{ fontWeight: 600 }}>
+                    {t("joinUs.fieldApplicant")}:
+                  </Box>{" "}
                   {String(reviewFields.applicantName || detail.fullName)}
                 </Typography>
                 <Typography variant="body2">
-                  <Box component="span" sx={{ fontWeight: 600 }}>Phone:</Box>{" "}
+                  <Box component="span" sx={{ fontWeight: 600 }}>
+                    {t("joinUs.fieldPhone")}:
+                  </Box>{" "}
                   {String(reviewFields.phone || detail.phone)}
                 </Typography>
                 <Typography variant="body2">
-                  <Box component="span" sx={{ fontWeight: 600 }}>Email:</Box>{" "}
+                  <Box component="span" sx={{ fontWeight: 600 }}>
+                    {t("joinUs.fieldEmail")}:
+                  </Box>{" "}
                   {String(reviewFields.email || detail.email || "-")}
                 </Typography>
                 <Typography variant="body2">
-                  <Box component="span" sx={{ fontWeight: 600 }}>City:</Box>{" "}
+                  <Box component="span" sx={{ fontWeight: 600 }}>
+                    {t("joinUs.fieldCity")}:
+                  </Box>{" "}
                   {String(reviewFields.city || detail.city)}
                 </Typography>
                 <Typography variant="body2">
-                  <Box component="span" sx={{ fontWeight: 600 }}>Description:</Box>{" "}
+                  <Box component="span" sx={{ fontWeight: 600 }}>
+                    {t("joinUs.fieldDescription")}:
+                  </Box>{" "}
                   {String(reviewFields.description || detail.description || "-")}
                 </Typography>
                 <Typography variant="body2">
-                  <Box component="span" sx={{ fontWeight: 600 }}>Business License:</Box>{" "}
-                  <AssetLink path={String(reviewFields.businessLicense || detail.businessLicense || "")} label="View file" />
+                  <Box component="span" sx={{ fontWeight: 600 }}>
+                    {t("companies.fieldBusinessLicense")}:
+                  </Box>{" "}
+                  <AssetLink
+                    path={String(reviewFields.businessLicense || detail.businessLicense || "")}
+                    label={t("joinUs.viewFile")}
+                  />
                 </Typography>
                 <Typography variant="body2">
-                  <Box component="span" sx={{ fontWeight: 600 }}>Commercial Registration:</Box>{" "}
-                  <AssetLink path={String(reviewFields.commercialReg || detail.commercialReg || "")} label="View file" />
+                  <Box component="span" sx={{ fontWeight: 600 }}>
+                    {t("companies.fieldCommercialReg")}:
+                  </Box>{" "}
+                  <AssetLink
+                    path={String(reviewFields.commercialReg || detail.commercialReg || "")}
+                    label={t("joinUs.viewFile")}
+                  />
                 </Typography>
 
                 <TextField
-                  label="Product quota on approval"
+                  label={t("companies.productQuota")}
                   type="number"
                   size="small"
                   fullWidth
-                  slotProps={{ htmlInput: {  min: 1  } }}
+                  slotProps={{ htmlInput: { min: 1 } }}
                   value={maxProducts}
                   onChange={(e) => setMaxProducts(e.target.value)}
                 />
                 <TextField
-                  label="Company login email"
+                  label={t("companies.loginEmail")}
                   type="email"
                   size="small"
                   fullWidth
@@ -378,7 +407,7 @@ export function JoinRequestsPage() {
                 />
                 <Stack direction="row" spacing={1}>
                   <TextField
-                    label="Company login password"
+                    label={t("companies.loginPassword")}
                     type="text"
                     size="small"
                     fullWidth
@@ -386,60 +415,84 @@ export function JoinRequestsPage() {
                     onChange={(e) => setCompanyPassword(e.target.value)}
                   />
                   <Button type="button" variant="outlined" onClick={() => setCompanyPassword(generatePassword())}>
-                    Generate
+                    {t("companies.generatePassword")}
                   </Button>
                 </Stack>
               </>
             ) : (
               <>
                 <Typography variant="body2">
-                  <Box component="span" sx={{ fontWeight: 600 }}>Full Name:</Box>{" "}
+                  <Box component="span" sx={{ fontWeight: 600 }}>
+                    {t("joinUs.fieldFullName")}:
+                  </Box>{" "}
                   {String(reviewFields.fullName || detail.fullName)}
                 </Typography>
                 <Typography variant="body2">
-                  <Box component="span" sx={{ fontWeight: 600 }}>City:</Box>{" "}
+                  <Box component="span" sx={{ fontWeight: 600 }}>
+                    {t("joinUs.fieldCity")}:
+                  </Box>{" "}
                   {String(reviewFields.city || detail.city)}
                 </Typography>
                 <Typography variant="body2">
-                  <Box component="span" sx={{ fontWeight: 600 }}>WhatsApp:</Box>{" "}
+                  <Box component="span" sx={{ fontWeight: 600 }}>
+                    {t("joinUs.fieldWhatsapp")}:
+                  </Box>{" "}
                   {String(reviewFields.whatsapp || detail.whatsappNumber || "-")}
                 </Typography>
                 <Typography variant="body2">
-                  <Box component="span" sx={{ fontWeight: 600 }}>Phone:</Box>{" "}
+                  <Box component="span" sx={{ fontWeight: 600 }}>
+                    {t("joinUs.fieldPhone")}:
+                  </Box>{" "}
                   {String(reviewFields.phone || detail.phone)}
                 </Typography>
                 <Typography variant="body2">
-                  <Box component="span" sx={{ fontWeight: 600 }}>Bio:</Box>{" "}
+                  <Box component="span" sx={{ fontWeight: 600 }}>
+                    {t("joinUs.fieldBio")}:
+                  </Box>{" "}
                   {String(reviewFields.bio || detail.bio || "-")}
                 </Typography>
                 <Typography variant="body2">
-                  <Box component="span" sx={{ fontWeight: 600 }}>Specializations:</Box>{" "}
+                  <Box component="span" sx={{ fontWeight: 600 }}>
+                    {t("joinUs.fieldSpecializations")}:
+                  </Box>{" "}
                   {Array.isArray(reviewFields.specializations)
                     ? (reviewFields.specializations as string[]).join(", ") || "-"
                     : (detail.specializations || []).join(", ") || "-"}
                 </Typography>
                 <Typography variant="body2">
-                  <Box component="span" sx={{ fontWeight: 600 }}>Experience:</Box>{" "}
-                  {String(reviewFields.experience ?? detail.yearsOfExperience ?? "-")} years
+                  <Box component="span" sx={{ fontWeight: 600 }}>
+                    {t("joinUs.fieldExperience")}:
+                  </Box>{" "}
+                  {String(reviewFields.experience ?? detail.yearsOfExperience ?? "-")} {t("joinUs.years")}
                 </Typography>
                 {detail.otherTypeLabel ? (
                   <Typography variant="body2">
-                    <Box component="span" sx={{ fontWeight: 600 }}>Other type:</Box> {detail.otherTypeLabel}
+                    <Box component="span" sx={{ fontWeight: 600 }}>
+                      {t("joinUs.fieldOtherType")}:
+                    </Box>{" "}
+                    {detail.otherTypeLabel}
                   </Typography>
                 ) : null}
                 <Typography variant="body2">
-                  <Box component="span" sx={{ fontWeight: 600 }}>Identity Image:</Box>{" "}
-                  <AssetLink path={String(reviewFields.idImage || detail.idImage || "")} label="View" />
+                  <Box component="span" sx={{ fontWeight: 600 }}>
+                    {t("joinUs.fieldIdImage")}:
+                  </Box>{" "}
+                  <AssetLink path={String(reviewFields.idImage || detail.idImage || "")} label={t("joinUs.viewFile")} />
                 </Typography>
                 <Typography variant="body2">
-                  <Box component="span" sx={{ fontWeight: 600 }}>License Image:</Box>{" "}
-                  <AssetLink path={String(reviewFields.licenseImage || detail.licenseImage || "")} label="View" />
+                  <Box component="span" sx={{ fontWeight: 600 }}>
+                    {t("joinUs.fieldLicenseImage")}:
+                  </Box>{" "}
+                  <AssetLink
+                    path={String(reviewFields.licenseImage || detail.licenseImage || "")}
+                    label={t("joinUs.viewFile")}
+                  />
                 </Typography>
               </>
             )}
 
             <TextField
-              label="Admin note"
+              label={t("companies.adminNote")}
               size="small"
               fullWidth
               value={adminNote}
@@ -447,14 +500,18 @@ export function JoinRequestsPage() {
             />
 
             {credentials ? (
-              <Paper variant="outlined" sx={{ p: 2, bgcolor: "primary.50", borderColor: "primary.light" }}>
+              <Paper variant="outlined" sx={{ p: 2, borderColor: "primary.light" }}>
                 <Typography variant="subtitle2" color="primary.main" gutterBottom>
-                  Company account created
+                  {t("companies.accountCreated")}
                 </Typography>
-                <Typography variant="body2">Email: {credentials.email}</Typography>
-                <Typography variant="body2">Password: {credentials.password}</Typography>
+                <Typography variant="body2">
+                  {t("companies.fieldEmail")}: {credentials.email}
+                </Typography>
+                <Typography variant="body2">
+                  {t("companies.loginPassword")}: {credentials.password}
+                </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
-                  Share via email, SMS, or WhatsApp.
+                  {t("companies.credentialsHint")}
                 </Typography>
                 <Button
                   sx={{ mt: 1 }}
@@ -463,7 +520,7 @@ export function JoinRequestsPage() {
                     setCredentials(null);
                   }}
                 >
-                  Close
+                  {t("companies.close")}
                 </Button>
               </Paper>
             ) : null}
@@ -473,14 +530,17 @@ export function JoinRequestsPage() {
             {!credentials && detail.status === "PENDING" ? (
               <Stack direction="row" spacing={1} sx={{ pt: 1 }}>
                 <Button variant="contained" disabled={reviewMutation.isPending} onClick={handleApprove}>
-                  {detail.review.approveButtonText}
+                  {detail.applicationType === "COMPANY"
+                    ? t("joinUs.approveCompany")
+                    : t("joinUs.approveProvider")}
                 </Button>
                 <Button
                   variant="outlined"
+                  color="error"
                   disabled={reviewMutation.isPending}
                   onClick={() => reviewMutation.mutate({ action: "REJECT" })}
                 >
-                  Reject
+                  {t("joinUs.reject")}
                 </Button>
               </Stack>
             ) : null}

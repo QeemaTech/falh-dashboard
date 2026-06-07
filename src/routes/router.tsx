@@ -1,4 +1,5 @@
 import { createBrowserRouter } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { DashboardLayout } from "../layouts/dashboard-layout";
 import { DashboardPage } from "../modules/dashboard/dashboard-page";
 import { UsersPage } from "../modules/users/users-page";
@@ -23,7 +24,6 @@ import { ForgotPasswordPage } from "../modules/auth/forgot-password-page";
 import { ProtectedRoute } from "./protected-route";
 import { CompanyProtectedRoute } from "./company-protected-route";
 import { CompanyLayout } from "../layouts/company-layout";
-import { CompanyApplicationsPage } from "../modules/companies/company-applications-page";
 import { JoinRequestsPage } from "../modules/join-us/join-requests-page";
 import { CompanyProductsPage } from "../modules/company-portal/company-products-page";
 
@@ -76,7 +76,7 @@ export const router = createBrowserRouter([
           { path: "users", element: <UsersPage /> },
           { path: "companies", element: <CompanyManagementPage /> },
           { path: "join-requests", element: <JoinRequestsPage /> },
-          { path: "company-applications", element: <CompanyApplicationsPage /> },
+          { path: "company-applications", element: <Navigate to="/companies" replace /> },
           { path: "pending-products", element: <ProductManagementPage pendingOnly /> },
           { path: "products", element: <ProductManagementPage /> },
           { path: "orders", element: <OrdersPage /> },
