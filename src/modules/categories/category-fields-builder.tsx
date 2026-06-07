@@ -13,10 +13,12 @@ import {
   Radio,
   RadioGroup,
   Stack,
+  Switch,
   TextField,
   Typography,
 } from "@mui/material";
 import { EmptyState, PageSection } from "../../components/layout";
+import { useI18n } from "../../hooks/use-i18n";
 import {
   createDynamicFieldApi,
   deleteDynamicFieldApi,
@@ -26,6 +28,7 @@ import {
   type DynamicField,
   type DynamicFieldType,
 } from "../../services/admin-api";
+import { dynamicFieldLabel, getDynamicFieldOptions } from "../products/product-dynamic-fields-utils";
 
 const FIELD_TYPES: DynamicFieldType[] = [
   "TEXT",
@@ -40,20 +43,44 @@ const FIELD_TYPES: DynamicFieldType[] = [
 
 const exampleTemplates = {
   agriculturalLand: [
-    { label: "Area", fieldKey: "area", fieldType: "NUMBER" as DynamicFieldType, isRequired: true },
-    { label: "Water Source", fieldKey: "water_source", fieldType: "SELECT" as DynamicFieldType, isRequired: true },
-    { label: "Ownership Type", fieldKey: "ownership_type", fieldType: "RADIO" as DynamicFieldType, isRequired: true },
+    { label: "المساحة", labelEn: "Area", fieldKey: "area", fieldType: "NUMBER" as DynamicFieldType, isRequired: true },
+    {
+      label: "مصدر المياه",
+      labelEn: "Water Source",
+      fieldKey: "water_source",
+      fieldType: "SELECT" as DynamicFieldType,
+      isRequired: true,
+    },
+    {
+      label: "نوع الملكية",
+      labelEn: "Ownership Type",
+      fieldKey: "ownership_type",
+      fieldType: "RADIO" as DynamicFieldType,
+      isRequired: true,
+    },
   ],
   crop: [
-    { label: "Production Date", fieldKey: "production_date", fieldType: "DATE" as DynamicFieldType, isRequired: true },
-    { label: "Export Quality", fieldKey: "export_quality", fieldType: "BOOLEAN" as DynamicFieldType, isRequired: false },
+    {
+      label: "تاريخ الإنتاج",
+      labelEn: "Production Date",
+      fieldKey: "production_date",
+      fieldType: "DATE" as DynamicFieldType,
+      isRequired: true,
+    },
+    {
+      label: "جودة التصدير",
+      labelEn: "Export Quality",
+      fieldKey: "export_quality",
+      fieldType: "BOOLEAN" as DynamicFieldType,
+      isRequired: false,
+    },
   ],
 };
 
-function defaultField(type: DynamicFieldType): Omit<DynamicField, "id" | "categoryId"> {
+function defaultField(type: DynamicFieldType, t: (key: string) => string): Omit<DynamicField, "id" | "categoryId"> {
   return {
-    label: "New Field",
-    labelEn: "",
+    label: t("categories.fields.label"),
+    labelEn: t("categories.fields.labelEn"),
     fieldKey: `field_${Date.now()}`,
     fieldType: type,
     placeholder: "",
@@ -66,33 +93,42 @@ function defaultField(type: DynamicFieldType): Omit<DynamicField, "id" | "catego
   };
 }
 
-function fieldPreview(field: DynamicField) {
+function fieldPreview(field: DynamicField, language: "ar" | "en", t: (key: string) => string) {
+  const label = dynamicFieldLabel(field, language);
   if (field.fieldType === "TEXTAREA") {
     return <TextField multiline rows={3} fullWidth size="small" disabled />;
   }
   if (field.fieldType === "BOOLEAN") {
-    return <Checkbox disabled />;
+    return <FormControlLabel control={<Switch disabled />} label={label} />;
   }
   if (field.fieldType === "FILE") {
     return (
       <Button variant="outlined" component="label" size="small" disabled>
-        Choose file
+        {t("categories.fields.chooseFile")}
         <input type="file" hidden disabled />
       </Button>
     );
   }
   if (field.fieldType === "SELECT") {
+    const options = getDynamicFieldOptions(field);
     return (
       <TextField select size="small" fullWidth disabled value="">
-        <MenuItem value="">Select</MenuItem>
+        <MenuItem value="">{t("categories.fields.select")}</MenuItem>
+        {options.map((option) => (
+          <MenuItem key={option} value={option}>
+            {option}
+          </MenuItem>
+        ))}
       </TextField>
     );
   }
   if (field.fieldType === "RADIO") {
+    const options = getDynamicFieldOptions(field);
     return (
       <RadioGroup row>
-        <FormControlLabel value="1" control={<Radio disabled />} label="Option 1" />
-        <FormControlLabel value="2" control={<Radio disabled />} label="Option 2" />
+        {options.map((option) => (
+          <FormControlLabel key={option} value={option} control={<Radio disabled size="small" />} label={option} />
+        ))}
       </RadioGroup>
     );
   }
@@ -102,7 +138,7 @@ function fieldPreview(field: DynamicField) {
       type={type}
       size="small"
       fullWidth
-      placeholder={field.placeholder || field.label}
+      placeholder={field.placeholder || label}
       disabled
     />
   );
@@ -114,6 +150,7 @@ type Props = {
 };
 
 export function CategoryFieldsBuilder({ categoryId, categoryLabel }: Props) {
+  const { t, language } = useI18n();
   const queryClient = useQueryClient();
   const [selectedFieldId, setSelectedFieldId] = useState("");
   const [dragFieldId, setDragFieldId] = useState<string | null>(null);
@@ -125,7 +162,7 @@ export function CategoryFieldsBuilder({ categoryId, categoryLabel }: Props) {
   });
 
   const createMutation = useMutation({
-    mutationFn: ({ type }: { type: DynamicFieldType }) => createDynamicFieldApi(categoryId, defaultField(type)),
+    mutationFn: ({ type }: { type: DynamicFieldType }) => createDynamicFieldApi(categoryId, defaultField(type, t)),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["category-dynamic-fields", categoryId] }),
   });
 
@@ -166,6 +203,7 @@ export function CategoryFieldsBuilder({ categoryId, categoryLabel }: Props) {
         fieldId: created.id,
         payload: {
           label: item.label,
+          labelEn: item.labelEn,
           fieldKey: item.fieldKey,
           isRequired: item.isRequired,
           options:
@@ -187,10 +225,7 @@ export function CategoryFieldsBuilder({ categoryId, categoryLabel }: Props) {
 
   if (!categoryId) {
     return (
-      <EmptyState
-        title="No category selected"
-        description="Select a category from the table above to manage its dynamic fields."
-      />
+      <EmptyState title={t("categories.fields.emptyTitle")} description={t("categories.fields.emptyHint")} />
     );
   }
 
@@ -204,17 +239,17 @@ export function CategoryFieldsBuilder({ categoryId, categoryLabel }: Props) {
         >
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              Dynamic fields
+              {t("categories.fields.title")}
             </Typography>
             <Typography variant="caption" color="text.secondary">
               {categoryLabel || categoryId}
             </Typography>
           </Box>
           <Button variant="outlined" onClick={() => applyTemplate("agriculturalLand")}>
-            Agricultural Land Example
+            {t("categories.fields.templateLand")}
           </Button>
           <Button variant="outlined" onClick={() => applyTemplate("crop")}>
-            Crop Example
+            {t("categories.fields.templateCrop")}
           </Button>
         </Stack>
       </Paper>
@@ -222,7 +257,7 @@ export function CategoryFieldsBuilder({ categoryId, categoryLabel }: Props) {
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, xl: 4 }}>
           <Paper sx={{ p: 2 }}>
-            <PageSection title="Field types">
+            <PageSection title={t("categories.fields.typesTitle")}>
               <Grid container spacing={1}>
                 {FIELD_TYPES.map((type) => (
                   <Grid key={type} size={{ xs: 12, sm: 6 }}>
@@ -233,7 +268,7 @@ export function CategoryFieldsBuilder({ categoryId, categoryLabel }: Props) {
                       onClick={() => createMutation.mutate({ type })}
                       sx={{ justifyContent: "flex-start" }}
                     >
-                      {type}
+                      {t(`categories.fieldTypes.${type}` as "categories.fieldTypes.TEXT")}
                     </Button>
                   </Grid>
                 ))}
@@ -244,7 +279,7 @@ export function CategoryFieldsBuilder({ categoryId, categoryLabel }: Props) {
 
         <Grid size={{ xs: 12, xl: 4 }}>
           <Paper sx={{ p: 2 }}>
-            <PageSection title="Fields list">
+            <PageSection title={t("categories.fields.listTitle")}>
               <Stack spacing={1} sx={{ maxHeight: 420, overflowY: "auto" }}>
                 {fields.map((field) => (
                   <Paper
@@ -276,11 +311,15 @@ export function CategoryFieldsBuilder({ categoryId, categoryLabel }: Props) {
                       <Stack direction="row" spacing={1} sx={{ alignItems: "center", minWidth: 0 }}>
                         <DragIndicator fontSize="small" color="action" />
                         <Box sx={{ minWidth: 0 }}>
-                          <Typography variant="body2" sx={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {field.label}
+                          <Typography
+                            variant="body2"
+                            sx={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                          >
+                            {dynamicFieldLabel(field, language)}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
-                            {field.fieldType} · {field.isRequired ? "Required" : "Optional"}
+                            {t(`categories.fieldTypes.${field.fieldType}` as "categories.fieldTypes.TEXT")} ·{" "}
+                            {field.isRequired ? t("categories.fields.required") : t("categories.fields.optional")}
                           </Typography>
                         </Box>
                       </Stack>
@@ -299,7 +338,7 @@ export function CategoryFieldsBuilder({ categoryId, categoryLabel }: Props) {
                 ))}
                 {!fields.length ? (
                   <Typography variant="body2" color="text.secondary">
-                    No fields yet. Add a field type to start.
+                    {t("categories.fields.noFields")}
                   </Typography>
                 ) : null}
               </Stack>
@@ -309,25 +348,32 @@ export function CategoryFieldsBuilder({ categoryId, categoryLabel }: Props) {
 
         <Grid size={{ xs: 12, xl: 4 }}>
           <Paper sx={{ p: 2 }}>
-            <PageSection title="Field settings">
+            <PageSection title={t("categories.fields.settingsTitle")}>
               {selectedField ? (
                 <Stack spacing={2}>
                   <TextField
-                    label="Label"
+                    label={t("categories.fields.label")}
                     size="small"
                     fullWidth
                     value={selectedField.label}
                     onChange={(e) => updateSelectedField({ label: e.target.value })}
                   />
                   <TextField
-                    label="Field key"
+                    label={t("categories.fields.labelEn")}
+                    size="small"
+                    fullWidth
+                    value={selectedField.labelEn || ""}
+                    onChange={(e) => updateSelectedField({ labelEn: e.target.value })}
+                  />
+                  <TextField
+                    label={t("categories.fields.fieldKey")}
                     size="small"
                     fullWidth
                     value={selectedField.fieldKey}
                     onChange={(e) => updateSelectedField({ fieldKey: e.target.value })}
                   />
                   <TextField
-                    label="Placeholder"
+                    label={t("categories.fields.placeholder")}
                     size="small"
                     fullWidth
                     value={selectedField.placeholder || ""}
@@ -340,11 +386,11 @@ export function CategoryFieldsBuilder({ categoryId, categoryLabel }: Props) {
                         onChange={(e) => updateSelectedField({ isRequired: e.target.checked })}
                       />
                     }
-                    label="Required"
+                    label={t("categories.fields.required")}
                   />
                   {(selectedField.fieldType === "SELECT" || selectedField.fieldType === "RADIO") && (
                     <TextField
-                      label="Options (comma separated)"
+                      label={t("categories.fields.options")}
                       size="small"
                       fullWidth
                       value={
@@ -366,21 +412,21 @@ export function CategoryFieldsBuilder({ categoryId, categoryLabel }: Props) {
                   )}
                   <Paper variant="outlined" sx={{ p: 2 }}>
                     <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
-                      Preview
+                      {t("categories.fields.preview")}
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                      {selectedField.label} {selectedField.isRequired ? "*" : ""}
+                      {dynamicFieldLabel(selectedField, language)} {selectedField.isRequired ? "*" : ""}
                     </Typography>
-                    {fieldPreview(selectedField)}
+                    {fieldPreview(selectedField, language, t)}
                   </Paper>
                 </Stack>
               ) : (
                 <Typography variant="body2" color="text.secondary">
-                  Select a field to edit.
+                  {t("categories.fields.selectHint")}
                 </Typography>
               )}
               <Button variant="outlined" fullWidth disabled startIcon={<Save />} sx={{ mt: 2 }}>
-                Auto-saved
+                {t("categories.fields.autoSaved")}
               </Button>
             </PageSection>
           </Paper>

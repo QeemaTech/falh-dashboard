@@ -21,6 +21,7 @@ import {
   AppTableRow,
 } from "../../components/design-system";
 import { EmptyState, PageHeader, PageSection } from "../../components/layout";
+import { useI18n } from "../../hooks/use-i18n";
 import { toast } from "../../components/ui/sonner";
 import {
   createAdminCategoryApi,
@@ -38,7 +39,13 @@ const emptyForm = {
   isActive: true,
 };
 
+function categoryDisplayName(category: AdminCategory, language: "ar" | "en") {
+  if (language === "ar") return category.nameAr || category.nameEn || "-";
+  return category.nameEn || category.nameAr || "-";
+}
+
 export function CategoriesPage() {
+  const { t, language } = useI18n();
   const queryClient = useQueryClient();
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -66,12 +73,13 @@ export function CategoriesPage() {
     onSuccess: (saved) => {
       queryClient.invalidateQueries({ queryKey: ["admin-categories"] });
       queryClient.invalidateQueries({ queryKey: ["admin-categories-all"] });
+      queryClient.invalidateQueries({ queryKey: ["product-categories"] });
       setForm(emptyForm);
       setEditingId(null);
       if (!selectedCategoryId && saved?.id) setSelectedCategoryId(saved.id);
-      toast.success(editingId ? "Category updated" : "Category created");
+      toast.success(editingId ? t("categories.updated") : t("categories.created"));
     },
-    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Failed to save category"),
+    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : t("categories.saveFailed")),
   });
 
   const deleteMutation = useMutation({
@@ -79,14 +87,15 @@ export function CategoriesPage() {
     onSuccess: (_data, categoryId) => {
       queryClient.invalidateQueries({ queryKey: ["admin-categories"] });
       queryClient.invalidateQueries({ queryKey: ["admin-categories-all"] });
+      queryClient.invalidateQueries({ queryKey: ["product-categories"] });
       if (selectedCategoryId === categoryId) setSelectedCategoryId("");
       if (editingId === categoryId) {
         setEditingId(null);
         setForm(emptyForm);
       }
-      toast.success("Category deleted");
+      toast.success(t("categories.deleted"));
     },
-    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : "Failed to delete category"),
+    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : t("categories.deleteFailed")),
   });
 
   function startEdit(category: AdminCategory) {
@@ -107,36 +116,31 @@ export function CategoriesPage() {
 
   return (
     <Stack spacing={3}>
-      <PageHeader
-        title="Categories"
-        subtitle="Add categories and configure dynamic form fields in one place."
-      />
+      <PageHeader title={t("categories.title")} subtitle={t("categories.subtitle")} />
 
       <Paper sx={{ p: 3 }}>
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, sm: 6 }}>
             <TextField
-              label="Arabic name *"
+              label={`${t("categories.nameAr")} *`}
               fullWidth
               size="small"
               value={form.nameAr}
               onChange={(e) => setForm((f) => ({ ...f, nameAr: e.target.value }))}
-              placeholder="محاصيل"
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
             <TextField
-              label="English name"
+              label={t("categories.nameEn")}
               fullWidth
               size="small"
               value={form.nameEn}
               onChange={(e) => setForm((f) => ({ ...f, nameEn: e.target.value }))}
-              placeholder="Crops"
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <TextField
-              label="Sort order"
+              label={t("categories.sortOrder")}
               type="number"
               fullWidth
               size="small"
@@ -148,29 +152,29 @@ export function CategoriesPage() {
           <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <TextField
               select
-              label="Status"
+              label={t("categories.status")}
               fullWidth
               size="small"
               value={form.isActive ? "true" : "false"}
               onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.value === "true" }))}
             >
-              <MenuItem value="true">Active</MenuItem>
-              <MenuItem value="false">Inactive</MenuItem>
+              <MenuItem value="true">{t("categories.active")}</MenuItem>
+              <MenuItem value="false">{t("categories.inactive")}</MenuItem>
             </TextField>
           </Grid>
         </Grid>
-        <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+        <Stack direction="row" spacing={1} sx={{ mt: 2, flexWrap: "wrap" }}>
           <Button
             variant="contained"
             startIcon={<Add />}
             onClick={() => saveMutation.mutate()}
             disabled={!form.nameAr.trim() || saveMutation.isPending}
           >
-            {editingId ? "Update category" : "Add category"}
+            {editingId ? t("categories.update") : t("categories.add")}
           </Button>
           {editingId ? (
             <Button variant="outlined" onClick={cancelEdit}>
-              Cancel edit
+              {t("categories.cancelEdit")}
             </Button>
           ) : null}
         </Stack>
@@ -182,49 +186,51 @@ export function CategoriesPage() {
         </Stack>
       ) : null}
 
-      {isError ? <EmptyState title="Failed to load categories" description={(error as Error).message} /> : null}
+      {isError ? (
+        <EmptyState title={t("categories.loadFailed")} description={(error as Error).message} />
+      ) : null}
 
       {!isLoading && !isError ? (
-        <PageSection title="All categories">
+        <PageSection title={t("categories.allTitle")}>
           <AppTable>
             <AppTableHead>
               <tr>
-                <AppTableHeaderCell>Arabic</AppTableHeaderCell>
-                <AppTableHeaderCell>English</AppTableHeaderCell>
-                <AppTableHeaderCell>Sort</AppTableHeaderCell>
-                <AppTableHeaderCell>Status</AppTableHeaderCell>
-                <AppTableHeaderCell>Actions</AppTableHeaderCell>
+                <AppTableHeaderCell>{t("categories.col.name")}</AppTableHeaderCell>
+                <AppTableHeaderCell>{t("categories.col.sort")}</AppTableHeaderCell>
+                <AppTableHeaderCell>{t("categories.col.status")}</AppTableHeaderCell>
+                <AppTableHeaderCell>{t("categories.col.actions")}</AppTableHeaderCell>
               </tr>
             </AppTableHead>
             <tbody>
               {categories.length ? (
                 categories.map((category) => (
                   <AppTableRow key={category.id}>
-                    <AppTableCell>{category.nameAr || "-"}</AppTableCell>
-                    <AppTableCell>{category.nameEn || "-"}</AppTableCell>
+                    <AppTableCell>{categoryDisplayName(category, language)}</AppTableCell>
                     <AppTableCell>{category.sortOrder ?? 0}</AppTableCell>
                     <AppTableCell>
                       <AppBadge variant={category.isActive ? "success" : "neutral"}>
-                        {category.isActive ? "Active" : "Inactive"}
+                        {category.isActive ? t("categories.active") : t("categories.inactive")}
                       </AppBadge>
                     </AppTableCell>
                     <AppTableCell>
-                      <Stack direction="row" spacing={0.5}>
+                      <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
                         <Button
                           size="small"
                           variant={selectedCategoryId === category.id ? "contained" : "outlined"}
                           onClick={() => setSelectedCategoryId(category.id)}
                         >
-                          Fields
+                          {t("categories.fields")}
                         </Button>
-                        <IconButton size="small" onClick={() => startEdit(category)}>
+                        <IconButton size="small" onClick={() => startEdit(category)} aria-label={t("categories.update")}>
                           <Edit fontSize="small" />
                         </IconButton>
                         <IconButton
                           size="small"
                           color="error"
+                          aria-label={t("categories.deleted")}
                           onClick={() => {
-                            if (window.confirm(`Delete category "${category.nameAr}"?`)) {
+                            const name = categoryDisplayName(category, language);
+                            if (window.confirm(t("categories.deleteConfirm").replace("{{name}}", name))) {
                               deleteMutation.mutate(category.id);
                             }
                           }}
@@ -237,9 +243,9 @@ export function CategoriesPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5}>
+                  <td colSpan={4}>
                     <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: "center" }}>
-                      No categories yet. Add one above.
+                      {t("categories.empty")}
                     </Typography>
                   </td>
                 </tr>
@@ -251,7 +257,7 @@ export function CategoriesPage() {
 
       <CategoryFieldsBuilder
         categoryId={selectedCategoryId}
-        categoryLabel={selectedCategory?.nameAr || selectedCategory?.nameEn}
+        categoryLabel={selectedCategory ? categoryDisplayName(selectedCategory, language) : undefined}
       />
     </Stack>
   );

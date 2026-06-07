@@ -4,6 +4,7 @@ import { DashboardLayout } from "../layouts/dashboard-layout";
 import { DashboardPage } from "../modules/dashboard/dashboard-page";
 import { UsersPage } from "../modules/users/users-page";
 import { ProductManagementPage } from "../modules/products/product-management-page";
+import { PendingProductsPage } from "../modules/products/pending-products-page";
 import { CompanyManagementPage } from "../modules/companies/company-management-page";
 import { DynamicFormBuilderPage } from "../modules/dynamic-fields/dynamic-form-builder-page";
 import { SystemSettingsPage } from "../modules/system-settings/system-settings-page";
@@ -77,7 +78,7 @@ export const router = createBrowserRouter([
           { path: "companies", element: <CompanyManagementPage /> },
           { path: "join-requests", element: <JoinRequestsPage /> },
           { path: "company-applications", element: <Navigate to="/companies" replace /> },
-          { path: "pending-products", element: <ProductManagementPage pendingOnly /> },
+          { path: "pending-products", element: <PendingProductsPage /> },
           { path: "products", element: <ProductManagementPage /> },
           { path: "orders", element: <OrdersPage /> },
           { path: "categories", element: <CategoriesPage /> },

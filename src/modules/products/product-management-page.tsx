@@ -1,13 +1,12 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Add, Delete, Download, Edit, Search, Tune, Visibility } from "@mui/icons-material";
+import { Add, Download, Search, Tune } from "@mui/icons-material";
 import {
   Box,
   Button,
   Checkbox,
   Chip,
   CircularProgress,
-  IconButton,
   InputAdornment,
   MenuItem,
   Paper,
@@ -37,39 +36,28 @@ import {
 } from "../../services/admin-api";
 import { resolveAssetUrl } from "../../utils/asset-url";
 import { ProductFormDrawer } from "./product-form-drawer";
-
-type Props = {
-  pendingOnly?: boolean;
-};
+import {
+  categoryLabel,
+  invalidateProductQueries,
+  ProductImageThumb,
+  ProductRowActions,
+  sortedProductImages,
+  statusChipColor,
+} from "./product-shared";
 
 type ProductStatus = AdminProduct["status"];
 
-function statusChipColor(status: string): "success" | "warning" | "error" | "default" {
-  if (status === "ACTIVE") return "success";
-  if (status === "PENDING") return "warning";
-  if (status === "REJECTED") return "error";
-  return "default";
+function formatSelectedLabel(template: string, count: number) {
+  return template.replace("{{count}}", String(count));
 }
 
-function canModerate(status: string) {
-  return status === "PENDING";
-}
-
-function categoryLabel(
-  product: AdminProduct,
-  language: "ar" | "en"
-) {
-  const cat = product.category;
-  if (!cat) return "-";
-  return language === "ar" ? cat.nameAr || cat.nameEn || "-" : cat.nameEn || cat.nameAr || "-";
-}
-
-export function ProductManagementPage({ pendingOnly = false }: Props) {
+export function ProductManagementPage() {
   const { t, language } = useI18n();
   const locale = language === "ar" ? "ar-EG" : "en-US";
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState(pendingOnly ? "PENDING" : "");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<string[]>([]);
   const [drawerProduct, setDrawerProduct] = useState<AdminProduct | null>(null);
@@ -79,20 +67,26 @@ export function ProductManagementPage({ pendingOnly = false }: Props) {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const limit = 20;
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 350);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
   const statusLabel = (value: ProductStatus) =>
     t(`products.status.${value}` as "products.status.PENDING");
 
   const { data, isLoading, isError, error, isFetching } = useQuery({
-    queryKey: ["admin-products", search, status, page],
+    queryKey: ["admin-products-catalog", debouncedSearch, status, page],
     queryFn: () =>
       fetchAdminProducts({
         page,
         limit,
-        search: search || undefined,
+        search: debouncedSearch || undefined,
         status: status || undefined,
         sortBy: "createdAt",
         sortOrder: "desc",
       }),
+    placeholderData: (previousData) => previousData,
   });
 
   const products = data?.items || [];
@@ -102,7 +96,7 @@ export function ProductManagementPage({ pendingOnly = false }: Props) {
     [products, selected]
   );
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+  const invalidate = () => invalidateProductQueries(queryClient);
 
   const approveMutation = useMutation({
     mutationFn: (id: string) => reviewProductApi(id, { action: "APPROVE" }),
@@ -110,7 +104,7 @@ export function ProductManagementPage({ pendingOnly = false }: Props) {
   });
   const rejectMutation = useMutation({
     mutationFn: ({ id, adminNote }: { id: string; adminNote?: string }) =>
-      reviewProductApi(id, { action: "REJECT", adminNote: adminNote || "Rejected by admin" }),
+      reviewProductApi(id, { action: "REJECT", adminNote: adminNote || t("products.defaultRejectNote") }),
     onSuccess: invalidate,
   });
   const deleteMutation = useMutation({
@@ -187,28 +181,34 @@ export function ProductManagementPage({ pendingOnly = false }: Props) {
     await bulkMutation.mutateAsync({
       productIds: ids,
       action: action === "approve" ? "APPROVE" : "REJECT",
-      adminNote: rejectNote || "Rejected by admin",
+      adminNote: rejectNote.trim() || t("products.defaultRejectNote"),
     });
   };
+
+  if (isLoading && !data) {
+    return (
+      <Stack sx={{ py: 6, alignItems: "center" }}>
+        <CircularProgress size={28} />
+      </Stack>
+    );
+  }
 
   return (
     <Stack spacing={3}>
       <PageHeader
-        title={pendingOnly ? t("products.pendingTitle") : t("products.title")}
-        subtitle={pendingOnly ? t("products.pendingSubtitle") : t("products.subtitle")}
+        title={t("products.title")}
+        subtitle={t("products.subtitle")}
         action={
-          !pendingOnly ? (
-            <Button
-              variant="contained"
-              startIcon={<Add />}
-              onClick={() => {
-                setEditProduct(null);
-                setFormOpen(true);
-              }}
-            >
-              {t("products.add")}
-            </Button>
-          ) : undefined
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={() => {
+              setEditProduct(null);
+              setFormOpen(true);
+            }}
+          >
+            {t("products.add")}
+          </Button>
         }
       />
 
@@ -229,6 +229,11 @@ export function ProductManagementPage({ pendingOnly = false }: Props) {
                   <Search fontSize="small" />
                 </InputAdornment>
               ),
+              endAdornment: isFetching ? (
+                <InputAdornment position="end">
+                  <CircularProgress size={16} />
+                </InputAdornment>
+              ) : undefined,
             },
           }}
         />
@@ -305,24 +310,22 @@ export function ProductManagementPage({ pendingOnly = false }: Props) {
             sx={{ minWidth: 200 }}
           />
           <Typography variant="caption" color="text.secondary">
-            {selected.length} {t("products.selectedCount")}
+            {formatSelectedLabel(t("products.selected"), selected.length)}
           </Typography>
         </Stack>
       </Paper>
 
-      {isLoading ? (
-        <Stack sx={{ py: 4, alignItems: "center" }}>
-          <CircularProgress size={28} />
-        </Stack>
-      ) : null}
       {isError ? (
         <EmptyState title={t("products.loadFailed")} description={(error as Error).message} />
       ) : null}
-      {!isLoading && !isError && !products.length ? (
-        <EmptyState title={t("products.empty")} description={t("products.emptyHint")} />
+      {!isError && !products.length ? (
+        <EmptyState
+          title={debouncedSearch || status ? t("products.noResults") : t("products.empty")}
+          description={t("products.emptyHint")}
+        />
       ) : null}
 
-      {!isLoading && !isError && products.length > 0 ? (
+      {!isError && products.length > 0 ? (
         <>
           <AppTable>
             <AppTableHead>
@@ -356,18 +359,13 @@ export function ProductManagementPage({ pendingOnly = false }: Props) {
                     />
                   </AppTableCell>
                   <AppTableCell>
-                    {product.images?.[0]?.path ? (
-                      <Box
-                        component="img"
-                        src={resolveAssetUrl(product.images[0].path)}
-                        alt={product.title}
-                        sx={{ height: 40, width: 40, borderRadius: 1, objectFit: "cover" }}
-                      />
-                    ) : (
-                      <Box sx={{ height: 40, width: 40, borderRadius: 1, bgcolor: "action.hover" }} />
-                    )}
+                    <ProductImageThumb product={product} />
                   </AppTableCell>
-                  <AppTableCell className="font-medium">{product.title}</AppTableCell>
+                  <AppTableCell>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {product.title}
+                    </Typography>
+                  </AppTableCell>
                   <AppTableCell>{categoryLabel(product, language)}</AppTableCell>
                   <AppTableCell>
                     {product.company?.name || product.user?.name || t("products.globalOwner")}
@@ -386,48 +384,26 @@ export function ProductManagementPage({ pendingOnly = false }: Props) {
                   <AppTableCell>{product.city || "-"}</AppTableCell>
                   <AppTableCell>{new Date(product.createdAt).toLocaleDateString(locale)}</AppTableCell>
                   <AppTableCell>
-                    <Stack direction="row" spacing={0.5} sx={{ flexWrap: "wrap", gap: 0.5 }}>
-                      <IconButton
-                        size="small"
-                        onClick={() => setDrawerProduct(product)}
-                        title={t("products.view")}
-                      >
-                        <Visibility fontSize="small" />
-                      </IconButton>
-                      {!pendingOnly ? (
-                        <IconButton
-                          size="small"
-                          onClick={() => {
-                            setEditProduct(product);
-                            setFormOpen(true);
-                          }}
-                          title={t("products.edit")}
-                        >
-                          <Edit fontSize="small" />
-                        </IconButton>
-                      ) : null}
-                      <Button
-                        size="small"
-                        color="success"
-                        disabled={!canModerate(product.status)}
-                        onClick={() => approveMutation.mutate(product.id)}
-                      >
-                        {t("products.approve")}
-                      </Button>
-                      <Button
-                        size="small"
-                        color="error"
-                        disabled={!canModerate(product.status)}
-                        onClick={() => rejectMutation.mutate({ id: product.id, adminNote: rejectNote })}
-                      >
-                        {t("products.reject")}
-                      </Button>
-                      {!pendingOnly ? (
-                        <IconButton size="small" color="error" onClick={() => setConfirmDeleteId(product.id)}>
-                          <Delete fontSize="small" />
-                        </IconButton>
-                      ) : null}
-                    </Stack>
+                    <ProductRowActions
+                      product={product}
+                      language={language}
+                      t={t}
+                      onView={() => setDrawerProduct(product)}
+                      onApprove={() => approveMutation.mutate(product.id)}
+                      onReject={() =>
+                        rejectMutation.mutate({
+                          id: product.id,
+                          adminNote: rejectNote.trim() || t("products.defaultRejectNote"),
+                        })
+                      }
+                      onEdit={() => {
+                        setEditProduct(product);
+                        setFormOpen(true);
+                      }}
+                      onDelete={() => setConfirmDeleteId(product.id)}
+                      approvePending={approveMutation.isPending}
+                      rejectPending={rejectMutation.isPending}
+                    />
                   </AppTableCell>
                 </AppTableRow>
               ))}
@@ -470,7 +446,8 @@ export function ProductManagementPage({ pendingOnly = false }: Props) {
             <Stack direction="row" spacing={1}>
               <Button
                 variant="contained"
-                disabled={!canModerate(drawerProduct.status)}
+                color="success"
+                disabled={drawerProduct.status !== "PENDING" || approveMutation.isPending}
                 onClick={() => {
                   approveMutation.mutate(drawerProduct.id);
                   setDrawerProduct(null);
@@ -480,9 +457,13 @@ export function ProductManagementPage({ pendingOnly = false }: Props) {
               </Button>
               <Button
                 variant="outlined"
-                disabled={!canModerate(drawerProduct.status)}
+                color="error"
+                disabled={drawerProduct.status !== "PENDING" || rejectMutation.isPending}
                 onClick={() => {
-                  rejectMutation.mutate({ id: drawerProduct.id, adminNote: rejectNote });
+                  rejectMutation.mutate({
+                    id: drawerProduct.id,
+                    adminNote: rejectNote.trim() || t("products.defaultRejectNote"),
+                  });
                   setDrawerProduct(null);
                 }}
               >
@@ -495,9 +476,9 @@ export function ProductManagementPage({ pendingOnly = false }: Props) {
       >
         {drawerProduct ? (
           <Stack spacing={2}>
-            {drawerProduct.images?.length ? (
+            {sortedProductImages(drawerProduct).length ? (
               <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
-                {drawerProduct.images.map((img) => (
+                {sortedProductImages(drawerProduct).map((img) => (
                   <Box
                     key={img.id}
                     component="img"
@@ -580,18 +561,16 @@ export function ProductManagementPage({ pendingOnly = false }: Props) {
         <Typography variant="body2">{t("products.confirmDeleteMsg")}</Typography>
       </AppDrawer>
 
-      {!pendingOnly ? (
-        <ProductFormDrawer
-          open={formOpen}
-          onClose={() => {
-            setFormOpen(false);
-            setEditProduct(null);
-          }}
-          onSuccess={invalidate}
-          scope="admin"
-          product={editProduct}
-        />
-      ) : null}
+      <ProductFormDrawer
+        open={formOpen}
+        onClose={() => {
+          setFormOpen(false);
+          setEditProduct(null);
+        }}
+        onSuccess={invalidate}
+        scope="admin"
+        product={editProduct}
+      />
     </Stack>
   );
 }

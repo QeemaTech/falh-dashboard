@@ -71,7 +71,13 @@ export type AdminProduct = {
   category?: { id: string; nameAr?: string; nameEn?: string };
   user?: { id: string; name?: string };
   company?: { id: string; name?: string };
-  images?: Array<{ id: string; path: string }>;
+  images?: Array<{ id: string; path: string; sortOrder?: number }>;
+  fieldValues?: Array<{
+    fieldId?: string;
+    value?: string | null;
+    fileUrl?: string | null;
+    field?: { id: string };
+  }>;
 };
 
 export async function fetchRecentOrders() {
@@ -127,6 +133,15 @@ export async function reviewProductApi(
 
 export async function deleteProductApi(productId: string) {
   await http.delete(`/admin/products/${productId}`);
+}
+
+export async function uploadAdminProductImagesApi(files: File[]) {
+  const formData = new FormData();
+  files.forEach((file) => formData.append("images", file));
+  const { data } = await http.post<ApiResponse<{ paths: string[] }>>("/admin/products/upload-images", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data.data.paths;
 }
 
 export type ProductFormPayload = {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Button,
@@ -16,12 +16,34 @@ import {
   createAdminProductApi,
   fetchAdminCategories,
   fetchAdminCompanies,
+  fetchCategoryDynamicFields,
   updateAdminProductApi,
+  uploadAdminProductImagesApi,
   type AdminProduct,
   type ProductFormPayload,
 } from "../../services/admin-api";
-import { createCompanyProductApi, fetchProductCategories, updateCompanyProductApi } from "../../services/products-api";
+import {
+  createCompanyProductApi,
+  fetchCategoryFormFields,
+  fetchProductById,
+  fetchProductCategories,
+  updateCompanyProductApi,
+  uploadCompanyProductImagesApi,
+} from "../../services/products-api";
 import { getApiErrorMessage } from "../../utils/api-error";
+import {
+  ProductImagePicker,
+  productImagesToItems,
+  resolveProductImagePaths,
+  type ProductImageItem,
+} from "./product-image-picker";
+import { ProductDynamicFieldsForm } from "./product-dynamic-fields-form";
+import {
+  buildDynamicFieldsPayload,
+  fieldValuesToMap,
+  validateDynamicFieldValues,
+  type DynamicFieldValuesMap,
+} from "./product-dynamic-fields-utils";
 
 type Props = {
   open: boolean;
@@ -32,15 +54,8 @@ type Props = {
   canAdd?: boolean;
 };
 
-function parseImagesInput(value: string) {
-  return value
-    .split(",")
-    .map((v) => v.trim())
-    .filter(Boolean);
-}
-
 export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, canAdd = true }: Props) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const isEdit = Boolean(product);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -50,11 +65,13 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
   const [price, setPrice] = useState(0);
   const [city, setCity] = useState("");
   const [target, setTarget] = useState<"LOCAL" | "EXPORT">("LOCAL");
-  const [imagesText, setImagesText] = useState("");
+  const [imageItems, setImageItems] = useState<ProductImageItem[]>([]);
   const [companyId, setCompanyId] = useState("");
   const [publishActive, setPublishActive] = useState(false);
   const [saveAsDraft, setSaveAsDraft] = useState(false);
+  const [dynamicValues, setDynamicValues] = useState<DynamicFieldValuesMap>({});
   const [error, setError] = useState<string | null>(null);
+  const previousCategoryId = useRef("");
 
   const { data: categories = [] } = useQuery({
     queryKey: ["product-categories", scope],
@@ -62,6 +79,20 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
     enabled: open,
   });
 
+  const { data: productDetails } = useQuery({
+    queryKey: ["product-details", product?.id],
+    queryFn: () => fetchProductById(product!.id),
+    enabled: open && isEdit && Boolean(product?.id),
+  });
+
+  const effectiveProduct = productDetails || product;
+
+  const { data: categoryFields = [], isLoading: categoryFieldsLoading } = useQuery({
+    queryKey: ["category-form-fields", categoryId, scope],
+    queryFn: () =>
+      scope === "admin" ? fetchCategoryDynamicFields(categoryId, false) : fetchCategoryFormFields(categoryId),
+    enabled: open && Boolean(categoryId),
+  });
   const { data: companiesData } = useQuery({
     queryKey: ["admin-companies-select"],
     queryFn: () => fetchAdminCompanies({ page: 1, limit: 100, status: "APPROVED" }),
@@ -80,7 +111,7 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
       setPrice(product.price || 0);
       setTarget((product.target as "LOCAL" | "EXPORT") || "LOCAL");
       setCity(product.city || "");
-      setImagesText((product.images || []).map((img) => img.path).join(", "));
+      setImageItems(productImagesToItems(product));
       setCompanyId(product.company?.id || "");
       setPublishActive(product.status === "ACTIVE");
       setSaveAsDraft(product.status === "DRAFT");
@@ -93,27 +124,55 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
       setPrice(0);
       setCity("");
       setTarget("LOCAL");
-      setImagesText("");
+      setImageItems([]);
       setCompanyId("");
-      setPublishActive(false);
+      setPublishActive(true);
       setSaveAsDraft(false);
+      setDynamicValues({});
     }
+    previousCategoryId.current = product?.category?.id || "";
   }, [open, product]);
+
+  useEffect(() => {
+    if (!open || !effectiveProduct?.fieldValues?.length) return;
+    setDynamicValues(fieldValuesToMap(effectiveProduct.fieldValues));
+  }, [open, effectiveProduct?.fieldValues, effectiveProduct?.id]);
+
+  useEffect(() => {
+    if (!open || isEdit) return;
+    if (previousCategoryId.current && previousCategoryId.current !== categoryId) {
+      setDynamicValues({});
+    }
+    previousCategoryId.current = categoryId;
+  }, [categoryId, open, isEdit]);
+
+  const categoryName = (cat: { nameAr?: string; nameEn?: string; id: string }) =>
+    language === "ar" ? cat.nameAr || cat.nameEn || cat.id : cat.nameEn || cat.nameAr || cat.id;
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (!title.trim() || title.trim().length < 2) throw new Error("Title must be at least 2 characters");
+      if (!title.trim() || title.trim().length < 2) throw new Error(t("products.form.errorTitle"));
       if (!description.trim() || description.trim().length < 5) {
-        throw new Error("Description must be at least 5 characters");
+        throw new Error(t("products.form.errorDescription"));
       }
-      if (!categoryId) throw new Error("Category is required");
-      if (!unit.trim()) throw new Error("Unit is required");
+      if (!categoryId) throw new Error(t("products.form.errorCategory"));
+      if (!unit.trim()) throw new Error(t("products.form.errorUnit"));
       if (Number.isNaN(Number(quantity)) || Number(quantity) < 0) {
-        throw new Error("Quantity must be a valid non-negative number");
+        throw new Error(t("products.form.errorQuantity"));
       }
       if (Number.isNaN(Number(price)) || Number(price) < 0) {
-        throw new Error("Price must be a valid non-negative number");
+        throw new Error(t("products.form.errorPrice"));
       }
+
+      const uploadImages = scope === "admin" ? uploadAdminProductImagesApi : uploadCompanyProductImagesApi;
+      const images = await resolveProductImagePaths(imageItems, uploadImages);
+
+      validateDynamicFieldValues(
+        categoryFields,
+        dynamicValues,
+        language,
+        (label) => t("products.form.fieldRequired").replace("{{label}}", label)
+      );
 
       const payload: ProductFormPayload = {
         title,
@@ -124,7 +183,8 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
         price: Number(price),
         city: city || undefined,
         target,
-        images: parseImagesInput(imagesText),
+        images,
+        dynamicFields: buildDynamicFieldsPayload(categoryFields, dynamicValues),
       };
 
       if (scope === "admin") {
@@ -143,7 +203,7 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
       }
 
       if (!canAdd && !isEdit && !saveAsDraft) {
-        throw new Error("Product quota reached. Delete or wait for moderation before adding more.");
+        throw new Error(t("products.form.errorQuota"));
       }
 
       if (isEdit && product) {
@@ -215,10 +275,30 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
           <MenuItem value="">{t("products.form.selectCategory")}</MenuItem>
           {categories.map((cat) => (
             <MenuItem key={cat.id} value={cat.id}>
-              {cat.nameAr || cat.nameEn || cat.id}
+              {categoryName(cat)}
             </MenuItem>
           ))}
         </TextField>
+        {categoryId && categoryFieldsLoading ? (
+          <Typography variant="body2" color="text.secondary">
+            {t("products.form.loadingFields")}
+          </Typography>
+        ) : null}
+        {categoryId && !categoryFieldsLoading ? (
+          <ProductDynamicFieldsForm
+            fields={categoryFields}
+            values={dynamicValues}
+            onChange={setDynamicValues}
+            language={language}
+            disabled={saveMutation.isPending}
+            onUploadFile={async (file) => {
+              const upload = scope === "admin" ? uploadAdminProductImagesApi : uploadCompanyProductImagesApi;
+              const paths = await upload([file]);
+              return paths[0] || "";
+            }}
+            t={t}
+          />
+        ) : null}
         <Grid container spacing={2}>
           <Grid size={6}>
             <TextField
@@ -268,13 +348,13 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
           <MenuItem value="LOCAL">{t("products.form.targetLocal")}</MenuItem>
           <MenuItem value="EXPORT">{t("products.form.targetExport")}</MenuItem>
         </TextField>
-        <TextField
-          size="small"
-          fullWidth
+        <ProductImagePicker
+          items={imageItems}
+          onChange={setImageItems}
           label={t("products.form.images")}
-          value={imagesText}
-          onChange={(e) => setImagesText(e.target.value)}
-          placeholder="/uploads/a.jpg, /uploads/b.jpg"
+          hint={t("products.form.uploadImagesHint")}
+          addLabel={t("products.form.addImages")}
+          disabled={saveMutation.isPending}
         />
         {scope === "admin" && !isEdit ? (
           <TextField
