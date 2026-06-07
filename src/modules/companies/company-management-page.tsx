@@ -4,6 +4,7 @@ import { Business, Key, Search, Tune } from "@mui/icons-material";
 import {
   Box,
   Button,
+  Chip,
   CircularProgress,
   Grid,
   InputAdornment,
@@ -13,9 +14,8 @@ import {
   Typography,
 } from "@mui/material";
 import {
-  AppBadge,
-  AppDrawer,
   AppStatCard,
+  AppDrawer,
   AppTable,
   AppTableCell,
   AppTableHead,
@@ -23,6 +23,7 @@ import {
   AppTableRow,
 } from "../../components/design-system";
 import { EmptyState, FilterBar, PageHeader } from "../../components/layout";
+import { useI18n } from "../../hooks/use-i18n";
 import {
   assignCompanyProductLimitApi,
   fetchAdminCompanies,
@@ -30,16 +31,22 @@ import {
   setCompanyStatusApi,
   type AdminCompany,
 } from "../../services/admin-api";
+import { toast } from "../../components/ui/sonner";
 
-function statusBadge(status: string) {
+type CompanyStatus = AdminCompany["status"];
+
+function statusChipColor(status: CompanyStatus): "success" | "warning" | "error" | "default" {
   if (status === "APPROVED") return "success";
   if (status === "PENDING") return "warning";
-  if (status === "SUSPENDED") return "danger";
-  return "neutral";
+  if (status === "SUSPENDED" || status === "REJECTED") return "error";
+  return "default";
 }
 
 export function CompanyManagementPage() {
+  const { t, language } = useI18n();
   const queryClient = useQueryClient();
+  const locale = language === "ar" ? "ar-EG" : "en-US";
+
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [selectedCompany, setSelectedCompany] = useState<AdminCompany | null>(null);
@@ -71,21 +78,39 @@ export function CompanyManagementPage() {
       adminNote,
     }: {
       companyId: string;
-      action: "approve" | "reject" | "suspend";
+      action: "approve" | "reject" | "suspend" | "unsuspend";
       adminNote?: string;
     }) => setCompanyStatusApi(companyId, action, adminNote),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-companies"] }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-companies"] });
+      const key =
+        variables.action === "approve"
+          ? "companies.approveSuccess"
+          : variables.action === "reject"
+            ? "companies.rejectSuccess"
+            : variables.action === "suspend"
+              ? "companies.suspendSuccess"
+              : "companies.unsuspendSuccess";
+      toast.success(t(key));
+    },
   });
 
   const limitMutation = useMutation({
     mutationFn: ({ companyId, maxProducts }: { companyId: string; maxProducts: number }) =>
       assignCompanyProductLimitApi(companyId, maxProducts),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-companies"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-companies"] });
+      toast.success(t("companies.limitSuccess"));
+    },
   });
 
   const resetPasswordMutation = useMutation({
     mutationFn: ({ companyId }: { companyId: string }) => resetCompanyPasswordApi(companyId),
+    onSuccess: () => toast.success(t("companies.passwordResetSuccess")),
   });
+
+  const statusLabel = (value: CompanyStatus) =>
+    t(`companies.status.${value}` as "companies.status.PENDING");
 
   if (isLoading) {
     return (
@@ -96,40 +121,50 @@ export function CompanyManagementPage() {
   }
 
   if (isError) {
-    return <EmptyState title="Failed to load companies" description={(error as Error).message} />;
+    return (
+      <EmptyState title={t("companies.loadFailed")} description={(error as Error).message} />
+    );
   }
 
   return (
     <Stack spacing={3}>
-      <PageHeader title="Companies" subtitle="Manage company accounts, limits, and approval status" />
+      <PageHeader title={t("companies.title")} subtitle={t("companies.subtitle")} />
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <AppStatCard title="Companies" value={companies.length} icon={<Business fontSize="small" />} />
+          <AppStatCard
+            title={t("companies.statTotal")}
+            value={data?.meta?.total ?? companies.length}
+            icon={<Business fontSize="small" />}
+          />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <AppStatCard
-            title="Approved"
+            title={t("companies.statApproved")}
             value={companies.filter((c) => c.status === "APPROVED").length}
             trend="up"
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <AppStatCard
-            title="Pending"
+            title={t("companies.statPending")}
             value={companies.filter((c) => c.status === "PENDING").length}
             trend="neutral"
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <AppStatCard title="Revenue" value={`EGP ${totalRevenue.toLocaleString()}`} trend="up" />
+          <AppStatCard
+            title={t("companies.statRevenue")}
+            value={`EGP ${totalRevenue.toLocaleString(locale)}`}
+            trend="up"
+          />
         </Grid>
       </Grid>
 
       <FilterBar>
         <TextField
           size="small"
-          placeholder="Search companies..."
+          placeholder={t("companies.search")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           sx={{ minWidth: { xs: "100%", sm: 280 } }}
@@ -145,7 +180,7 @@ export function CompanyManagementPage() {
         />
         <TextField
           select
-          label="Status"
+          label={t("companies.filterStatus")}
           size="small"
           value={status}
           onChange={(e) => setStatus(e.target.value)}
@@ -160,27 +195,27 @@ export function CompanyManagementPage() {
             },
           }}
         >
-          <MenuItem value="">All statuses</MenuItem>
-          <MenuItem value="PENDING">Pending</MenuItem>
-          <MenuItem value="APPROVED">Approved</MenuItem>
-          <MenuItem value="REJECTED">Rejected</MenuItem>
-          <MenuItem value="SUSPENDED">Suspended</MenuItem>
+          <MenuItem value="">{t("companies.allStatuses")}</MenuItem>
+          <MenuItem value="PENDING">{t("companies.status.PENDING")}</MenuItem>
+          <MenuItem value="APPROVED">{t("companies.status.APPROVED")}</MenuItem>
+          <MenuItem value="REJECTED">{t("companies.status.REJECTED")}</MenuItem>
+          <MenuItem value="SUSPENDED">{t("companies.status.SUSPENDED")}</MenuItem>
         </TextField>
       </FilterBar>
 
       {!companies.length ? (
-        <EmptyState title="No companies found" description="Try adjusting your search or filters." />
+        <EmptyState title={t("companies.empty")} description={t("companies.emptyHint")} />
       ) : (
         <AppTable>
           <AppTableHead>
             <tr>
-              <AppTableHeaderCell>Company</AppTableHeaderCell>
-              <AppTableHeaderCell>Details</AppTableHeaderCell>
-              <AppTableHeaderCell>Products Count</AppTableHeaderCell>
-              <AppTableHeaderCell>Revenue</AppTableHeaderCell>
-              <AppTableHeaderCell>Rating</AppTableHeaderCell>
-              <AppTableHeaderCell>Status</AppTableHeaderCell>
-              <AppTableHeaderCell>Actions</AppTableHeaderCell>
+              <AppTableHeaderCell>{t("companies.col.company")}</AppTableHeaderCell>
+              <AppTableHeaderCell>{t("companies.col.details")}</AppTableHeaderCell>
+              <AppTableHeaderCell>{t("companies.col.products")}</AppTableHeaderCell>
+              <AppTableHeaderCell>{t("companies.col.revenue")}</AppTableHeaderCell>
+              <AppTableHeaderCell>{t("companies.col.rating")}</AppTableHeaderCell>
+              <AppTableHeaderCell>{t("companies.col.status")}</AppTableHeaderCell>
+              <AppTableHeaderCell>{t("companies.col.actions")}</AppTableHeaderCell>
             </tr>
           </AppTableHead>
           <tbody>
@@ -211,43 +246,105 @@ export function CompanyManagementPage() {
                   </Stack>
                 </AppTableCell>
                 <AppTableCell>
-                  <Typography variant="body2">{company.city}</Typography>
+                  <Typography variant="body2">{company.city || "-"}</Typography>
                   <Typography variant="caption" color="text.secondary">
-                    {company.phone}
+                    {company.phone || "-"}
                   </Typography>
                 </AppTableCell>
                 <AppTableCell>{company.productsCount}</AppTableCell>
-                <AppTableCell>EGP {Number(company.revenue || 0).toLocaleString()}</AppTableCell>
+                <AppTableCell>EGP {Number(company.revenue || 0).toLocaleString(locale)}</AppTableCell>
                 <AppTableCell>{Number(company.rating || 0).toFixed(1)}</AppTableCell>
                 <AppTableCell>
-                  <AppBadge variant={statusBadge(company.status) as "success" | "warning" | "danger" | "neutral"}>
-                    {company.status}
-                  </AppBadge>
+                  <Chip
+                    size="small"
+                    label={statusLabel(company.status)}
+                    color={statusChipColor(company.status)}
+                    variant="outlined"
+                  />
                 </AppTableCell>
                 <AppTableCell>
-                  <Stack direction="row" spacing={0.5} sx={{ flexWrap: "wrap" }}>
-                    <Button size="small" onClick={() => statusMutation.mutate({ companyId: company.id, action: "approve", adminNote: "Approved" })}>
-                      Approve
-                    </Button>
-                    <Button size="small" color="error" onClick={() => statusMutation.mutate({ companyId: company.id, action: "reject", adminNote: "Rejected" })}>
-                      Reject
-                    </Button>
-                    <Button size="small" onClick={() => statusMutation.mutate({ companyId: company.id, action: "suspend", adminNote: "Suspended" })}>
-                      Suspend
-                    </Button>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      onClick={() => {
-                        setSelectedCompany(company);
-                        setNewLimit(company.maxProducts || 10);
-                      }}
-                    >
-                      Set Limit
-                    </Button>
-                    <Button size="small" onClick={() => resetPasswordMutation.mutate({ companyId: company.id })}>
-                      <Key fontSize="small" />
-                    </Button>
+                  <Stack direction="row" spacing={0.5} sx={{ flexWrap: "wrap", gap: 0.5 }}>
+                    {company.status === "PENDING" && (
+                      <>
+                        <Button
+                          size="small"
+                          color="success"
+                          onClick={() =>
+                            statusMutation.mutate({
+                              companyId: company.id,
+                              action: "approve",
+                              adminNote: "Approved",
+                            })
+                          }
+                        >
+                          {t("companies.approve")}
+                        </Button>
+                        <Button
+                          size="small"
+                          color="error"
+                          onClick={() =>
+                            statusMutation.mutate({
+                              companyId: company.id,
+                              action: "reject",
+                              adminNote: "Rejected",
+                            })
+                          }
+                        >
+                          {t("companies.reject")}
+                        </Button>
+                      </>
+                    )}
+                    {company.status === "APPROVED" && (
+                      <Button
+                        size="small"
+                        color="warning"
+                        onClick={() =>
+                          statusMutation.mutate({
+                            companyId: company.id,
+                            action: "suspend",
+                            adminNote: "Suspended",
+                          })
+                        }
+                      >
+                        {t("companies.suspend")}
+                      </Button>
+                    )}
+                    {company.status === "SUSPENDED" && (
+                      <Button
+                        size="small"
+                        color="success"
+                        onClick={() =>
+                          statusMutation.mutate({
+                            companyId: company.id,
+                            action: "unsuspend",
+                            adminNote: "Unsuspended",
+                          })
+                        }
+                      >
+                        {t("companies.unsuspend")}
+                      </Button>
+                    )}
+                    {(company.status === "APPROVED" || company.status === "SUSPENDED") && (
+                      <>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => {
+                            setSelectedCompany(company);
+                            setNewLimit(company.maxProducts || 10);
+                          }}
+                        >
+                          {t("companies.setLimit")}
+                        </Button>
+                        <Button
+                          size="small"
+                          title={t("companies.resetPassword")}
+                          onClick={() => resetPasswordMutation.mutate({ companyId: company.id })}
+                        >
+                          <Key fontSize="small" />
+                        </Button>
+                      </>
+                    )}
                   </Stack>
                 </AppTableCell>
               </AppTableRow>
@@ -256,17 +353,51 @@ export function CompanyManagementPage() {
         </AppTable>
       )}
 
-      <AppDrawer open={Boolean(selectedCompany)} onClose={() => setSelectedCompany(null)} title="Company Details">
+      <AppDrawer
+        open={Boolean(selectedCompany)}
+        onClose={() => setSelectedCompany(null)}
+        title={t("companies.detailsTitle")}
+      >
         {selectedCompany ? (
           <Stack spacing={2}>
-            <Typography variant="body2"><strong>Name:</strong> {selectedCompany.name}</Typography>
-            <Typography variant="body2"><strong>Products Count:</strong> {selectedCompany.productsCount}</Typography>
-            <Typography variant="body2"><strong>Product Limit:</strong> {selectedCompany.maxProducts}</Typography>
-            <Typography variant="body2"><strong>Revenue:</strong> EGP {Number(selectedCompany.revenue || 0).toLocaleString()}</Typography>
-            <Typography variant="body2"><strong>Status:</strong> {selectedCompany.status}</Typography>
-            <Typography variant="body2"><strong>Rating:</strong> {Number(selectedCompany.rating || 0).toFixed(1)}</Typography>
+            <Typography variant="body2">
+              <Box component="span" sx={{ fontWeight: 600 }}>
+                {t("companies.fieldName")}:
+              </Box>{" "}
+              {selectedCompany.name}
+            </Typography>
+            <Typography variant="body2">
+              <Box component="span" sx={{ fontWeight: 600 }}>
+                {t("companies.fieldProductsCount")}:
+              </Box>{" "}
+              {selectedCompany.productsCount}
+            </Typography>
+            <Typography variant="body2">
+              <Box component="span" sx={{ fontWeight: 600 }}>
+                {t("companies.fieldProductLimit")}:
+              </Box>{" "}
+              {selectedCompany.maxProducts}
+            </Typography>
+            <Typography variant="body2">
+              <Box component="span" sx={{ fontWeight: 600 }}>
+                {t("companies.fieldRevenue")}:
+              </Box>{" "}
+              EGP {Number(selectedCompany.revenue || 0).toLocaleString(locale)}
+            </Typography>
+            <Typography variant="body2">
+              <Box component="span" sx={{ fontWeight: 600 }}>
+                {t("companies.fieldStatus")}:
+              </Box>{" "}
+              {statusLabel(selectedCompany.status)}
+            </Typography>
+            <Typography variant="body2">
+              <Box component="span" sx={{ fontWeight: 600 }}>
+                {t("companies.fieldRating")}:
+              </Box>{" "}
+              {Number(selectedCompany.rating || 0).toFixed(1)}
+            </Typography>
             <TextField
-              label="Assign Product Limit"
+              label={t("companies.assignLimit")}
               type="number"
               size="small"
               fullWidth
@@ -284,7 +415,7 @@ export function CompanyManagementPage() {
                 )
               }
             >
-              Save Product Limit
+              {t("companies.saveLimit")}
             </Button>
           </Stack>
         ) : null}

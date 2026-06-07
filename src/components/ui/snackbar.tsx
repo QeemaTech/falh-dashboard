@@ -74,6 +74,9 @@ export const toast = {
   info(message: string) {
     window.dispatchEvent(new CustomEvent("falh-toast", { detail: { message, severity: "info" } }));
   },
+  warning(message: string) {
+    window.dispatchEvent(new CustomEvent("falh-toast", { detail: { message, severity: "warning" } }));
+  },
 };
 
 /** Bridge global toast API to React context (works outside components too). */

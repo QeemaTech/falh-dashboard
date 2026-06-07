@@ -1,9 +1,9 @@
 import { http } from "./http";
 import type { AiSettings, AiSettingsPayload } from "../types/ai";
-import type { DashboardStats, User } from "../types/dashboard";
+import type { DashboardStats, User, UserAdminDetails } from "../types/dashboard";
 import type { LatestMarketData, LivestockCategory, MarketItem, MarketPagination, MarketTrend } from "../types/market";
 
-type ApiResponse<T> = { success: boolean; data: T; meta?: { total?: number; page?: number; limit?: number } };
+type ApiResponse<T> = { success: boolean; data: T; message?: string; meta?: { total?: number; page?: number; limit?: number } };
 
 export async function fetchDashboardStats() {
   const { data } = await http.get<ApiResponse<DashboardStats>>("/admin/dashboard/stats");
@@ -14,11 +14,28 @@ export async function fetchUsers(params: {
   page: number;
   limit: number;
   search?: string;
+  status?: string;
+  role?: string;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
 }) {
   const { data } = await http.get<ApiResponse<User[]>>("/admin/users", { params });
   return { users: data.data, meta: data.meta };
+}
+
+export async function fetchUserDetails(userId: string) {
+  const { data } = await http.get<ApiResponse<UserAdminDetails>>(`/admin/users/${userId}`);
+  return data.data;
+}
+
+export async function activateUserApi(userId: string) {
+  const { data } = await http.patch<ApiResponse<User>>(`/admin/users/${userId}/activate`);
+  return data.data;
+}
+
+export async function suspendUserApi(userId: string) {
+  const { data } = await http.patch<ApiResponse<User>>(`/admin/users/${userId}/suspend`);
+  return data.data;
 }
 
 export type AdminOrder = {
@@ -293,7 +310,7 @@ export async function reviewCompanyApplicationApi(
 
 export async function setCompanyStatusApi(
   companyId: string,
-  action: "approve" | "reject" | "suspend",
+  action: "approve" | "reject" | "suspend" | "unsuspend",
   adminNote?: string
 ) {
   const { data } = await http.patch(`/admin/companies/${companyId}/${action}`, { adminNote });

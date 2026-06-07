@@ -1,11 +1,13 @@
 import { Outlet } from "react-router-dom";
 import { Box, Container } from "@mui/material";
-import { Sidebar } from "../components/sidebar";
+import { Sidebar, SIDEBAR_WIDTH_COLLAPSED, SIDEBAR_WIDTH_OPEN } from "../components/sidebar";
 import { Header } from "../components/header";
 import { useUiStore } from "../store/ui-store";
 
 export function DashboardLayout() {
-  const { direction } = useUiStore();
+  const { direction, sidebarOpen } = useUiStore();
+  const drawerWidth = sidebarOpen ? SIDEBAR_WIDTH_OPEN : SIDEBAR_WIDTH_COLLAPSED;
+  const isRtl = direction === "rtl";
 
   return (
     <Box dir={direction} sx={{ display: "flex", minHeight: "100vh", bgcolor: "background.default" }}>
@@ -15,8 +17,12 @@ export function DashboardLayout() {
         sx={{
           flex: 1,
           minWidth: 0,
+          ml: { lg: isRtl ? 0 : `${drawerWidth}px` },
+          mr: { lg: isRtl ? `${drawerWidth}px` : 0 },
           display: "flex",
           flexDirection: "column",
+          transition: (theme) =>
+            theme.transitions.create(["margin"], { duration: theme.transitions.duration.shortest }),
         }}
       >
         <Header />

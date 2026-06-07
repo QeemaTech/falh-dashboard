@@ -179,17 +179,24 @@ export function Sidebar() {
       anchor={anchor}
       open
       sx={{
-        width: drawerWidth,
+        width: 0,
         flexShrink: 0,
+        display: { xs: "none", lg: "block" },
         "& .MuiDrawer-paper": {
           width: drawerWidth,
           boxSizing: "border-box",
-          position: "relative",
+          position: "fixed",
+          top: 0,
+          height: "100vh",
+          overflowY: "auto",
+          zIndex: (theme) => theme.zIndex.drawer,
           border: "none",
           bgcolor: "background.paper",
           borderRight: direction === "rtl" ? "none" : 1,
           borderLeft: direction === "rtl" ? 1 : "none",
           borderColor: "divider",
+          transition: (theme) =>
+            theme.transitions.create("width", { duration: theme.transitions.duration.shortest }),
         },
       }}
     >
