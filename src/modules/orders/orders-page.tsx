@@ -171,7 +171,7 @@ export function OrdersPage() {
           </Stack>
         ) : orderDetail ? (
           <Stack spacing={2.5} sx={{ px: 2.5, pb: 3 }}>
-            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+            <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap" }}>
               <Chip label={statusLabel(orderDetail.status)} size="small" color="primary" variant="outlined" />
               {orderDetail.isPaid ? (
                 <Chip label={t("orders.detail.paid")} size="small" color="success" variant="outlined" />
@@ -327,7 +327,7 @@ export function OrdersPage() {
                         <Typography variant="body2" sx={{ fontWeight: 600 }}>
                           {statusLabel(entry.status)}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary" display="block">
+                        <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
                           {new Date(entry.createdAt).toLocaleString(locale)}
                         </Typography>
                         {entry.note ? (
