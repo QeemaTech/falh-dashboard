@@ -27,6 +27,7 @@ type DataTableProps<T extends Record<string, unknown>> = {
   emptyMessage?: string;
   loadingMessage?: string;
   getRowKey?: (row: T, index: number) => string | number;
+  onRowClick?: (row: T) => void;
 };
 
 export function DataTable<T extends Record<string, unknown>>({
@@ -37,6 +38,7 @@ export function DataTable<T extends Record<string, unknown>>({
   emptyMessage = "No records available.",
   loadingMessage,
   getRowKey,
+  onRowClick,
 }: DataTableProps<T>) {
   const { t } = useI18n();
   const loadingText = loadingMessage || t("common.loading");
@@ -78,7 +80,12 @@ export function DataTable<T extends Record<string, unknown>>({
           <TableBody>
             {data.length ? (
               data.map((row, index) => (
-                <TableRow key={getRowKey?.(row, index) ?? index} hover>
+                <TableRow
+                  key={getRowKey?.(row, index) ?? index}
+                  hover
+                  onClick={onRowClick ? () => onRowClick(row) : undefined}
+                  sx={onRowClick ? { cursor: "pointer" } : undefined}
+                >
                   {columns.map((column) => (
                     <TableCell key={String(column.key)}>
                       {column.render ? column.render(row) : String(row[column.key] ?? "-")}

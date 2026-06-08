@@ -38,12 +38,47 @@ export async function suspendUserApi(userId: string) {
   return data.data;
 }
 
+export type AdminOrderStatus = "PENDING" | "CONFIRMED" | "PREPARING" | "DELIVERED" | "CANCELLED";
+export type AdminPaymentMethod = "CASH" | "MASTERCARD" | "VISA" | "APPLE_PAY";
+
+export type AdminOrderItem = {
+  id: string;
+  title: string;
+  price: number;
+  quantity: number;
+  unit?: string | null;
+  product?: { id: string; images?: Array<{ path: string }> };
+};
+
+export type AdminOrderAddress = {
+  label?: string | null;
+  city?: string | null;
+  district?: string | null;
+  street?: string | null;
+};
+
+export type AdminOrderStatusHistory = {
+  id: string;
+  status: AdminOrderStatus;
+  note?: string | null;
+  createdAt: string;
+};
+
 export type AdminOrder = {
   id: string;
-  status: string;
+  status: AdminOrderStatus;
+  subtotal?: number;
+  discount?: number;
   total: number;
+  paymentMethod?: AdminPaymentMethod;
+  isPaid?: boolean;
+  notes?: string | null;
   createdAt: string;
-  user?: { name?: string };
+  updatedAt?: string;
+  user?: { id?: string; name?: string; phone?: string; email?: string };
+  address?: AdminOrderAddress | null;
+  items?: AdminOrderItem[];
+  statusHistory?: AdminOrderStatusHistory[];
 };
 
 export type AdminBanner = {
@@ -99,6 +134,11 @@ export async function fetchAdminOrders(params: {
     items: data.data,
     meta: data.meta as { page?: number; limit?: number; total?: number; totalPages?: number },
   };
+}
+
+export async function fetchAdminOrderById(orderId: string) {
+  const { data } = await http.get<ApiResponse<AdminOrder>>(`/orders/${orderId}`);
+  return data.data;
 }
 
 export async function fetchRecentProducts() {
