@@ -22,18 +22,11 @@ import {
   uploadAppearanceAssetsApi,
   type AppearanceSettings,
 } from "../../services/admin-api";
+import { resolveAssetUrl } from "../../utils/asset-url";
 
 type AssetKey = "logo" | "loginLogo" | "loginBackground";
 
-const baseApiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
-const hostUrl = baseApiUrl.replace(/\/api\/?$/, "");
 const themes = ["emerald", "blue", "amber", "violet", "rose"];
-
-function toAbs(path?: string) {
-  if (!path) return "";
-  if (/^https?:\/\//i.test(path)) return path;
-  return `${hostUrl}${path.startsWith("/") ? "" : "/"}${path}`;
-}
 
 const initialAppearance: AppearanceSettings = {
   logo: "",
@@ -90,9 +83,9 @@ export function AppearanceSettingsPage() {
 
   const previews = useMemo(
     () => ({
-      logo: files.logo ? URL.createObjectURL(files.logo) : toAbs(form.logo),
-      loginLogo: files.loginLogo ? URL.createObjectURL(files.loginLogo) : toAbs(form.loginLogo),
-      loginBackground: files.loginBackground ? URL.createObjectURL(files.loginBackground) : toAbs(form.loginBackground),
+      logo: files.logo ? URL.createObjectURL(files.logo) : resolveAssetUrl(form.logo),
+      loginLogo: files.loginLogo ? URL.createObjectURL(files.loginLogo) : resolveAssetUrl(form.loginLogo),
+      loginBackground: files.loginBackground ? URL.createObjectURL(files.loginBackground) : resolveAssetUrl(form.loginBackground),
     }),
     [files, form]
   );

@@ -1,11 +1,12 @@
 import axios from "axios";
+import { API_BASE_URL } from "../config/api";
 import { refreshTokenApi } from "./auth-api";
 import { notifySessionExpired } from "./auth-session";
 import { scheduleTokenRefresh } from "./auth-refresh";
 import { getAccessToken, getRefreshToken, setAccessToken, setRefreshToken, clearAuthSession } from "./auth-storage";
 
 export const http = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000/api",
+  baseURL: API_BASE_URL,
   timeout: 20_000,
 });
 

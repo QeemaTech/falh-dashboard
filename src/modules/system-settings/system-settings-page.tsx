@@ -19,17 +19,9 @@ import {
   uploadSystemAssetsApi,
   type SystemSettings,
 } from "../../services/admin-api";
+import { resolveAssetUrl } from "../../utils/asset-url";
 
 type AssetKey = "logo" | "favicon" | "splashScreen" | "appIcon" | "loginBackground";
-
-const baseApiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
-const hostUrl = baseApiUrl.replace(/\/api\/?$/, "");
-
-function toAbs(path?: string) {
-  if (!path) return "";
-  if (/^https?:\/\//i.test(path)) return path;
-  return `${hostUrl}${path.startsWith("/") ? "" : "/"}${path}`;
-}
 
 const initialSettings: SystemSettings = {
   general: { projectName: "", logo: "", favicon: "", footerText: "" },
@@ -73,13 +65,13 @@ export function SystemSettingsPage() {
 
   const assetPreview = useMemo(
     () => ({
-      logo: files.logo ? URL.createObjectURL(files.logo) : toAbs(form.general.logo),
-      favicon: files.favicon ? URL.createObjectURL(files.favicon) : toAbs(form.general.favicon),
-      splashScreen: files.splashScreen ? URL.createObjectURL(files.splashScreen) : toAbs(form.application.splashScreen),
-      appIcon: files.appIcon ? URL.createObjectURL(files.appIcon) : toAbs(form.application.appIcon),
+      logo: files.logo ? URL.createObjectURL(files.logo) : resolveAssetUrl(form.general.logo),
+      favicon: files.favicon ? URL.createObjectURL(files.favicon) : resolveAssetUrl(form.general.favicon),
+      splashScreen: files.splashScreen ? URL.createObjectURL(files.splashScreen) : resolveAssetUrl(form.application.splashScreen),
+      appIcon: files.appIcon ? URL.createObjectURL(files.appIcon) : resolveAssetUrl(form.application.appIcon),
       loginBackground: files.loginBackground
         ? URL.createObjectURL(files.loginBackground)
-        : toAbs(form.application.loginBackground),
+        : resolveAssetUrl(form.application.loginBackground),
     }),
     [files, form]
   );
