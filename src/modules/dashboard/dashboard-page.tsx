@@ -233,7 +233,10 @@ export function DashboardPage() {
     [t]
   );
 
-  const chartTooltipFormatter = (value: number, name: string) => {
+  const chartTooltipFormatter = (
+    value: number | string | readonly (number | string)[] | undefined,
+    name?: string | number
+  ) => {
     const labels: Record<string, string> = {
       sales: t("dashboard.chart.sales"),
       orders: t("dashboard.chart.orders"),
@@ -243,7 +246,11 @@ export function DashboardPage() {
       value: t("dashboard.col.amount"),
       count: t("dashboard.stats.totalProducts"),
     };
-    return [value.toLocaleString(locale), labels[name] || name];
+    const raw = Array.isArray(value) ? value[0] : value;
+    const numeric = typeof raw === "number" ? raw : Number(raw);
+    const display = Number.isFinite(numeric) ? numeric.toLocaleString(locale) : String(raw ?? "");
+    const nameKey = String(name ?? "");
+    return [display, labels[nameKey] || nameKey];
   };
 
   const isLoading = statsLoading || usersLoading || ordersLoading || productsLoading || providersLoading;
