@@ -15,6 +15,7 @@ import {
   ShowChart,
   SmartToy,
   WbSunny,
+  AccountBalance,
 } from "@mui/icons-material";
 import {
   Box,
@@ -32,50 +33,52 @@ import { NavLink, useLocation } from "react-router-dom";
 import { AppLogo } from "./branding";
 import { useUiStore } from "../store/ui-store";
 import { useI18n } from "../hooks/use-i18n";
+import { usePermission } from "../store/permission-context";
 
 export const SIDEBAR_WIDTH_OPEN = 260;
 export const SIDEBAR_WIDTH_COLLAPSED = 72;
 
-type NavItem = { to: string; labelKey: string; icon: SvgIconComponent };
+type NavItem = { to: string; labelKey: string; icon: SvgIconComponent; permission?: string };
 
 const sections: Array<{ titleKey: string; items: NavItem[] }> = [
   {
     titleKey: "nav.section.dashboard",
-    items: [{ to: "/", labelKey: "nav.dashboard", icon: Dashboard }],
+    items: [{ to: "/", labelKey: "nav.dashboard", icon: Dashboard, permission: "dashboard.view" }],
   },
   {
     titleKey: "nav.section.management",
     items: [
-      { to: "/users", labelKey: "nav.users", icon: People },
-      { to: "/companies", labelKey: "nav.companies", icon: CorporateFare },
-      { to: "/join-requests", labelKey: "nav.joinRequests", icon: HowToReg },
-      { to: "/products", labelKey: "nav.products", icon: Inventory2 },
-      { to: "/pending-products", labelKey: "nav.pendingProducts", icon: PendingActions },
-      { to: "/categories", labelKey: "nav.categories", icon: Category },
-      { to: "/orders", labelKey: "nav.orders", icon: ShoppingCart },
+      { to: "/users", labelKey: "nav.users", icon: People, permission: "users.view" },
+      { to: "/companies", labelKey: "nav.companies", icon: CorporateFare, permission: "companies.view" },
+      { to: "/join-requests", labelKey: "nav.joinRequests", icon: HowToReg, permission: "companies.view" },
+      { to: "/products", labelKey: "nav.products", icon: Inventory2, permission: "products.view" },
+      { to: "/pending-products", labelKey: "nav.pendingProducts", icon: PendingActions, permission: "products.view" },
+      { to: "/categories", labelKey: "nav.categories", icon: Category, permission: "categories.view" },
+      { to: "/orders", labelKey: "nav.orders", icon: ShoppingCart, permission: "orders.view" },
+      { to: "/finance", labelKey: "nav.finance", icon: AccountBalance, permission: "finance.view" },
     ],
   },
   {
     titleKey: "nav.section.content",
     items: [
-      { to: "/banners", labelKey: "nav.banners", icon: Campaign },
-      { to: "/notifications", labelKey: "nav.notifications", icon: Notifications },
+      { to: "/banners", labelKey: "nav.banners", icon: Campaign, permission: "banners.view" },
+      { to: "/notifications", labelKey: "nav.notifications", icon: Notifications, permission: "notifications.view" },
     ],
   },
   {
     titleKey: "nav.section.services",
     items: [
-      { to: "/consultants", labelKey: "nav.consultants", icon: People },
-      { to: "/ai-settings", labelKey: "nav.aiSettings", icon: SmartToy },
-      { to: "/market", labelKey: "nav.market", icon: ShowChart },
-      { to: "/weather-settings", labelKey: "nav.weatherSettings", icon: WbSunny },
+      { to: "/consultants", labelKey: "nav.consultants", icon: People, permission: "consultants.view" },
+      { to: "/ai-settings", labelKey: "nav.aiSettings", icon: SmartToy, permission: "settings.view" },
+      { to: "/market", labelKey: "nav.market", icon: ShowChart, permission: "settings.view" },
+      { to: "/weather-settings", labelKey: "nav.weatherSettings", icon: WbSunny, permission: "settings.view" },
     ],
   },
   {
     titleKey: "nav.section.system",
     items: [
-      { to: "/system-settings", labelKey: "nav.systemSettings", icon: Settings },
-      { to: "/roles-permissions", labelKey: "nav.rolesPermissions", icon: AdminPanelSettings },
+      { to: "/system-settings", labelKey: "nav.systemSettings", icon: Settings, permission: "settings.view" },
+      { to: "/roles-permissions", labelKey: "nav.rolesPermissions", icon: AdminPanelSettings, permission: "roles.view" },
     ],
   },
 ];
@@ -93,11 +96,19 @@ const sidebarScrollSx = {
 function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const { sidebarOpen } = useUiStore();
   const { t } = useI18n();
+  const { hasPermission } = usePermission();
   const location = useLocation();
+
+  const visibleSections = sections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => !item.permission || hasPermission(item.permission)),
+    }))
+    .filter((section) => section.items.length > 0);
 
   return (
     <Stack spacing={0.75} sx={{ px: 0.75, py: 0.75 }}>
-      {sections.map((section) => (
+      {visibleSections.map((section) => (
         <Box key={section.titleKey}>
           {sidebarOpen ? (
             <Typography

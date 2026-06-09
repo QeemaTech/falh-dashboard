@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CalendarMonth,
@@ -29,8 +29,12 @@ import {
 import { AppDrawer } from "../../components/design-system";
 import { DataTable, EmptyState, FilterBar, PageHeader } from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
+import { PermissionGate } from "../../components/permission-gate";
 import {
   activateUserApi,
+  assignUserAdminRoleApi,
+  fetchAdminRoles,
+  fetchUserAdminRole,
   fetchUserDetails,
   fetchUsers,
   suspendUserApi,
@@ -159,6 +163,7 @@ export function UsersPage() {
   const [role, setRole] = useState("");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [adminRoleId, setAdminRoleId] = useState("");
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["users", status, role, search],
@@ -178,6 +183,34 @@ export function UsersPage() {
     queryKey: ["user-details", selectedId],
     queryFn: () => fetchUserDetails(selectedId!),
     enabled: Boolean(selectedId),
+  });
+
+  const { data: adminRoles = [] } = useQuery({
+    queryKey: ["admin-roles"],
+    queryFn: fetchAdminRoles,
+  });
+
+  const { data: userAdminRole } = useQuery({
+    queryKey: ["user-admin-role", selectedId],
+    queryFn: () => fetchUserAdminRole(selectedId!),
+    enabled: Boolean(selectedId && detail?.role === "ADMIN"),
+  });
+
+  useEffect(() => {
+    if (userAdminRole?.role?.id) {
+      setAdminRoleId(userAdminRole.role.id);
+    }
+  }, [userAdminRole?.role?.id, selectedId]);
+
+  const assignRoleMutation = useMutation({
+    mutationFn: ({ userId, roleId }: { userId: string; roleId: string }) =>
+      assignUserAdminRoleApi(userId, roleId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user-admin-role", selectedId] });
+      toast.success(t("users.adminRoleSaved"));
+    },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : t("users.adminRoleSaveFailed")),
   });
 
   const statusMutation = useMutation({
@@ -304,25 +337,27 @@ export function UsersPage() {
         footer={
           detail && selectedId ? (
             <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
-              {detail.status !== "ACTIVE" ? (
-                <Button
-                  variant="contained"
-                  disabled={statusMutation.isPending}
-                  onClick={() => statusMutation.mutate({ userId: selectedId, action: "activate" })}
-                >
-                  {t("users.activate")}
-                </Button>
-              ) : null}
-              {detail.status !== "SUSPENDED" ? (
-                <Button
-                  variant="outlined"
-                  color="error"
-                  disabled={statusMutation.isPending}
-                  onClick={() => statusMutation.mutate({ userId: selectedId, action: "suspend" })}
-                >
-                  {t("users.suspend")}
-                </Button>
-              ) : null}
+              <PermissionGate permission="users.update">
+                {detail.status !== "ACTIVE" ? (
+                  <Button
+                    variant="contained"
+                    disabled={statusMutation.isPending}
+                    onClick={() => statusMutation.mutate({ userId: selectedId, action: "activate" })}
+                  >
+                    {t("users.activate")}
+                  </Button>
+                ) : null}
+                {detail.status !== "SUSPENDED" ? (
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    disabled={statusMutation.isPending}
+                    onClick={() => statusMutation.mutate({ userId: selectedId, action: "suspend" })}
+                  >
+                    {t("users.suspend")}
+                  </Button>
+                ) : null}
+              </PermissionGate>
             </Stack>
           ) : undefined
         }
@@ -408,6 +443,43 @@ export function UsersPage() {
                 />
               </Stack>
             </Paper>
+
+            {detail.role === "ADMIN" ? (
+              <PermissionGate permission="users.update">
+                <SectionBlock title={t("users.adminRoleSection")}>
+                  <Stack spacing={1.5}>
+                    <TextField
+                      select
+                      size="small"
+                      fullWidth
+                      label={t("users.adminRole")}
+                      value={adminRoleId || userAdminRole?.role?.id || ""}
+                      onChange={(e) => setAdminRoleId(e.target.value)}
+                    >
+                      {adminRoles.map((item) => (
+                        <MenuItem key={item.id} value={item.id}>
+                          {item.name}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      disabled={!adminRoleId || assignRoleMutation.isPending}
+                      onClick={() =>
+                        assignRoleMutation.mutate({ userId: detail.id, roleId: adminRoleId })
+                      }
+                      sx={{ alignSelf: "flex-start" }}
+                    >
+                      {t("users.saveAdminRole")}
+                    </Button>
+                    <Typography variant="caption" color="text.secondary">
+                      {t("users.adminRoleHint")}
+                    </Typography>
+                  </Stack>
+                </SectionBlock>
+              </PermissionGate>
+            ) : null}
 
             <SectionBlock title={t("users.statsSection")}>
               <Grid container spacing={1.5}>

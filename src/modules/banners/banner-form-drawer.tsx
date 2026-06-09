@@ -32,7 +32,8 @@ const LINK_TYPES = [
 
 export function BannerFormDrawer({ open, onClose, onSuccess }: Props) {
   const { t } = useI18n();
-  const [title, setTitle] = useState("");
+  const [titleAr, setTitleAr] = useState("");
+  const [titleEn, setTitleEn] = useState("");
   const [linkType, setLinkType] = useState("");
   const [linkValue, setLinkValue] = useState("");
   const [sortOrder, setSortOrder] = useState(0);
@@ -43,7 +44,8 @@ export function BannerFormDrawer({ open, onClose, onSuccess }: Props) {
 
   useEffect(() => {
     if (!open) return;
-    setTitle("");
+    setTitleAr("");
+    setTitleEn("");
     setLinkType("");
     setLinkValue("");
     setSortOrder(0);
@@ -65,10 +67,12 @@ export function BannerFormDrawer({ open, onClose, onSuccess }: Props) {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (!title.trim()) throw new Error(t("banners.titleRequired"));
+      if (!titleAr.trim()) throw new Error(t("banners.titleRequired"));
+      if (!titleEn.trim()) throw new Error(t("banners.errorTitleEn"));
       if (!imageFile) throw new Error(t("banners.imageRequired"));
       return createAdminBannerApi({
-        title: title.trim(),
+        titleAr: titleAr.trim(),
+        titleEn: titleEn.trim(),
         image: imageFile,
         linkType: linkType || undefined,
         linkValue: linkValue.trim() || undefined,
@@ -104,7 +108,8 @@ export function BannerFormDrawer({ open, onClose, onSuccess }: Props) {
             {error}
           </Typography>
         ) : null}
-        <TextField size="small" fullWidth label={t("banners.fieldTitle")} value={title} onChange={(e) => setTitle(e.target.value)} />
+        <TextField size="small" fullWidth label={t("banners.fieldTitleAr")} value={titleAr} onChange={(e) => setTitleAr(e.target.value)} />
+        <TextField size="small" fullWidth label={t("banners.fieldTitleEn")} value={titleEn} onChange={(e) => setTitleEn(e.target.value)} />
         <Button component="label" variant="outlined" fullWidth>
           {t("banners.fieldImage")}
           <input hidden type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />

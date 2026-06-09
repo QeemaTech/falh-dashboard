@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Add, Check, Delete, Save, Security } from "@mui/icons-material";
+import { Add, Check, Delete, Lock, Save, Security } from "@mui/icons-material";
 import {
+  Alert,
   Box,
   Button,
   Checkbox,
+  Chip,
   CircularProgress,
   Grid,
   IconButton,
@@ -24,6 +26,8 @@ import {
 } from "@mui/material";
 import { EmptyState, PageHeader } from "../../components/layout";
 import { toast } from "../../components/ui/sonner";
+import { useI18n } from "../../hooks/use-i18n";
+import { PermissionGate } from "../../components/permission-gate";
 import {
   createRoleApi,
   deleteRoleApi,
@@ -44,7 +48,20 @@ function emptyPermissions(modules: string[]): PermissionRecord {
   );
 }
 
+function moduleLabel(t: (key: string) => string, moduleName: string) {
+  const key = `rbac.modules.${moduleName}`;
+  const translated = t(key);
+  return translated === key ? moduleName : translated;
+}
+
+function actionLabel(t: (key: string) => string, action: string) {
+  const key = `rbac.actions.${action}`;
+  const translated = t(key);
+  return translated === key ? action : translated;
+}
+
 export function RolesPermissionsPage() {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const [newRoleName, setNewRoleName] = useState("");
   const [selectedRoleId, setSelectedRoleId] = useState("");
@@ -57,12 +74,18 @@ export function RolesPermissionsPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: createRoleApi,
-    onSuccess: () => {
+    mutationFn: (name: string) => createRoleApi({ name }),
+    onSuccess: (role) => {
       setNewRoleName("");
       queryClient.invalidateQueries({ queryKey: ["roles-permissions"] });
-      toast.success("Role created");
+      const moduleList = rolesQuery.data?.modules || [];
+      setSelectedRoleId(role.id);
+      setEditableName(role.name);
+      setPermissions(emptyPermissions(moduleList));
+      toast.success(t("rbac.roleCreated"));
     },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : t("rbac.saveFailed")),
   });
 
   const saveMutation = useMutation({
@@ -77,8 +100,10 @@ export function RolesPermissionsPage() {
     }) => updateRoleApi(roleId, { name, permissions: rolePermissions }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["roles-permissions"] });
-      toast.success("Role updated");
+      toast.success(t("rbac.roleUpdated"));
     },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : t("rbac.saveFailed")),
   });
 
   const deleteMutation = useMutation({
@@ -88,22 +113,27 @@ export function RolesPermissionsPage() {
       setEditableName("");
       setPermissions({});
       queryClient.invalidateQueries({ queryKey: ["roles-permissions"] });
-      toast.success("Role deleted");
+      toast.success(t("rbac.roleDeleted"));
     },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : t("rbac.deleteFailed")),
   });
 
-  const modules = rolesQuery.data?.modules || ["users", "products", "orders", "companies", "categories", "settings", "reports"];
+  const modules = rolesQuery.data?.modules || [];
   const actions = rolesQuery.data?.actions || ["view", "create", "update", "delete"];
   const roles = rolesQuery.data?.roles || [];
 
-  const selectedRole = useMemo(() => roles.find((role) => role.id === selectedRoleId) || null, [roles, selectedRoleId]);
+  const selectedRole = useMemo(
+    () => roles.find((role) => role.id === selectedRoleId) || null,
+    [roles, selectedRoleId]
+  );
 
-  const loadRole = (roleId: string) => {
+  const loadRole = (roleId: string, name?: string, perms?: PermissionRecord) => {
     const role = roles.find((r) => r.id === roleId);
-    if (!role) return;
+    if (!role && !name) return;
     setSelectedRoleId(roleId);
-    setEditableName(role.name);
-    setPermissions(role.permissions || emptyPermissions(modules));
+    setEditableName(name || role?.name || "");
+    setPermissions(perms || role?.permissions || emptyPermissions(modules));
   };
 
   const togglePermission = (moduleName: string, action: keyof PermissionActions, checked: boolean) => {
@@ -116,6 +146,9 @@ export function RolesPermissionsPage() {
     }));
   };
 
+  const isSuperAdmin = selectedRole?.slug === "super-admin";
+  const isReadOnly = Boolean(selectedRole?.isSystemRole);
+
   if (rolesQuery.isLoading) {
     return (
       <Stack sx={{ py: 6, alignItems: "center" }}>
@@ -125,35 +158,48 @@ export function RolesPermissionsPage() {
   }
 
   if (rolesQuery.isError) {
-    return <EmptyState title="Failed to load roles" description={(rolesQuery.error as Error).message} />;
+    return (
+      <EmptyState
+        title={t("rbac.loadFailed")}
+        description={(rolesQuery.error as Error).message}
+      />
+    );
   }
 
   return (
     <Stack spacing={3}>
       <PageHeader
-        title="Roles & Permissions"
-        subtitle="Create, edit, delete roles and assign permissions through matrix UI."
+        title={t("rbac.title")}
+        subtitle={t("rbac.subtitle")}
         icon={<Security fontSize="small" />}
       />
 
+      <Alert severity="info">{t("rbac.hint")}</Alert>
+
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, lg: 4 }}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
-              Roles
+          <Paper sx={{ p: 2, border: 1, borderColor: "divider" }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
+              {t("rbac.rolesList")}
             </Typography>
-            <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-              <TextField
-                size="small"
-                fullWidth
-                placeholder="New role name"
-                value={newRoleName}
-                onChange={(e) => setNewRoleName(e.target.value)}
-              />
-              <IconButton color="primary" onClick={() => createMutation.mutate(newRoleName)} disabled={!newRoleName.trim()}>
-                <Add />
-              </IconButton>
-            </Stack>
+            <PermissionGate permission="roles.create">
+              <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+                <TextField
+                  size="small"
+                  fullWidth
+                  placeholder={t("rbac.newRolePlaceholder")}
+                  value={newRoleName}
+                  onChange={(e) => setNewRoleName(e.target.value)}
+                />
+                <IconButton
+                  color="primary"
+                  onClick={() => createMutation.mutate(newRoleName)}
+                  disabled={!newRoleName.trim() || createMutation.isPending}
+                >
+                  <Add />
+                </IconButton>
+              </Stack>
+            </PermissionGate>
             <List dense disablePadding>
               {roles.map((role) => (
                 <ListItemButton
@@ -162,7 +208,16 @@ export function RolesPermissionsPage() {
                   onClick={() => loadRole(role.id)}
                   sx={{ borderRadius: 2, mb: 0.5 }}
                 >
-                  <ListItemText primary={role.name} />
+                  <ListItemText
+                    primary={
+                      <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                        <span>{role.name}</span>
+                        {role.isSystemRole ? (
+                          <Chip size="small" icon={<Lock sx={{ fontSize: 14 }} />} label={t("rbac.systemRole")} />
+                        ) : null}
+                      </Stack>
+                    }
+                  />
                 </ListItemButton>
               ))}
             </List>
@@ -170,31 +225,40 @@ export function RolesPermissionsPage() {
         </Grid>
 
         <Grid size={{ xs: 12, lg: 8 }}>
-          <Paper sx={{ p: 2 }}>
+          <Paper sx={{ p: 2, border: 1, borderColor: "divider" }}>
             {selectedRole ? (
               <Stack spacing={2}>
+                {isSuperAdmin ? <Alert severity="warning">{t("rbac.superAdminLocked")}</Alert> : null}
                 <Stack direction="row" spacing={1} sx={{ alignItems: "flex-end", flexWrap: "wrap" }}>
                   <TextField
                     size="small"
                     fullWidth
-                    label="Role Name"
+                    label={t("rbac.roleName")}
                     value={editableName}
                     onChange={(e) => setEditableName(e.target.value)}
+                    disabled={isReadOnly}
                     sx={{ flex: 1, minWidth: 200 }}
                   />
-                  <Button color="error" startIcon={<Delete />} onClick={() => deleteMutation.mutate(selectedRole.id)}>
-                    Delete Role
-                  </Button>
+                  <PermissionGate permission="roles.delete">
+                    <Button
+                      color="error"
+                      startIcon={<Delete />}
+                      disabled={isReadOnly || deleteMutation.isPending}
+                      onClick={() => deleteMutation.mutate(selectedRole.id)}
+                    >
+                      {t("rbac.deleteRole")}
+                    </Button>
+                  </PermissionGate>
                 </Stack>
 
                 <TableContainer component={Paper} variant="outlined">
                   <Table size="small">
                     <TableHead>
                       <TableRow>
-                        <TableCell sx={{ fontWeight: 700 }}>Module</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>{t("rbac.module")}</TableCell>
                         {actions.map((action) => (
-                          <TableCell key={action} align="center" sx={{ fontWeight: 700, textTransform: "capitalize" }}>
-                            {action}
+                          <TableCell key={action} align="center" sx={{ fontWeight: 700 }}>
+                            {actionLabel(t, action)}
                           </TableCell>
                         ))}
                       </TableRow>
@@ -202,17 +266,37 @@ export function RolesPermissionsPage() {
                     <TableBody>
                       {modules.map((moduleName) => (
                         <TableRow key={moduleName}>
-                          <TableCell sx={{ fontWeight: 600, textTransform: "capitalize" }}>
-                            {moduleName}
+                          <TableCell sx={{ fontWeight: 600 }}>
+                            {moduleLabel(t, moduleName)}
                           </TableCell>
                           {actions.map((action) => {
-                            const isChecked = Boolean(permissions?.[moduleName]?.[action as keyof PermissionActions]);
+                            const modulePerms = permissions?.[moduleName];
+                            const hasAction = action in (modulePerms || {});
+                            if (!hasAction) {
+                              return (
+                                <TableCell key={action} align="center">
+                                  —
+                                </TableCell>
+                              );
+                            }
+                            const isChecked = Boolean(modulePerms?.[action as keyof PermissionActions]);
                             return (
                               <TableCell key={action} align="center">
                                 <Checkbox
                                   size="small"
                                   checked={isChecked}
-                                  icon={<Box sx={{ width: 20, height: 20, border: 1, borderColor: "divider", borderRadius: 1 }} />}
+                                  disabled={isReadOnly}
+                                  icon={
+                                    <Box
+                                      sx={{
+                                        width: 20,
+                                        height: 20,
+                                        border: 1,
+                                        borderColor: "divider",
+                                        borderRadius: 1,
+                                      }}
+                                    />
+                                  }
                                   checkedIcon={<Check fontSize="small" />}
                                   onChange={(_, checked) =>
                                     togglePermission(moduleName, action as keyof PermissionActions, checked)
@@ -227,25 +311,28 @@ export function RolesPermissionsPage() {
                   </Table>
                 </TableContainer>
 
-                <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-                  <Button
-                    variant="contained"
-                    startIcon={<Save />}
-                    onClick={() =>
-                      saveMutation.mutate({
-                        roleId: selectedRole.id,
-                        name: editableName,
-                        rolePermissions: permissions,
-                      })
-                    }
-                  >
-                    Save Changes
-                  </Button>
-                </Box>
+                <PermissionGate permission="roles.update">
+                  <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+                    <Button
+                      variant="contained"
+                      startIcon={<Save />}
+                      disabled={isReadOnly || saveMutation.isPending}
+                      onClick={() =>
+                        saveMutation.mutate({
+                          roleId: selectedRole.id,
+                          name: editableName,
+                          rolePermissions: permissions,
+                        })
+                      }
+                    >
+                      {t("rbac.saveChanges")}
+                    </Button>
+                  </Box>
+                </PermissionGate>
               </Stack>
             ) : (
               <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: "center" }}>
-                Select a role to edit permissions matrix.
+                {t("rbac.selectRole")}
               </Typography>
             )}
           </Paper>

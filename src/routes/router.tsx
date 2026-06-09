@@ -14,6 +14,7 @@ import { OrdersPage } from "../modules/orders/orders-page";
 import { CategoriesPage } from "../modules/categories/categories-page";
 import { BannersPage } from "../modules/banners/banners-page";
 import { NotificationsPage } from "../modules/notifications/notifications-page";
+import { FinancePage } from "../modules/finance/finance-page";
 import { ConsultantsPage } from "../modules/consultants/consultants-page";
 import { CropPricesPage } from "../modules/crop-prices/crop-prices-page";
 import { MarketPage } from "../modules/market/market-page";
@@ -81,6 +82,7 @@ export const router = createBrowserRouter([
           { path: "pending-products", element: <PendingProductsPage /> },
           { path: "products", element: <ProductManagementPage /> },
           { path: "orders", element: <OrdersPage /> },
+          { path: "finance", element: <FinancePage /> },
           { path: "categories", element: <CategoriesPage /> },
           { path: "banners", element: <BannersPage /> },
           { path: "notifications", element: <NotificationsPage /> },

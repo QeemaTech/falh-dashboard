@@ -20,6 +20,7 @@ import {
 } from "@mui/material";
 import { ChevronRight, Visibility, VisibilityOff } from "@mui/icons-material";
 import { AppLogo, AuthChrome } from "../../components/branding";
+import { useBranding } from "../../hooks/use-branding";
 import { useI18n } from "../../hooks/use-i18n";
 import { useAuth } from "../../store/auth-store";
 import { getStoredUser } from "../../services/auth-storage";
@@ -37,6 +38,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { t, language } = useI18n();
+  const { footerText } = useBranding();
 
   const schema = useMemo(
     () =>
@@ -76,7 +78,7 @@ export function LoginPage() {
     <AuthChrome
       footer={
         <Typography variant="caption" color="text.disabled">
-          {t("login.footer")}
+          {footerText || t("login.footer")}
         </Typography>
       }
     >

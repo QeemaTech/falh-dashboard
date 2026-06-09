@@ -12,7 +12,12 @@ import { toast } from "../../components/ui/sonner";
 import { useI18n } from "../../hooks/use-i18n";
 
 export function BannersPage() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
+
+  const bannerTitle = (banner: AdminBanner) =>
+    language === "ar"
+      ? banner.titleAr || banner.title
+      : banner.titleEn || banner.titleAr || banner.title;
   const queryClient = useQueryClient();
   const [formOpen, setFormOpen] = useState(false);
 
@@ -88,14 +93,14 @@ export function BannersPage() {
                     <Box
                       component="img"
                       src={resolveAssetUrl(banner.imagePath)}
-                      alt={banner.title}
+                      alt={bannerTitle(banner)}
                       sx={{ height: 56, width: 96, borderRadius: 1, objectFit: "cover" }}
                     />
                   ) : (
                     <Box sx={{ height: 56, width: 96, borderRadius: 1, bgcolor: "action.hover" }} />
                   )}
                 </AppTableCell>
-                <AppTableCell>{banner.title}</AppTableCell>
+                <AppTableCell>{bannerTitle(banner)}</AppTableCell>
                 <AppTableCell>{banner.linkType || "—"}</AppTableCell>
                 <AppTableCell>{banner.sortOrder ?? 0}</AppTableCell>
                 <AppTableCell>

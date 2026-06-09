@@ -1,8 +1,17 @@
+export type AdminRoleSummary = {
+  id: string;
+  name: string;
+  slug?: string;
+};
+
 export type AuthUser = {
   id: string;
   name: string;
   email?: string;
   role: "USER" | "ADMIN" | "COMPANY";
+  permissions?: string[];
+  adminRole?: AdminRoleSummary | null;
+  isSuperAdmin?: boolean;
 };
 
 export type AuthTokens = {

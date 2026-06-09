@@ -84,6 +84,8 @@ export type AdminOrder = {
 export type AdminBanner = {
   id: string;
   title: string;
+  titleAr?: string;
+  titleEn?: string;
   imagePath: string;
   linkType?: string;
   linkValue?: string;
@@ -95,7 +97,11 @@ export type AdminBanner = {
 export type AdminProduct = {
   id: string;
   title: string;
+  titleAr?: string;
+  titleEn?: string;
   description?: string;
+  descriptionAr?: string;
+  descriptionEn?: string;
   status: string;
   price?: number;
   quantity?: number;
@@ -185,8 +191,10 @@ export async function uploadAdminProductImagesApi(files: File[]) {
 }
 
 export type ProductFormPayload = {
-  title: string;
-  description: string;
+  titleAr: string;
+  titleEn: string;
+  descriptionAr: string;
+  descriptionEn: string;
   categoryId: string;
   quantity: number;
   unit: string;
@@ -314,6 +322,8 @@ export type AdminCompany = {
   productsCount: number;
   revenue: number;
   maxProducts: number;
+  displayDays?: number;
+  listingExpiresAt?: string | null;
   createdAt: string;
   description?: string;
   commercialReg?: string;
@@ -339,7 +349,7 @@ export async function fetchAdminCompanyDetails(companyId: string) {
 
 export async function approveCompanyWithCredentialsApi(
   companyId: string,
-  payload: { email: string; password: string; maxProducts: number; adminNote?: string }
+  payload: { email: string; password: string; maxProducts: number; displayDays: number; adminNote?: string }
 ) {
   const { data } = await http.patch<
     ApiResponse<{ credentials?: { email: string; password: string } }>
@@ -367,6 +377,7 @@ export async function reviewCompanyApplicationApi(
   payload: {
     action: "APPROVE" | "REJECT";
     maxProducts?: number;
+    displayDays?: number;
     email?: string;
     password?: string;
     adminNote?: string;
@@ -383,6 +394,7 @@ export async function reviewCompanyApplicationApi(
     `/admin/company-applications/${applicationId}/approve`,
     {
       maxProducts: payload.maxProducts,
+      displayDays: payload.displayDays,
       email: payload.email,
       password: payload.password,
       adminNote: payload.adminNote,
@@ -401,8 +413,11 @@ export async function setCompanyStatusApi(
   return data;
 }
 
-export async function assignCompanyProductLimitApi(companyId: string, maxProducts: number) {
-  const { data } = await http.patch(`/admin/companies/${companyId}/product-limit`, { maxProducts });
+export async function assignCompanyProductLimitApi(
+  companyId: string,
+  payload: { maxProducts: number; displayDays?: number }
+) {
+  const { data } = await http.patch(`/admin/companies/${companyId}/product-limit`, payload);
   return data;
 }
 
@@ -410,6 +425,85 @@ export async function resetCompanyPasswordApi(companyId: string, newPassword?: s
   const { data } = await http.post<
     ApiResponse<{ companyId: string; userId: string; generatedPassword: string }>
   >(`/admin/companies/${companyId}/reset-password`, { newPassword });
+  return data.data;
+}
+
+export type CompanyFinanceSummary = {
+  companyId: string;
+  companyName: string;
+  companyStatus: string;
+  city: string;
+  commissionRate: number;
+  ordersCount: number;
+  itemsCount: number;
+  grossSales: number;
+  commissionAmount: number;
+  netToCompany: number;
+};
+
+export type FinanceTotals = {
+  grossSales: number;
+  commissionAmount: number;
+  netToCompany: number;
+  ordersCount: number;
+  companiesCount: number;
+};
+
+export type CompanyFinanceOrderItem = {
+  id: string;
+  title: string;
+  quantity: number;
+  unit: string;
+  price: number;
+  lineTotal: number;
+};
+
+export type CompanyFinanceOrder = {
+  orderId: string;
+  status: string;
+  createdAt: string;
+  customerName: string;
+  customerPhone?: string | null;
+  companyGross: number;
+  commissionAmount: number;
+  netToCompany: number;
+  items: CompanyFinanceOrderItem[];
+};
+
+export type CompanyFinanceDetails = {
+  company: {
+    id: string;
+    name: string;
+    status: string;
+    city: string;
+    commissionRate: number;
+    phone?: string;
+    user?: { email?: string | null };
+  };
+  summary: CompanyFinanceSummary;
+  orders: CompanyFinanceOrder[];
+};
+
+export async function fetchFinanceOverview(params?: { search?: string; status?: string }) {
+  const { data } = await http.get<ApiResponse<CompanyFinanceSummary[]>>("/admin/finance/companies", {
+    params,
+  });
+  return {
+    items: data.data,
+    totals: (data.meta || {}) as FinanceTotals,
+  };
+}
+
+export async function fetchCompanyFinanceDetails(companyId: string) {
+  const { data } = await http.get<ApiResponse<CompanyFinanceDetails>>(`/admin/finance/companies/${companyId}`);
+  return data.data;
+}
+
+export async function updateCompanyCommissionApi(companyId: string, commissionRate: number) {
+  const { data } = await http.patch<ApiResponse<CompanyFinanceSummary>>(
+    `/admin/finance/companies/${companyId}/commission`,
+    { commissionRate }
+  );
   return data.data;
 }
 
@@ -616,7 +710,8 @@ export async function fetchAdminBanners() {
 }
 
 export type BannerFormPayload = {
-  title: string;
+  titleAr: string;
+  titleEn: string;
   image: File;
   linkType?: string;
   linkValue?: string;
@@ -626,7 +721,8 @@ export type BannerFormPayload = {
 
 export async function createAdminBannerApi(payload: BannerFormPayload) {
   const formData = new FormData();
-  formData.append("title", payload.title);
+  formData.append("titleAr", payload.titleAr);
+  formData.append("titleEn", payload.titleEn);
   formData.append("image", payload.image);
   if (payload.linkType) formData.append("linkType", payload.linkType);
   if (payload.linkValue) formData.append("linkValue", payload.linkValue);
@@ -816,14 +912,35 @@ export type PermissionActions = {
   delete: boolean;
 };
 
+export type RbacRole = {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  isSystemRole: boolean;
+  permissions: string[] | Record<string, PermissionActions>;
+  assignedUsers?: number;
+};
+
 export type RolePermissionsPayload = {
   roles: Array<{
     id: string;
     name: string;
+    slug?: string;
+    description?: string | null;
+    isSystemRole?: boolean;
     permissions: Record<string, PermissionActions>;
   }>;
   modules: string[];
   actions: Array<keyof PermissionActions>;
+  permissionCodes?: string[];
+};
+
+export type PermissionRecord = {
+  id: string;
+  module: string;
+  action: string;
+  code: string;
 };
 
 export async function fetchRolesPermissions() {
@@ -831,21 +948,50 @@ export async function fetchRolesPermissions() {
   return data.data;
 }
 
-export async function createRoleApi(name: string) {
-  const { data } = await http.post("/admin/roles-permissions/roles", { name });
-  return data;
+export async function fetchAdminRoles() {
+  const { data } = await http.get<ApiResponse<RbacRole[]>>("/admin/roles");
+  return data.data;
+}
+
+export async function fetchAdminPermissions() {
+  const { data } = await http.get<ApiResponse<PermissionRecord[]>>("/admin/permissions");
+  return data.data;
+}
+
+export async function createRoleApi(payload: {
+  name: string;
+  description?: string;
+  permissions?: Record<string, PermissionActions>;
+}) {
+  const { data } = await http.post<ApiResponse<RbacRole>>("/admin/roles", payload);
+  return data.data;
 }
 
 export async function updateRoleApi(
   roleId: string,
-  payload: { name?: string; permissions?: Record<string, PermissionActions> }
+  payload: { name?: string; description?: string; permissions?: Record<string, PermissionActions> }
 ) {
-  const { data } = await http.patch(`/admin/roles-permissions/roles/${roleId}`, payload);
-  return data;
+  const { data } = await http.put<ApiResponse<RbacRole>>(`/admin/roles/${roleId}`, payload);
+  return data.data;
 }
 
 export async function deleteRoleApi(roleId: string) {
-  await http.delete(`/admin/roles-permissions/roles/${roleId}`);
+  await http.delete(`/admin/roles/${roleId}`);
+}
+
+export async function fetchUserAdminRole(userId: string) {
+  const { data } = await http.get<ApiResponse<{ userId: string; role: RbacRole | null }>>(
+    `/admin/users/${userId}/role`
+  );
+  return data.data;
+}
+
+export async function assignUserAdminRoleApi(userId: string, roleId: string) {
+  const { data } = await http.put<ApiResponse<{ userId: string; role: RbacRole }>>(
+    `/admin/users/${userId}/role`,
+    { roleId }
+  );
+  return data.data;
 }
 
 export type JoinUsApplicationListItem = {
@@ -931,7 +1077,7 @@ export async function fetchJoinUsApplicationById(applicationId: string) {
 
 export async function approveJoinUsApplicationApi(
   applicationId: string,
-  payload: { email?: string; password?: string; maxProducts?: number; adminNote?: string }
+  payload: { email?: string; password?: string; maxProducts?: number; displayDays?: number; adminNote?: string }
 ) {
   const { data } = await http.post<
     ApiResponse<{

@@ -5,6 +5,7 @@ import { RouterProvider } from "react-router-dom";
 import { router } from "./routes/router";
 import { UiProvider } from "./store/ui-store";
 import { AuthProvider } from "./store/auth-store";
+import { PermissionProvider } from "./store/permission-context";
 import { AppThemeProvider } from "./theme/AppThemeProvider";
 import "./index.css";
 
@@ -27,9 +28,11 @@ createRoot(document.getElementById("root")!).render(
     <UiProvider>
       <AppThemeProvider>
         <AuthProvider>
-          <QueryClientProvider client={queryClient}>
-            <RouterProvider router={router} />
-          </QueryClientProvider>
+          <PermissionProvider>
+            <QueryClientProvider client={queryClient}>
+              <RouterProvider router={router} />
+            </QueryClientProvider>
+          </PermissionProvider>
         </AuthProvider>
       </AppThemeProvider>
     </UiProvider>

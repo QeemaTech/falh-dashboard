@@ -1,6 +1,6 @@
 import { Box, Typography } from "@mui/material";
 import { useColorMode } from "../../theme/useColorMode";
-import { useI18n } from "../../hooks/use-i18n";
+import { useBranding } from "../../hooks/use-branding";
 
 export const LOGO_SRC = "/logo.png";
 
@@ -8,11 +8,14 @@ type AppLogoProps = {
   size?: number;
   showLabel?: boolean;
   label?: string;
+  tagline?: string;
 };
 
-export function AppLogo({ size = 48, showLabel = false, label }: AppLogoProps) {
+export function AppLogo({ size = 48, showLabel = false, label, tagline }: AppLogoProps) {
   const { mode } = useColorMode();
-  const { t } = useI18n();
+  const { projectName, footerText, logoUrl } = useBranding();
+  const displayName = label || projectName;
+  const displayTagline = tagline || footerText;
 
   return (
     <Box
@@ -37,8 +40,8 @@ export function AppLogo({ size = 48, showLabel = false, label }: AppLogoProps) {
       >
         <Box
           component="img"
-          src={LOGO_SRC}
-          alt={t("brand.name")}
+          src={logoUrl || LOGO_SRC}
+          alt={displayName}
           sx={{
             height: size,
             width: "auto",
@@ -51,11 +54,13 @@ export function AppLogo({ size = 48, showLabel = false, label }: AppLogoProps) {
       {showLabel ? (
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
-            {label || t("brand.name")}
+            {displayName}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {t("brand.tagline")}
-          </Typography>
+          {displayTagline ? (
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+              {displayTagline}
+            </Typography>
+          ) : null}
         </Box>
       ) : null}
     </Box>

@@ -61,9 +61,10 @@ export function CategoriesPage() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      if (!form.nameEn.trim()) throw new Error(t("categories.nameEnRequired"));
       const payload = {
         nameAr: form.nameAr.trim(),
-        nameEn: form.nameEn.trim() || undefined,
+        nameEn: form.nameEn.trim(),
         sortOrder: Number(form.sortOrder) || 0,
         isActive: form.isActive,
       };
@@ -131,7 +132,7 @@ export function CategoriesPage() {
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
             <TextField
-              label={t("categories.nameEn")}
+              label={`${t("categories.nameEn")} *`}
               fullWidth
               size="small"
               value={form.nameEn}
@@ -168,7 +169,7 @@ export function CategoriesPage() {
             variant="contained"
             startIcon={<Add />}
             onClick={() => saveMutation.mutate()}
-            disabled={!form.nameAr.trim() || saveMutation.isPending}
+            disabled={!form.nameAr.trim() || !form.nameEn.trim() || saveMutation.isPending}
           >
             {editingId ? t("categories.update") : t("categories.add")}
           </Button>

@@ -116,6 +116,8 @@ export function CompanyManagementPage() {
   const [reviewCompanyId, setReviewCompanyId] = useState<string | null>(null);
   const [newLimit, setNewLimit] = useState<number>(10);
   const [maxProducts, setMaxProducts] = useState("10");
+  const [displayDays, setDisplayDays] = useState("30");
+  const [editDisplayDays, setEditDisplayDays] = useState(30);
   const [companyEmail, setCompanyEmail] = useState("");
   const [companyPassword, setCompanyPassword] = useState("");
   const [adminNote, setAdminNote] = useState("");
@@ -166,11 +168,19 @@ export function CompanyManagementPage() {
   };
 
   const approveMutation = useMutation({
-    mutationFn: (payload: { companyId: string; email: string; password: string; maxProducts: number; adminNote?: string }) =>
+    mutationFn: (payload: {
+      companyId: string;
+      email: string;
+      password: string;
+      maxProducts: number;
+      displayDays: number;
+      adminNote?: string;
+    }) =>
       approveCompanyWithCredentialsApi(payload.companyId, {
         email: payload.email,
         password: payload.password,
         maxProducts: payload.maxProducts,
+        displayDays: payload.displayDays,
         adminNote: payload.adminNote,
       }),
     onSuccess: (result) => {
@@ -227,8 +237,15 @@ export function CompanyManagementPage() {
   });
 
   const limitMutation = useMutation({
-    mutationFn: ({ companyId, maxProducts: limit }: { companyId: string; maxProducts: number }) =>
-      assignCompanyProductLimitApi(companyId, limit),
+    mutationFn: ({
+      companyId,
+      maxProducts: limit,
+      displayDays: days,
+    }: {
+      companyId: string;
+      maxProducts: number;
+      displayDays: number;
+    }) => assignCompanyProductLimitApi(companyId, { maxProducts: limit, displayDays: days }),
     onSuccess: () => {
       invalidate();
       toast.success(t("companies.limitSuccess"));
@@ -275,6 +292,7 @@ export function CompanyManagementPage() {
   function openReview(company: AdminCompany) {
     setReviewCompanyId(company.id);
     setMaxProducts(String(company.maxProducts || 10));
+    setDisplayDays(String(company.displayDays || 30));
     setCompanyEmail(prefillCompanyLoginEmail(company.email_public, company.user?.email));
     setCompanyPassword(generatePassword());
     setAdminNote("");
@@ -319,6 +337,7 @@ export function CompanyManagementPage() {
   function handleApprove() {
     if (!reviewCompanyId) return;
     const quota = Number(maxProducts);
+    const days = Number(displayDays);
     const email = companyEmail.trim().toLowerCase();
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setFormError(t("companies.invalidEmail"));
@@ -332,11 +351,16 @@ export function CompanyManagementPage() {
       setFormError(t("companies.quotaMin"));
       return;
     }
+    if (!Number.isInteger(days) || days < 1) {
+      setFormError(t("companies.displayDaysMin"));
+      return;
+    }
     approveMutation.mutate({
       companyId: reviewCompanyId,
       email,
       password: companyPassword,
       maxProducts: quota,
+      displayDays: days,
       adminNote: adminNote.trim() || undefined,
     });
   }
@@ -447,6 +471,7 @@ export function CompanyManagementPage() {
               <AppTableHeaderCell>{t("companies.col.company")}</AppTableHeaderCell>
               <AppTableHeaderCell>{t("companies.col.details")}</AppTableHeaderCell>
               <AppTableHeaderCell>{t("companies.col.products")}</AppTableHeaderCell>
+              <AppTableHeaderCell>{t("companies.fieldListingExpires")}</AppTableHeaderCell>
               <AppTableHeaderCell>{t("companies.col.revenue")}</AppTableHeaderCell>
               <AppTableHeaderCell>{t("companies.col.rating")}</AppTableHeaderCell>
               <AppTableHeaderCell>{t("companies.col.status")}</AppTableHeaderCell>
@@ -487,6 +512,13 @@ export function CompanyManagementPage() {
                   </Typography>
                 </AppTableCell>
                 <AppTableCell>{company.productsCount}</AppTableCell>
+                <AppTableCell>
+                  {company.listingExpiresAt
+                    ? new Date(company.listingExpiresAt).toLocaleDateString(locale)
+                    : company.status === "APPROVED"
+                      ? t("companies.listingActive")
+                      : "-"}
+                </AppTableCell>
                 <AppTableCell>
                   {t("market.currency")} {Number(company.revenue || 0).toLocaleString(locale)}
                 </AppTableCell>
@@ -565,6 +597,7 @@ export function CompanyManagementPage() {
                           onClick={() => {
                             setSelectedCompany(company);
                             setNewLimit(company.maxProducts || 10);
+                            setEditDisplayDays(company.displayDays || 30);
                           }}
                         >
                           {t("companies.setLimit")}
@@ -611,6 +644,7 @@ export function CompanyManagementPage() {
                           onClick={() => {
                             setSelectedCompany(company);
                             setNewLimit(company.maxProducts || 10);
+                            setEditDisplayDays(company.displayDays || 30);
                           }}
                         >
                           {t("companies.setLimit")}
@@ -686,6 +720,16 @@ export function CompanyManagementPage() {
                   slotProps={{ htmlInput: { min: 1 } }}
                   value={maxProducts}
                   onChange={(e) => setMaxProducts(e.target.value)}
+                />
+                <TextField
+                  label={t("companies.displayDays")}
+                  type="number"
+                  size="small"
+                  fullWidth
+                  helperText={t("companies.displayDaysHint")}
+                  slotProps={{ htmlInput: { min: 1 } }}
+                  value={displayDays}
+                  onChange={(e) => setDisplayDays(e.target.value)}
                 />
                 <TextField
                   label={t("companies.loginEmail")}
@@ -791,6 +835,20 @@ export function CompanyManagementPage() {
             </Typography>
             <Typography variant="body2">
               <Box component="span" sx={{ fontWeight: 600 }}>
+                {t("companies.fieldDisplayDays")}:
+              </Box>{" "}
+              {selectedCompany.displayDays ?? 30}
+            </Typography>
+            <Typography variant="body2">
+              <Box component="span" sx={{ fontWeight: 600 }}>
+                {t("companies.fieldListingExpires")}:
+              </Box>{" "}
+              {selectedCompany.listingExpiresAt
+                ? new Date(selectedCompany.listingExpiresAt).toLocaleString(locale)
+                : "-"}
+            </Typography>
+            <Typography variant="body2">
+              <Box component="span" sx={{ fontWeight: 600 }}>
                 {t("companies.fieldRevenue")}:
               </Box>{" "}
               {t("market.currency")} {Number(selectedCompany.revenue || 0).toLocaleString(locale)}
@@ -816,12 +874,26 @@ export function CompanyManagementPage() {
               value={newLimit}
               onChange={(e) => setNewLimit(Number(e.target.value))}
             />
+            <TextField
+              label={t("companies.displayDays")}
+              type="number"
+              size="small"
+              fullWidth
+              helperText={t("companies.displayDaysHint")}
+              slotProps={{ htmlInput: { min: 1 } }}
+              value={editDisplayDays}
+              onChange={(e) => setEditDisplayDays(Number(e.target.value))}
+            />
             <Button
               variant="contained"
               fullWidth
               onClick={() =>
                 limitMutation.mutate(
-                  { companyId: selectedCompany.id, maxProducts: newLimit },
+                  {
+                    companyId: selectedCompany.id,
+                    maxProducts: newLimit,
+                    displayDays: editDisplayDays,
+                  },
                   { onSuccess: () => setSelectedCompany(null) }
                 )
               }

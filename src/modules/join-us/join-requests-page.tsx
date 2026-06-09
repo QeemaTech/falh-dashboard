@@ -69,6 +69,7 @@ export function JoinRequestsPage() {
   const [tab, setTab] = useState<JoinUsTab>("ALL");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [maxProducts, setMaxProducts] = useState("10");
+  const [displayDays, setDisplayDays] = useState("30");
   const [adminNote, setAdminNote] = useState("");
   const [companyEmail, setCompanyEmail] = useState("");
   const [companyPassword, setCompanyPassword] = useState("");
@@ -116,6 +117,7 @@ export function JoinRequestsPage() {
         email: detail.applicationType === "COMPANY" ? companyEmail.trim().toLowerCase() : undefined,
         password: detail.applicationType === "COMPANY" ? companyPassword : undefined,
         maxProducts: detail.applicationType === "COMPANY" ? Number(maxProducts) : undefined,
+        displayDays: detail.applicationType === "COMPANY" ? Number(displayDays) : undefined,
         adminNote: adminNote.trim() || undefined,
       });
     },
@@ -168,6 +170,7 @@ export function JoinRequestsPage() {
   function openReview(item: JoinUsApplicationListItem) {
     setSelectedId(item.id);
     setMaxProducts("10");
+    setDisplayDays("30");
     setAdminNote("");
     setCompanyEmail(prefillCompanyLoginEmail(item.email));
     setCompanyPassword(generatePassword());
@@ -179,6 +182,7 @@ export function JoinRequestsPage() {
     if (!detail) return;
     if (detail.applicationType === "COMPANY") {
       const quota = Number(maxProducts);
+      const days = Number(displayDays);
       const email = companyEmail.trim().toLowerCase();
       if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         setFormError(t("companies.invalidEmail"));
@@ -190,6 +194,10 @@ export function JoinRequestsPage() {
       }
       if (!Number.isInteger(quota) || quota < 1) {
         setFormError(t("companies.quotaMin"));
+        return;
+      }
+      if (!Number.isInteger(days) || days < 1) {
+        setFormError(t("companies.displayDaysMin"));
         return;
       }
     }
@@ -396,6 +404,16 @@ export function JoinRequestsPage() {
                   slotProps={{ htmlInput: { min: 1 } }}
                   value={maxProducts}
                   onChange={(e) => setMaxProducts(e.target.value)}
+                />
+                <TextField
+                  label={t("companies.displayDays")}
+                  type="number"
+                  size="small"
+                  fullWidth
+                  helperText={t("companies.displayDaysHint")}
+                  slotProps={{ htmlInput: { min: 1 } }}
+                  value={displayDays}
+                  onChange={(e) => setDisplayDays(e.target.value)}
                 />
                 <TextField
                   label={t("companies.loginEmail")}

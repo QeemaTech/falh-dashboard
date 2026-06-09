@@ -7,12 +7,13 @@ import {
   type PropsWithChildren,
 } from "react";
 import type { AuthUser, LoginPayload } from "../types/auth";
-import { loginApi } from "../services/auth-api";
+import { fetchMeApi, loginApi } from "../services/auth-api";
 import { clearRefreshSchedule, scheduleTokenRefresh } from "../services/auth-refresh";
 import { subscribeSessionExpired } from "../services/auth-session";
 import {
   clearAuthSession,
   getAccessToken,
+  getRememberMeFlag,
   getStoredUser,
   saveAuthSession,
 } from "../services/auth-storage";
@@ -49,6 +50,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
       clearRefreshSchedule();
     }
     return () => clearRefreshSchedule();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user || user.role !== "ADMIN" || user.permissions !== undefined || !getAccessToken()) return;
+    fetchMeApi()
+      .then((profile) => {
+        const storage = getRememberMeFlag() ? localStorage : sessionStorage;
+        const merged = { ...user, ...profile };
+        storage.setItem("auth.user", JSON.stringify(merged));
+        setUser(merged);
+      })
+      .catch(() => {
+        /* ignore — session may be stale */
+      });
   }, [user]);
 
   useEffect(() => {

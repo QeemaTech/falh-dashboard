@@ -33,6 +33,7 @@ import {
 } from "@mui/icons-material";
 import { AnalyticsWidget } from "../../components/analytics-widget";
 import { EmptyState } from "../../components/layout";
+import { useI18n } from "../../hooks/use-i18n";
 import {
   fetchDashboardStats,
   fetchRecentOrders,
@@ -115,7 +116,13 @@ function ChartCard({ title, badge, subtitle, children }: { title: string; badge?
 }
 
 export function DashboardPage() {
+  const { t, language } = useI18n();
+  const locale = language === "ar" ? "ar-EG" : "en-US";
+  const currency = t("market.currency");
   const [period, setPeriod] = useState<DashboardPeriod>("month");
+
+  const periodLabel =
+    period === "today" ? t("dashboard.period.today") : period === "week" ? t("dashboard.period.week") : t("dashboard.period.month");
 
   const { data: stats, isLoading: statsLoading, isError: statsError } = useQuery({
     queryKey: ["dashboard-stats"],
@@ -144,52 +151,118 @@ export function DashboardPage() {
   const periodProducts = useMemo(() => filterByPeriod(recentProducts, period), [recentProducts, period]);
   const scale = periodScale(period);
 
+  const orderStatusLabel = (status: string) => {
+    const key = `orders.status.${status}`;
+    const label = t(key);
+    return label === key ? status : label;
+  };
+
+  const userRoleLabel = (role: string) => {
+    const key = `users.role.${role}`;
+    const label = t(key);
+    return label === key ? role : label;
+  };
+
+  const userStatusLabel = (status: string) => {
+    const key = `users.status.${status}`;
+    const label = t(key);
+    return label === key ? status : label;
+  };
+
+  const productStatusLabel = (status: string) => {
+    const key = `products.status.${status}`;
+    const label = t(key);
+    return label === key ? status : label;
+  };
+
+  const salesData = useMemo(
+    () => [
+      { name: t("dashboard.week.w1"), sales: Math.round((stats?.revenue || 0) * 0.14 * scale), orders: Math.round((stats?.totalOrders || 0) * 0.18 * scale) },
+      { name: t("dashboard.week.w2"), sales: Math.round((stats?.revenue || 0) * 0.19 * scale), orders: Math.round((stats?.totalOrders || 0) * 0.22 * scale) },
+      { name: t("dashboard.week.w3"), sales: Math.round((stats?.revenue || 0) * 0.24 * scale), orders: Math.round((stats?.totalOrders || 0) * 0.27 * scale) },
+      { name: t("dashboard.week.w4"), sales: Math.round((stats?.revenue || 0) * 0.43 * scale), orders: Math.round((stats?.totalOrders || 0) * 0.33 * scale) },
+    ],
+    [t, stats?.revenue, stats?.totalOrders, scale]
+  );
+
+  const growthData = useMemo(
+    () => [
+      { label: t("dashboard.growth.users"), value: period === "month" ? stats?.totalUsers || 0 : periodUsers.length },
+      { label: t("dashboard.growth.products"), value: period === "month" ? stats?.totalProducts || 0 : periodProducts.length },
+      { label: t("dashboard.growth.companies"), value: Math.round((stats?.totalCompanies || 0) * scale) },
+      { label: t("dashboard.growth.providers"), value: Math.round((serviceProvidersCount || 0) * scale) },
+    ],
+    [t, period, stats, periodUsers.length, periodProducts.length, serviceProvidersCount, scale]
+  );
+
+  const productGrowthData = useMemo(
+    () => [
+      { step: t("dashboard.productFlow.submitted"), count: period === "month" ? stats?.totalProducts || 0 : periodProducts.length },
+      { step: t("dashboard.productFlow.pending"), count: Math.round((stats?.pendingProducts || 0) * scale) },
+      {
+        step: t("dashboard.productFlow.approved"),
+        count: Math.max(
+          (period === "month" ? stats?.totalProducts || 0 : periodProducts.length) - Math.round((stats?.pendingProducts || 0) * scale),
+          0
+        ),
+      },
+    ],
+    [t, period, stats, periodProducts.length, scale]
+  );
+
+  const analyticsWeekData = useMemo(
+    () => [
+      { day: t("dashboard.days.sun"), visitors: Math.round((stats?.totalUsers || 0) * 0.03 * scale), sessions: Math.round((stats?.totalOrders || 0) * 0.06 * scale), clicks: Math.round((stats?.totalProducts || 0) * 0.04 * scale) },
+      { day: t("dashboard.days.mon"), visitors: Math.round((stats?.totalUsers || 0) * 0.05 * scale), sessions: Math.round((stats?.totalOrders || 0) * 0.08 * scale), clicks: Math.round((stats?.totalProducts || 0) * 0.06 * scale) },
+      { day: t("dashboard.days.tue"), visitors: Math.round((stats?.totalUsers || 0) * 0.08 * scale), sessions: Math.round((stats?.totalOrders || 0) * 0.1 * scale), clicks: Math.round((stats?.totalProducts || 0) * 0.09 * scale) },
+      { day: t("dashboard.days.wed"), visitors: Math.round((stats?.totalUsers || 0) * 0.07 * scale), sessions: Math.round((stats?.totalOrders || 0) * 0.09 * scale), clicks: Math.round((stats?.totalProducts || 0) * 0.08 * scale) },
+      { day: t("dashboard.days.thu"), visitors: Math.round((stats?.totalUsers || 0) * 0.06 * scale), sessions: Math.round((stats?.totalOrders || 0) * 0.08 * scale), clicks: Math.round((stats?.totalProducts || 0) * 0.07 * scale) },
+      { day: t("dashboard.days.fri"), visitors: Math.round((stats?.totalUsers || 0) * 0.045 * scale), sessions: Math.round((stats?.totalOrders || 0) * 0.07 * scale), clicks: Math.round((stats?.totalProducts || 0) * 0.05 * scale) },
+      { day: t("dashboard.days.sat"), visitors: Math.round((stats?.totalUsers || 0) * 0.04 * scale), sessions: Math.round((stats?.totalOrders || 0) * 0.065 * scale), clicks: Math.round((stats?.totalProducts || 0) * 0.045 * scale) },
+    ],
+    [t, stats, scale]
+  );
+
+  const quickActions = useMemo(
+    () => [
+      { to: "/categories", label: t("dashboard.action.addCategory") },
+      { to: "/banners", label: t("dashboard.action.addBanner") },
+      { to: "/companies", label: t("dashboard.action.reviewCompanies") },
+      { to: "/products", label: t("dashboard.action.manageProducts") },
+    ],
+    [t]
+  );
+
+  const chartTooltipFormatter = (value: number, name: string) => {
+    const labels: Record<string, string> = {
+      sales: t("dashboard.chart.sales"),
+      orders: t("dashboard.chart.orders"),
+      visitors: t("dashboard.chart.visitors"),
+      sessions: t("dashboard.chart.sessions"),
+      clicks: t("dashboard.chart.clicks"),
+      value: t("dashboard.col.amount"),
+      count: t("dashboard.stats.totalProducts"),
+    };
+    return [value.toLocaleString(locale), labels[name] || name];
+  };
+
   const isLoading = statsLoading || usersLoading || ordersLoading || productsLoading || providersLoading;
   if (isLoading) return <DashboardSkeleton />;
   if (statsError || usersError || ordersError || productsError || providersError) {
-    return <EmptyState title="Failed to load dashboard" description="Please refresh the page and try again." />;
+    return <EmptyState title={t("dashboard.loadFailed")} description={t("dashboard.loadFailedHint")} />;
   }
   if (!stats) {
     return (
       <EmptyState
         icon={<TrendingUp sx={{ fontSize: 48 }} />}
-        title="No dashboard data yet"
-        description="Once users, orders, and products are active, this dashboard will auto-populate with live analytics."
+        title={t("dashboard.emptyTitle")}
+        description={t("dashboard.emptyDescription")}
       />
     );
   }
 
-  const salesData = [
-    { name: "W1", sales: Math.round(stats.revenue * 0.14 * scale), orders: Math.round(stats.totalOrders * 0.18 * scale) },
-    { name: "W2", sales: Math.round(stats.revenue * 0.19 * scale), orders: Math.round(stats.totalOrders * 0.22 * scale) },
-    { name: "W3", sales: Math.round(stats.revenue * 0.24 * scale), orders: Math.round(stats.totalOrders * 0.27 * scale) },
-    { name: "W4", sales: Math.round(stats.revenue * 0.43 * scale), orders: Math.round(stats.totalOrders * 0.33 * scale) },
-  ];
-  const growthData = [
-    { label: "Users", value: period === "month" ? stats.totalUsers : periodUsers.length },
-    { label: "Products", value: period === "month" ? stats.totalProducts : periodProducts.length },
-    { label: "Companies", value: Math.round(stats.totalCompanies * scale) },
-    { label: "Providers", value: Math.round((serviceProvidersCount || 0) * scale) },
-  ];
-  const productGrowthData = [
-    { step: "Submitted", count: period === "month" ? stats.totalProducts : periodProducts.length },
-    { step: "Pending", count: Math.round(stats.pendingProducts * scale) },
-    { step: "Approved", count: Math.max((period === "month" ? stats.totalProducts : periodProducts.length) - Math.round(stats.pendingProducts * scale), 0) },
-  ];
-  const analyticsWeekData = [
-    { day: "Sun", visitors: Math.round(stats.totalUsers * 0.03 * scale), sessions: Math.round(stats.totalOrders * 0.06 * scale), clicks: Math.round(stats.totalProducts * 0.04 * scale) },
-    { day: "Mon", visitors: Math.round(stats.totalUsers * 0.05 * scale), sessions: Math.round(stats.totalOrders * 0.08 * scale), clicks: Math.round(stats.totalProducts * 0.06 * scale) },
-    { day: "Tue", visitors: Math.round(stats.totalUsers * 0.08 * scale), sessions: Math.round(stats.totalOrders * 0.1 * scale), clicks: Math.round(stats.totalProducts * 0.09 * scale) },
-    { day: "Wed", visitors: Math.round(stats.totalUsers * 0.07 * scale), sessions: Math.round(stats.totalOrders * 0.09 * scale), clicks: Math.round(stats.totalProducts * 0.08 * scale) },
-    { day: "Thu", visitors: Math.round(stats.totalUsers * 0.06 * scale), sessions: Math.round(stats.totalOrders * 0.08 * scale), clicks: Math.round(stats.totalProducts * 0.07 * scale) },
-    { day: "Fri", visitors: Math.round(stats.totalUsers * 0.045 * scale), sessions: Math.round(stats.totalOrders * 0.07 * scale), clicks: Math.round(stats.totalProducts * 0.05 * scale) },
-    { day: "Sat", visitors: Math.round(stats.totalUsers * 0.04 * scale), sessions: Math.round(stats.totalOrders * 0.065 * scale), clicks: Math.round(stats.totalProducts * 0.045 * scale) },
-  ];
-
-  const periodLabel = period === "today" ? "Today" : period === "week" ? "This week" : "This month";
-
   return (
-    <Stack spacing={3}>
+    <Stack spacing={3} key={language}>
       <Paper
         sx={{
           p: 3,
@@ -201,13 +274,13 @@ export function DashboardPage() {
           <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ justifyContent: "space-between", alignItems: { md: "center" } }}>
             <Box>
               <Typography variant="overline" color="primary" sx={{ fontWeight: 700, letterSpacing: 1.5 }}>
-                Performance Overview
+                {t("dashboard.hero.badge")}
               </Typography>
               <Typography variant="h5" sx={{ mt: 1, fontWeight: 700 }}>
-                Admin Command Center
+                {t("dashboard.hero.title")}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1, maxWidth: 560 }}>
-                Premium unified analytics for operations, users, products, and orders with real-time insights.
+                {t("dashboard.hero.subtitle")}
               </Typography>
             </Box>
             <ToggleButtonGroup
@@ -216,31 +289,47 @@ export function DashboardPage() {
               value={period}
               onChange={(_, value: DashboardPeriod | null) => value && setPeriod(value)}
             >
-              <ToggleButton value="today">Today</ToggleButton>
-              <ToggleButton value="week">This Week</ToggleButton>
-              <ToggleButton value="month">This Month</ToggleButton>
+              <ToggleButton value="today">{t("dashboard.period.today")}</ToggleButton>
+              <ToggleButton value="week">{t("dashboard.period.week")}</ToggleButton>
+              <ToggleButton value="month">{t("dashboard.period.month")}</ToggleButton>
             </ToggleButtonGroup>
           </Stack>
           <Typography variant="caption" color="text.secondary">
-            Showing data for: {periodLabel}
+            {t("dashboard.showingDataFor")} {periodLabel}
           </Typography>
         </Stack>
       </Paper>
 
       <Grid container spacing={2}>
-        <Grid size={{ xs: 12, sm: 6, xl: 3 }}><AnalyticsWidget title="Total Users" value={period === "month" ? stats.totalUsers : periodUsers.length} icon={<People fontSize="small" />} change="+12.4%" hint={periodLabel} sparkline={[22, 30, 18, 40, 65, 55].map((v) => Math.round(v * scale))} /></Grid>
-        <Grid size={{ xs: 12, sm: 6, xl: 3 }}><AnalyticsWidget title="Total Companies" value={Math.round(stats.totalCompanies * scale)} icon={<Business fontSize="small" />} change="+8.7%" hint={periodLabel} sparkline={[28, 45, 34, 50, 68, 72].map((v) => Math.round(v * scale))} /></Grid>
-        <Grid size={{ xs: 12, sm: 6, xl: 3 }}><AnalyticsWidget title="Total Products" value={period === "month" ? stats.totalProducts : periodProducts.length} icon={<Inventory2 fontSize="small" />} change="+15.2%" hint={periodLabel} sparkline={[15, 30, 42, 46, 58, 66].map((v) => Math.round(v * scale))} /></Grid>
-        <Grid size={{ xs: 12, sm: 6, xl: 3 }}><AnalyticsWidget title="Total Orders" value={period === "month" ? stats.totalOrders : periodOrders.length} icon={<LocalShipping fontSize="small" />} change="+6.1%" hint={periodLabel} sparkline={[20, 25, 32, 29, 52, 60].map((v) => Math.round(v * scale))} /></Grid>
-        <Grid size={{ xs: 12, sm: 6, xl: 3 }}><AnalyticsWidget title="Total Revenue" value={`EGP ${Math.round(Number(stats.revenue) * scale).toLocaleString()}`} icon={<MonetizationOn fontSize="small" />} change="+19.8%" hint={periodLabel} sparkline={[12, 21, 30, 41, 52, 74].map((v) => Math.round(v * scale))} /></Grid>
-        <Grid size={{ xs: 12, sm: 6, xl: 3 }}><AnalyticsWidget title="Service Providers" value={Math.round((serviceProvidersCount || 0) * scale)} icon={<Warehouse fontSize="small" />} change="+4.1%" hint={periodLabel} sparkline={[18, 23, 31, 38, 44, 48].map((v) => Math.round(v * scale))} /></Grid>
-        <Grid size={{ xs: 12, sm: 6, xl: 3 }}><AnalyticsWidget title="Pending Products" value={Math.round(stats.pendingProducts * scale)} icon={<PendingActions fontSize="small" />} change="-2.3%" trend="down" hint="requires moderation" sparkline={[62, 55, 52, 40, 37, 28].map((v) => Math.round(v * scale))} /></Grid>
-        <Grid size={{ xs: 12, sm: 6, xl: 3 }}><AnalyticsWidget title="Pending Companies" value={Math.round(stats.pendingCompanies * scale)} icon={<Storefront fontSize="small" />} change="-1.7%" trend="down" hint="application queue" sparkline={[45, 42, 38, 30, 26, 23].map((v) => Math.round(v * scale))} /></Grid>
+        <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
+          <AnalyticsWidget title={t("dashboard.stats.totalUsers")} value={period === "month" ? stats.totalUsers : periodUsers.length} icon={<People fontSize="small" />} change="+12.4%" hint={periodLabel} sparkline={[22, 30, 18, 40, 65, 55].map((v) => Math.round(v * scale))} />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
+          <AnalyticsWidget title={t("dashboard.stats.totalCompanies")} value={Math.round(stats.totalCompanies * scale)} icon={<Business fontSize="small" />} change="+8.7%" hint={periodLabel} sparkline={[28, 45, 34, 50, 68, 72].map((v) => Math.round(v * scale))} />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
+          <AnalyticsWidget title={t("dashboard.stats.totalProducts")} value={period === "month" ? stats.totalProducts : periodProducts.length} icon={<Inventory2 fontSize="small" />} change="+15.2%" hint={periodLabel} sparkline={[15, 30, 42, 46, 58, 66].map((v) => Math.round(v * scale))} />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
+          <AnalyticsWidget title={t("dashboard.stats.totalOrders")} value={period === "month" ? stats.totalOrders : periodOrders.length} icon={<LocalShipping fontSize="small" />} change="+6.1%" hint={periodLabel} sparkline={[20, 25, 32, 29, 52, 60].map((v) => Math.round(v * scale))} />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
+          <AnalyticsWidget title={t("dashboard.stats.totalRevenue")} value={`${currency} ${Math.round(Number(stats.revenue) * scale).toLocaleString(locale)}`} icon={<MonetizationOn fontSize="small" />} change="+19.8%" hint={periodLabel} sparkline={[12, 21, 30, 41, 52, 74].map((v) => Math.round(v * scale))} />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
+          <AnalyticsWidget title={t("dashboard.stats.serviceProviders")} value={Math.round((serviceProvidersCount || 0) * scale)} icon={<Warehouse fontSize="small" />} change="+4.1%" hint={periodLabel} sparkline={[18, 23, 31, 38, 44, 48].map((v) => Math.round(v * scale))} />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
+          <AnalyticsWidget title={t("dashboard.stats.pendingProducts")} value={Math.round(stats.pendingProducts * scale)} icon={<PendingActions fontSize="small" />} change="-2.3%" trend="down" hint={t("dashboard.hint.moderation")} sparkline={[62, 55, 52, 40, 37, 28].map((v) => Math.round(v * scale))} />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
+          <AnalyticsWidget title={t("dashboard.stats.pendingCompanies")} value={Math.round(stats.pendingCompanies * scale)} icon={<Storefront fontSize="small" />} change="-1.7%" trend="down" hint={t("dashboard.hint.applicationQueue")} sparkline={[45, 42, 38, 30, 26, 23].map((v) => Math.round(v * scale))} />
+        </Grid>
       </Grid>
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, xl: 6 }}>
-          <ChartCard title="Revenue Analytics" badge="Income">
+          <ChartCard title={t("dashboard.charts.revenue")} badge={t("dashboard.charts.revenueBadge")}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={salesData}>
                 <defs>
@@ -251,7 +340,7 @@ export function DashboardPage() {
                 </defs>
                 <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#E4E7EC" />
                 <XAxis axisLine={false} tickLine={false} dataKey="name" />
-                <Tooltip />
+                <Tooltip formatter={chartTooltipFormatter} />
                 <Area type="monotone" dataKey="sales" stroke="#23673A" strokeWidth={2.5} fill="url(#salesPrimary)" />
                 <Area type="monotone" dataKey="orders" stroke="#69A87B" strokeWidth={2} fill="transparent" />
               </AreaChart>
@@ -259,36 +348,36 @@ export function DashboardPage() {
           </ChartCard>
         </Grid>
         <Grid size={{ xs: 12, xl: 6 }}>
-          <ChartCard title="Project Status" badge="Overview">
+          <ChartCard title={t("dashboard.charts.projectStatus")} badge={t("dashboard.charts.projectStatusBadge")}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={growthData}>
                 <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#E4E7EC" />
                 <XAxis axisLine={false} tickLine={false} dataKey="label" />
-                <Tooltip />
+                <Tooltip formatter={chartTooltipFormatter} />
                 <Bar dataKey="value" fill="#23673A" radius={[8, 8, 0, 0]} barSize={12} />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
         </Grid>
         <Grid size={{ xs: 12, xl: 6 }}>
-          <ChartCard title="Products Analytics" badge="Catalog">
+          <ChartCard title={t("dashboard.charts.products")} badge={t("dashboard.charts.productsBadge")}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={productGrowthData}>
                 <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#E4E7EC" />
                 <XAxis axisLine={false} tickLine={false} dataKey="step" />
-                <Tooltip />
+                <Tooltip formatter={chartTooltipFormatter} />
                 <Bar dataKey="count" fill="#15803D" radius={[8, 8, 0, 0]} barSize={12} />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
         </Grid>
         <Grid size={{ xs: 12, xl: 6 }}>
-          <ChartCard title="Analytics" subtitle="Sunday to Saturday performance overview">
+          <ChartCard title={t("dashboard.charts.analytics")} subtitle={t("dashboard.charts.analyticsSubtitle")}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={analyticsWeekData} barGap={10} barCategoryGap="44%">
                 <CartesianGrid strokeDasharray="3 5" vertical={false} stroke="#dbe7de" />
                 <XAxis axisLine={false} tickLine={false} dataKey="day" tick={{ fill: "#6b7280", fontSize: 11 }} />
-                <Tooltip cursor={{ fill: "rgba(35, 103, 58, 0.08)" }} />
+                <Tooltip cursor={{ fill: "rgba(35, 103, 58, 0.08)" }} formatter={chartTooltipFormatter} />
                 <Bar dataKey="visitors" fill="#82b695" radius={[8, 8, 0, 0]} barSize={6} />
                 <Bar dataKey="sessions" fill="#23673A" radius={[8, 8, 0, 0]} barSize={6} />
                 <Bar dataKey="clicks" fill="#c7ddcd" radius={[8, 8, 0, 0]} barSize={6} />
@@ -302,30 +391,32 @@ export function DashboardPage() {
         <Grid size={{ xs: 12, xl: 4 }}>
           <Paper sx={{ p: 2, height: "100%" }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>
-              Latest Orders
+              {t("dashboard.latestOrders")}
             </Typography>
             <TableContainer>
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell>Customer</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Amount</TableCell>
+                    <TableCell>{t("dashboard.col.customer")}</TableCell>
+                    <TableCell>{t("dashboard.col.status")}</TableCell>
+                    <TableCell>{t("dashboard.col.amount")}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {periodOrders.length ? (
                     periodOrders.map((order) => (
                       <TableRow key={order.id}>
-                        <TableCell>{order.user?.name || "Customer"}</TableCell>
-                        <TableCell>{order.status}</TableCell>
-                        <TableCell sx={{ color: "primary.main" }}>EGP {Number(order.total).toLocaleString()}</TableCell>
+                        <TableCell>{order.user?.name || t("dashboard.customerFallback")}</TableCell>
+                        <TableCell>{orderStatusLabel(order.status)}</TableCell>
+                        <TableCell sx={{ color: "primary.main" }}>
+                          {currency} {Number(order.total).toLocaleString(locale)}
+                        </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
                       <TableCell colSpan={3} align="center" sx={{ color: "text.secondary", py: 4 }}>
-                        No recent orders available.
+                        {t("dashboard.noRecentOrders")}
                       </TableCell>
                     </TableRow>
                   )}
@@ -337,7 +428,7 @@ export function DashboardPage() {
         <Grid size={{ xs: 12, xl: 4 }}>
           <Paper sx={{ p: 2, height: "100%" }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>
-              Latest Registrations
+              {t("dashboard.latestRegistrations")}
             </Typography>
             <Stack spacing={1}>
               {periodUsers.length ? (
@@ -347,13 +438,13 @@ export function DashboardPage() {
                       {user.name}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {user.role} — {user.status}
+                      {userRoleLabel(user.role)} — {userStatusLabel(user.status)}
                     </Typography>
                   </Paper>
                 ))
               ) : (
                 <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: "center" }}>
-                  No user registrations yet.
+                  {t("dashboard.noRegistrations")}
                 </Typography>
               )}
             </Stack>
@@ -362,7 +453,7 @@ export function DashboardPage() {
         <Grid size={{ xs: 12, xl: 4 }}>
           <Paper sx={{ p: 2, height: "100%" }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>
-              Latest Products
+              {t("dashboard.latestProducts")}
             </Typography>
             <Stack spacing={1}>
               {periodProducts.length ? (
@@ -372,13 +463,13 @@ export function DashboardPage() {
                       {product.title}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {product.status}
+                      {productStatusLabel(product.status)}
                     </Typography>
                   </Paper>
                 ))
               ) : (
                 <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: "center" }}>
-                  No products added recently.
+                  {t("dashboard.noRecentProducts")}
                 </Typography>
               )}
             </Stack>
@@ -388,15 +479,10 @@ export function DashboardPage() {
 
       <Paper sx={{ p: 2 }}>
         <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>
-          Quick Actions
+          {t("dashboard.quickActions")}
         </Typography>
         <Grid container spacing={2}>
-          {[
-            { to: "/categories", label: "Add Category" },
-            { to: "/banners", label: "Add Banner" },
-            { to: "/company-applications", label: "Review Company Applications" },
-            { to: "/products", label: "Manage Products" },
-          ].map((action) => (
+          {quickActions.map((action) => (
             <Grid key={action.to} size={{ xs: 12, sm: 6, lg: 3 }}>
               <Button component={RouterLink} to={action.to} variant="contained" fullWidth>
                 {action.label}

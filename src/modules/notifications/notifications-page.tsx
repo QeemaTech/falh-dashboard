@@ -1,55 +1,102 @@
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Stack } from "@mui/material";
+import { DoneAll } from "@mui/icons-material";
+import { Button, Chip, Stack } from "@mui/material";
 import { DataTable, EmptyState, PageHeader } from "../../components/layout";
-import { useAuth } from "../../store/auth-store";
-import { fetchUserNotifications, type AdminNotification } from "../../services/admin-api";
+import { useI18n } from "../../hooks/use-i18n";
+import {
+  formatNotificationDate,
+  localizeNotification,
+  notificationTypeLabel,
+} from "./notification-utils";
+import { useNotifications } from "./use-notifications";
+import type { NotificationRecord } from "../../services/notifications-api";
 
 type NotificationRow = {
+  id: string;
   type: string;
   title: string;
   body: string;
   isRead: string;
   createdAt: string;
+  _raw: NotificationRecord;
 };
 
 export function NotificationsPage() {
-  const { user } = useAuth();
-
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["admin-notifications", user?.id],
-    queryFn: () => fetchUserNotifications(user!.id, { page: 1, limit: 100 }),
-    enabled: Boolean(user?.id),
-  });
+  const { t, language } = useI18n();
+  const { items, isLoading, isError, error, markAsRead, markAllAsRead, unreadCount, isMarkingRead } =
+    useNotifications(100);
 
   const rows = useMemo<NotificationRow[]>(() => {
-    const items = (data?.items || []) as AdminNotification[];
-    return items.map((notification) => ({
-      type: notification.type,
-      title: notification.title,
-      body: notification.body,
-      isRead: notification.isRead ? "Read" : "Unread",
-      createdAt: new Date(notification.createdAt).toLocaleString(),
-    }));
-  }, [data?.items]);
+    return items.map((notification) => {
+      const localized = localizeNotification(notification, language, t);
+      return {
+        id: notification.id,
+        type: notificationTypeLabel(notification.type, t),
+        title: localized.title,
+        body: localized.body,
+        isRead: notification.isRead ? t("notifications.read") : t("notifications.unread"),
+        createdAt: formatNotificationDate(notification.createdAt, language),
+        _raw: notification,
+      };
+    });
+  }, [items, language, t]);
 
   if (isError) {
-    return <EmptyState title="Failed to load notifications" description={(error as Error).message} />;
+    return (
+      <EmptyState
+        title={t("notifications.loadFailed")}
+        description={(error as Error).message}
+      />
+    );
   }
 
   return (
     <Stack spacing={3}>
-      <PageHeader title="Notifications" subtitle="System and user notification history" />
+      <PageHeader
+        title={t("notifications.title")}
+        subtitle={t("notifications.subtitle")}
+        action={
+          unreadCount > 0 ? (
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<DoneAll />}
+              onClick={() => markAllAsRead()}
+              disabled={isMarkingRead}
+            >
+              {t("notifications.markAllRead")}
+            </Button>
+          ) : undefined
+        }
+      />
+
       <DataTable<NotificationRow>
-        title="All notifications"
+        title={t("notifications.listTitle")}
         loading={isLoading}
-        emptyMessage="No notifications found."
+        emptyMessage={t("notifications.empty")}
+        getRowKey={(row) => row.id}
+        onRowClick={(row) => {
+          if (!row._raw.isRead) {
+            markAsRead(row._raw.id);
+          }
+        }}
         columns={[
-          { key: "type", label: "Type" },
-          { key: "title", label: "Title" },
-          { key: "body", label: "Message" },
-          { key: "isRead", label: "Read" },
-          { key: "createdAt", label: "Created At" },
+          { key: "type", label: t("notifications.col.type") },
+          { key: "title", label: t("notifications.col.title") },
+          { key: "body", label: t("notifications.col.message") },
+          {
+            key: "isRead",
+            label: t("notifications.col.status"),
+            render: (row) => (
+              <Chip
+                size="small"
+                label={row.isRead}
+                color={row._raw.isRead ? "default" : "primary"}
+                variant={row._raw.isRead ? "outlined" : "filled"}
+              />
+            ),
+          },
+          { key: "createdAt", label: t("notifications.col.createdAt") },
         ]}
         data={rows}
       />

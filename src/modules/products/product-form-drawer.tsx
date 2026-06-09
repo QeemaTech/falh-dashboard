@@ -57,8 +57,10 @@ type Props = {
 export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, canAdd = true }: Props) {
   const { t, language } = useI18n();
   const isEdit = Boolean(product);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  const [titleAr, setTitleAr] = useState("");
+  const [titleEn, setTitleEn] = useState("");
+  const [descriptionAr, setDescriptionAr] = useState("");
+  const [descriptionEn, setDescriptionEn] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [unit, setUnit] = useState("kg");
@@ -102,22 +104,27 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
   useEffect(() => {
     if (!open) return;
     setError(null);
-    if (product) {
-      setTitle(product.title);
-      setDescription(product.description || "");
-      setCategoryId(product.category?.id || "");
-      setQuantity(product.quantity ?? 1);
-      setUnit(product.unit || "kg");
-      setPrice(product.price || 0);
-      setTarget((product.target as "LOCAL" | "EXPORT") || "LOCAL");
-      setCity(product.city || "");
-      setImageItems(productImagesToItems(product));
-      setCompanyId(product.company?.id || "");
-      setPublishActive(product.status === "ACTIVE");
-      setSaveAsDraft(product.status === "DRAFT");
+    const source = effectiveProduct || product;
+    if (source) {
+      setTitleAr(source.titleAr || source.title);
+      setTitleEn(source.titleEn || "");
+      setDescriptionAr(source.descriptionAr || source.description || "");
+      setDescriptionEn(source.descriptionEn || "");
+      setCategoryId(source.category?.id || "");
+      setQuantity(source.quantity ?? 1);
+      setUnit(source.unit || "kg");
+      setPrice(source.price || 0);
+      setTarget((source.target as "LOCAL" | "EXPORT") || "LOCAL");
+      setCity(source.city || "");
+      setImageItems(productImagesToItems(source));
+      setCompanyId(source.company?.id || "");
+      setPublishActive(source.status === "ACTIVE");
+      setSaveAsDraft(source.status === "DRAFT");
     } else {
-      setTitle("");
-      setDescription("");
+      setTitleAr("");
+      setTitleEn("");
+      setDescriptionAr("");
+      setDescriptionEn("");
       setCategoryId("");
       setQuantity(1);
       setUnit("kg");
@@ -130,8 +137,8 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
       setSaveAsDraft(false);
       setDynamicValues({});
     }
-    previousCategoryId.current = product?.category?.id || "";
-  }, [open, product]);
+    previousCategoryId.current = source?.category?.id || "";
+  }, [open, product, effectiveProduct]);
 
   useEffect(() => {
     if (!open || !effectiveProduct?.fieldValues?.length) return;
@@ -151,9 +158,13 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (!title.trim() || title.trim().length < 2) throw new Error(t("products.form.errorTitle"));
-      if (!description.trim() || description.trim().length < 5) {
+      if (!titleAr.trim() || titleAr.trim().length < 2) throw new Error(t("products.form.errorTitle"));
+      if (!titleEn.trim() || titleEn.trim().length < 2) throw new Error(t("products.form.errorTitleEn"));
+      if (!descriptionAr.trim() || descriptionAr.trim().length < 5) {
         throw new Error(t("products.form.errorDescription"));
+      }
+      if (!descriptionEn.trim() || descriptionEn.trim().length < 5) {
+        throw new Error(t("products.form.errorDescriptionEn"));
       }
       if (!categoryId) throw new Error(t("products.form.errorCategory"));
       if (!unit.trim()) throw new Error(t("products.form.errorUnit"));
@@ -175,8 +186,10 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
       );
 
       const payload: ProductFormPayload = {
-        title,
-        description,
+        titleAr: titleAr.trim(),
+        titleEn: titleEn.trim(),
+        descriptionAr: descriptionAr.trim(),
+        descriptionEn: descriptionEn.trim(),
         categoryId,
         quantity: Number(quantity),
         unit,
@@ -253,16 +266,34 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
         <TextField
           size="small"
           fullWidth
-          label={t("products.form.title")}
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          label={t("products.form.titleAr")}
+          value={titleAr}
+          onChange={(e) => setTitleAr(e.target.value)}
         />
         <TextField
           size="small"
           fullWidth
-          label={t("products.form.description")}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          label={t("products.form.titleEn")}
+          value={titleEn}
+          onChange={(e) => setTitleEn(e.target.value)}
+        />
+        <TextField
+          size="small"
+          fullWidth
+          multiline
+          minRows={2}
+          label={t("products.form.descriptionAr")}
+          value={descriptionAr}
+          onChange={(e) => setDescriptionAr(e.target.value)}
+        />
+        <TextField
+          size="small"
+          fullWidth
+          multiline
+          minRows={2}
+          label={t("products.form.descriptionEn")}
+          value={descriptionEn}
+          onChange={(e) => setDescriptionEn(e.target.value)}
         />
         <TextField
           select

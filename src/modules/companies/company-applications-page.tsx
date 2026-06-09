@@ -37,6 +37,7 @@ function openReviewForm(app: CompanyApplication) {
     .slice(0, 24);
   return {
     maxProducts: "10",
+    displayDays: "30",
     adminNote: "",
     companyEmail: slug ? `${slug}@company.falh.local` : "",
     companyPassword: "",
@@ -49,6 +50,7 @@ export function CompanyApplicationsPage() {
   const [status, setStatus] = useState("PENDING");
   const [selected, setSelected] = useState<CompanyApplication | null>(null);
   const [maxProducts, setMaxProducts] = useState("10");
+  const [displayDays, setDisplayDays] = useState("30");
   const [adminNote, setAdminNote] = useState("");
   const [companyEmail, setCompanyEmail] = useState("");
   const [companyPassword, setCompanyPassword] = useState("");
@@ -64,6 +66,7 @@ export function CompanyApplicationsPage() {
       applicationId: string;
       action: "APPROVE" | "REJECT";
       maxProducts?: number;
+      displayDays?: number;
       email?: string;
       password?: string;
       adminNote?: string;
@@ -71,6 +74,7 @@ export function CompanyApplicationsPage() {
       reviewCompanyApplicationApi(payload.applicationId, {
         action: payload.action,
         maxProducts: payload.maxProducts,
+        displayDays: payload.displayDays,
         email: payload.email,
         password: payload.password,
         adminNote: payload.adminNote,
@@ -98,6 +102,7 @@ export function CompanyApplicationsPage() {
     const form = openReviewForm(app);
     setSelected(app);
     setMaxProducts(form.maxProducts);
+    setDisplayDays(form.displayDays);
     setAdminNote(form.adminNote);
     setCompanyEmail(form.companyEmail);
     setCompanyPassword(form.companyPassword);
@@ -107,6 +112,7 @@ export function CompanyApplicationsPage() {
   function handleApprove() {
     if (!selected) return;
     const quota = Number(maxProducts);
+    const days = Number(displayDays);
     const email = companyEmail.trim().toLowerCase();
     const password = companyPassword;
 
@@ -126,12 +132,17 @@ export function CompanyApplicationsPage() {
       setFormError("Product quota must be a number of at least 1");
       return;
     }
+    if (!Number.isInteger(days) || days < 1) {
+      setFormError("Listing duration must be at least 1 day");
+      return;
+    }
 
     setFormError("");
     reviewMutation.mutate({
       applicationId: selected.id,
       action: "APPROVE",
       maxProducts: quota,
+      displayDays: days,
       email,
       password,
       adminNote: adminNote.trim() || undefined,
@@ -237,6 +248,17 @@ export function CompanyApplicationsPage() {
               slotProps={{ htmlInput: {  min: 1, step: 1  } }}
               value={maxProducts}
               onChange={(e) => setMaxProducts(e.target.value)}
+            />
+
+            <TextField
+              label="Listing duration (days)"
+              type="number"
+              size="small"
+              fullWidth
+              helperText="After this period the company is suspended and products are hidden from the app."
+              slotProps={{ htmlInput: { min: 1, step: 1 } }}
+              value={displayDays}
+              onChange={(e) => setDisplayDays(e.target.value)}
             />
 
             <TextField

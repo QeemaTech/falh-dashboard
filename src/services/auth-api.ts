@@ -1,7 +1,7 @@
 import axios from "axios";
 import { API_BASE_URL } from "../config/api";
 import { http } from "./http";
-import type { LoginPayload, LoginResponse } from "../types/auth";
+import type { AuthUser, LoginPayload, LoginResponse } from "../types/auth";
 
 type ApiResponse<T> = { success: boolean; data: T };
 
@@ -17,5 +17,10 @@ export async function loginApi(payload: LoginPayload) {
 
 export async function refreshTokenApi(refreshToken: string) {
   const { data } = await authHttp.post<ApiResponse<LoginResponse>>("/auth/refresh-token", { refreshToken });
+  return data.data;
+}
+
+export async function fetchMeApi() {
+  const { data } = await http.get<ApiResponse<AuthUser>>("/auth/me");
   return data.data;
 }

@@ -12,6 +12,7 @@ export function useBreadcrumbs() {
       products: "nav.products",
       categories: "nav.categories",
       orders: "nav.orders",
+      finance: "nav.finance",
       banners: "nav.banners",
       notifications: "nav.notifications",
       consultants: "nav.consultants",
