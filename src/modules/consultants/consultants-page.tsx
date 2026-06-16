@@ -116,8 +116,19 @@ export function ConsultantsPage() {
 
   const statusLabel = (status: string) => t(`consultants.status.${status}`, status);
 
+  const matchesTab = (provider: AdminServiceProvider) => {
+    if (tab === TAB_ALL) return true;
+    const typeKey = resolveTypeKey(provider);
+    if (typeKey === tab) return true;
+    const joinType = typesByCode.get(tab);
+    if (!provider.applicationType && joinType?.serviceProviderType) {
+      return provider.type === joinType.serviceProviderType;
+    }
+    return false;
+  };
+
   const rows = useMemo<ConsultantRow[]>(() => {
-    const items = (data?.items || []) as AdminServiceProvider[];
+    const items = ((data?.items || []) as AdminServiceProvider[]).filter(matchesTab);
     return items.map((provider) => ({
       id: provider.id,
       name: providerName(provider),
@@ -126,7 +137,7 @@ export function ConsultantsPage() {
       status: provider.status,
       rating: Number(provider.rating || 0).toFixed(1),
     }));
-  }, [data?.items]);
+  }, [data?.items, tab, typesByCode]);
 
   if (isError) {
     return (

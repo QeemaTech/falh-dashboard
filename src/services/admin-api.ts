@@ -1,4 +1,5 @@
 import { http } from "./http";
+import { FALLBACK_JOIN_APPLICATION_TYPES } from "../constants/join-application-types";
 import type { AiSettings, AiSettingsPayload } from "../types/ai";
 import type { DashboardStats, User, UserAdminDetails } from "../types/dashboard";
 import type { LatestMarketData, LivestockCategory, MarketItem, MarketPagination, MarketTrend } from "../types/market";
@@ -1062,8 +1063,25 @@ export type JoinApplicationType = {
 };
 
 export async function fetchJoinApplicationTypes() {
-  const { data } = await http.get<ApiResponse<JoinApplicationType[]>>("/admin/join-us/types");
-  return data.data;
+  try {
+    const { data } = await http.get<ApiResponse<JoinApplicationType[]>>("/admin/join-us/types");
+    if (Array.isArray(data.data) && data.data.length > 0) {
+      return data.data;
+    }
+  } catch {
+    // Admin route may be missing on older backends — try public endpoint next.
+  }
+
+  try {
+    const { data } = await http.get<ApiResponse<JoinApplicationType[]>>("/join-us/types");
+    if (Array.isArray(data.data) && data.data.length > 0) {
+      return data.data.map((type) => ({ ...type, isActive: type.isActive ?? true }));
+    }
+  } catch {
+    // Public route also unavailable — use built-in defaults below.
+  }
+
+  return FALLBACK_JOIN_APPLICATION_TYPES as JoinApplicationType[];
 }
 
 export async function createJoinApplicationTypeApi(payload: {
