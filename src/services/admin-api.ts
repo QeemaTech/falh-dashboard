@@ -91,6 +91,8 @@ export type AdminBanner = {
   linkValue?: string;
   sortOrder: number;
   isActive: boolean;
+  displayDays?: number | null;
+  expiresAt?: string | null;
   createdAt: string;
 };
 
@@ -290,6 +292,8 @@ export type AdminServiceProvider = {
   reviewCount?: number;
   idImagePath?: string | null;
   licensePath?: string | null;
+  applicationType?: string | null;
+  otherTypeLabel?: string | null;
   user?: { id: string; name?: string; profileImage?: string | null };
 };
 
@@ -297,6 +301,7 @@ export async function fetchAdminServiceProviders(params: {
   page: number;
   limit: number;
   status?: string;
+  applicationType?: string;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
 }) {
@@ -717,6 +722,7 @@ export type BannerFormPayload = {
   linkValue?: string;
   sortOrder?: number;
   isActive?: boolean;
+  displayDays?: number | null;
 };
 
 export async function createAdminBannerApi(payload: BannerFormPayload) {
@@ -727,6 +733,9 @@ export async function createAdminBannerApi(payload: BannerFormPayload) {
   if (payload.linkType) formData.append("linkType", payload.linkType);
   if (payload.linkValue) formData.append("linkValue", payload.linkValue);
   formData.append("sortOrder", String(payload.sortOrder ?? 0));
+  if (payload.displayDays != null && payload.displayDays > 0) {
+    formData.append("displayDays", String(payload.displayDays));
+  }
   formData.append("isActive", String(payload.isActive ?? true));
 
   const { data } = await http.post<ApiResponse<AdminBanner>>("/admin/banners", formData, {
@@ -1036,15 +1045,52 @@ export type JoinUsApplicationDetail = {
   };
 };
 
-export type JoinUsTab =
-  | "ALL"
-  | "COMPANIES"
-  | "DOCTORS"
-  | "ENGINEERS"
-  | "CONSULTANTS"
-  | "BROKERS"
-  | "TRANSPORT"
-  | "OTHERS";
+export type JoinUsTab = "ALL" | string;
+
+export type JoinApplicationType = {
+  id: string;
+  code: string;
+  nameAr: string;
+  nameEn: string;
+  category: "COMPANY" | "PROVIDER";
+  serviceProviderType?: string | null;
+  isSystem: boolean;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export async function fetchJoinApplicationTypes() {
+  const { data } = await http.get<ApiResponse<JoinApplicationType[]>>("/admin/join-us/types");
+  return data.data;
+}
+
+export async function createJoinApplicationTypeApi(payload: {
+  nameAr: string;
+  nameEn: string;
+  code?: string;
+  serviceProviderType?: string;
+  sortOrder?: number;
+}) {
+  const { data } = await http.post<ApiResponse<JoinApplicationType>>("/admin/join-us/types", payload);
+  return data.data;
+}
+
+export async function updateJoinApplicationTypeApi(
+  typeId: string,
+  payload: Partial<{ nameAr: string; nameEn: string; isActive: boolean; sortOrder: number; serviceProviderType: string }>
+) {
+  const { data } = await http.patch<ApiResponse<JoinApplicationType>>(`/admin/join-us/types/${typeId}`, payload);
+  return data.data;
+}
+
+export async function deleteJoinApplicationTypeApi(typeId: string) {
+  const { data } = await http.delete<ApiResponse<JoinApplicationType | { id: string; deleted: boolean }>>(
+    `/admin/join-us/types/${typeId}`
+  );
+  return data.data;
+}
 
 export async function fetchJoinUsApplications(params: {
   page: number;

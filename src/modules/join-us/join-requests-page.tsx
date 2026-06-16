@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import { Search } from "@mui/icons-material";
+import { Search, Settings } from "@mui/icons-material";
 import {
   Alert,
   Box,
@@ -23,24 +23,18 @@ import {
   approveJoinUsApplicationApi,
   fetchJoinUsApplicationById,
   fetchJoinUsApplications,
+  fetchJoinApplicationTypes,
   rejectJoinUsApplicationApi,
   type JoinUsApplicationListItem,
+  type JoinApplicationType,
   type JoinUsTab,
 } from "../../services/admin-api";
+import { JoinApplicationTypesDrawer } from "./join-application-types-drawer";
 import { resolveAssetUrl } from "../../utils/asset-url";
 import { generatePassword } from "../../utils/generate-password";
 import { prefillCompanyLoginEmail } from "../../utils/company-approval-email";
 
-const TAB_IDS: JoinUsTab[] = [
-  "ALL",
-  "COMPANIES",
-  "DOCTORS",
-  "ENGINEERS",
-  "CONSULTANTS",
-  "BROKERS",
-  "TRANSPORT",
-  "OTHERS",
-];
+const TAB_ALL = "ALL" as const;
 
 type JoinRequestRow = JoinUsApplicationListItem & Record<string, unknown>;
 
@@ -66,7 +60,8 @@ export function JoinRequestsPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("PENDING");
-  const [tab, setTab] = useState<JoinUsTab>("ALL");
+  const [tab, setTab] = useState<JoinUsTab>(TAB_ALL);
+  const [typesDrawerOpen, setTypesDrawerOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [maxProducts, setMaxProducts] = useState("10");
   const [displayDays, setDisplayDays] = useState("30");
@@ -76,16 +71,33 @@ export function JoinRequestsPage() {
   const [formError, setFormError] = useState("");
   const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null);
 
-  const typeLabel = (type: string) =>
-    t(`joinUs.type.${type}` as "joinUs.type.COMPANY") || type;
+  const { data: joinTypes = [] } = useQuery({
+    queryKey: ["join-application-types"],
+    queryFn: fetchJoinApplicationTypes,
+  });
+
+  const typesByCode = useMemo(() => {
+    const map = new Map<string, JoinApplicationType>();
+    joinTypes.forEach((type) => map.set(type.code, type));
+    return map;
+  }, [joinTypes]);
+
+  const typeLabel = (type: string) => {
+    const row = typesByCode.get(type);
+    if (row) return language === "ar" ? row.nameAr || row.nameEn : row.nameEn || row.nameAr;
+    return t(`joinUs.type.${type}` as "joinUs.type.COMPANY") || type;
+  };
+
+  const tabItems = useMemo(() => {
+    const active = joinTypes.filter((type) => type.isActive);
+    return [{ code: TAB_ALL, label: t("joinUs.tab.all") }, ...active.map((type) => ({
+      code: type.code,
+      label: language === "ar" ? type.nameAr || type.nameEn : type.nameEn || type.nameAr,
+    }))];
+  }, [joinTypes, language, t]);
 
   const statusLabel = (value: string) =>
     t(`joinUs.status.${value}` as "joinUs.status.PENDING") || value;
-
-  const tabLabel = (id: JoinUsTab) => {
-    const key = id.toLowerCase() as "all" | "companies" | "doctors" | "engineers" | "consultants" | "brokers" | "transport" | "others";
-    return t(`joinUs.tab.${key}`);
-  };
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["join-us-applications", search, status, tab],
@@ -211,18 +223,26 @@ export function JoinRequestsPage() {
 
   return (
     <Stack spacing={3} sx={{ minWidth: 0, overflowX: "hidden" }}>
-      <PageHeader title={t("joinUs.title")} subtitle={t("joinUs.subtitle")} />
+      <PageHeader
+        title={t("joinUs.title")}
+        subtitle={t("joinUs.subtitle")}
+        action={
+          <Button variant="outlined" startIcon={<Settings />} onClick={() => setTypesDrawerOpen(true)}>
+            {t("joinUs.types.manage")}
+          </Button>
+        }
+      />
 
       <Paper sx={{ p: 1.5 }}>
         <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", gap: 0.75 }}>
-          {TAB_IDS.map((id) => (
+          {tabItems.map((item) => (
             <Chip
-              key={id}
-              label={tabLabel(id)}
+              key={item.code}
+              label={item.label}
               clickable
-              color={tab === id ? "primary" : "default"}
-              variant={tab === id ? "filled" : "outlined"}
-              onClick={() => setTab(id)}
+              color={tab === item.code ? "primary" : "default"}
+              variant={tab === item.code ? "filled" : "outlined"}
+              onClick={() => setTab(item.code)}
               size="small"
             />
           ))}
@@ -565,6 +585,8 @@ export function JoinRequestsPage() {
           </Stack>
         ) : null}
       </AppDrawer>
+
+      <JoinApplicationTypesDrawer open={typesDrawerOpen} onClose={() => setTypesDrawerOpen(false)} />
     </Stack>
   );
 }

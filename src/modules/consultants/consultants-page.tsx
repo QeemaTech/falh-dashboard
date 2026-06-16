@@ -7,6 +7,7 @@ import {
   Chip,
   CircularProgress,
   Link,
+  Paper,
   Stack,
   Typography,
 } from "@mui/material";
@@ -15,14 +16,19 @@ import { DataTable, EmptyState, PageHeader } from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
 import {
   fetchAdminServiceProviders,
+  fetchJoinApplicationTypes,
   fetchServiceProviderById,
   type AdminServiceProvider,
+  type JoinApplicationType,
 } from "../../services/admin-api";
+
+const TAB_ALL = "ALL" as const;
+type ConsultantTab = typeof TAB_ALL | string;
 
 type ConsultantRow = {
   id: string;
   name: string;
-  type: string;
+  typeKey: string;
   city: string;
   status: string;
   rating: string;
@@ -52,12 +58,54 @@ function DetailRow({ label, value }: { label: string; value?: string | null }) {
 }
 
 export function ConsultantsPage() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [tab, setTab] = useState<ConsultantTab>(TAB_ALL);
+
+  const { data: joinTypes = [] } = useQuery({
+    queryKey: ["join-application-types"],
+    queryFn: fetchJoinApplicationTypes,
+  });
+
+  const typesByCode = useMemo(() => {
+    const map = new Map<string, JoinApplicationType>();
+    joinTypes.forEach((type) => map.set(type.code, type));
+    return map;
+  }, [joinTypes]);
+
+  const resolveTypeKey = (provider: AdminServiceProvider) =>
+    provider.applicationType || provider.type;
+
+  const typeLabel = (typeKey: string, otherTypeLabel?: string | null) => {
+    const row = typesByCode.get(typeKey);
+    if (row) {
+      return language === "ar" ? row.nameAr || row.nameEn : row.nameEn || row.nameAr;
+    }
+    if (typeKey === "OTHER" && otherTypeLabel) return otherTypeLabel;
+    return t(`consultants.type.${typeKey}`, typeKey);
+  };
+
+  const tabItems = useMemo(() => {
+    const active = joinTypes.filter((type) => type.isActive && type.category === "PROVIDER");
+    return [
+      { code: TAB_ALL, label: t("joinUs.tab.all") },
+      ...active.map((type) => ({
+        code: type.code,
+        label: language === "ar" ? type.nameAr || type.nameEn : type.nameEn || type.nameAr,
+      })),
+    ];
+  }, [joinTypes, language, t]);
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["admin-consultants"],
-    queryFn: () => fetchAdminServiceProviders({ page: 1, limit: 100, sortBy: "createdAt", sortOrder: "desc" }),
+    queryKey: ["admin-consultants", tab],
+    queryFn: () =>
+      fetchAdminServiceProviders({
+        page: 1,
+        limit: 100,
+        sortBy: "createdAt",
+        sortOrder: "desc",
+        applicationType: tab === TAB_ALL ? undefined : tab,
+      }),
   });
 
   const { data: detail, isLoading: detailLoading } = useQuery({
@@ -66,18 +114,14 @@ export function ConsultantsPage() {
     enabled: Boolean(selectedId),
   });
 
-  const typeLabel = (type: string) => t(`consultants.type.${type}`, type);
-
   const statusLabel = (status: string) => t(`consultants.status.${status}`, status);
 
   const rows = useMemo<ConsultantRow[]>(() => {
-    const items = ((data?.items || []) as AdminServiceProvider[]).filter(
-      (provider) => provider.type === "CONSULTANT" || provider.type === "ENGINEER" || provider.type === "DOCTOR"
-    );
+    const items = (data?.items || []) as AdminServiceProvider[];
     return items.map((provider) => ({
       id: provider.id,
       name: providerName(provider),
-      type: provider.type,
+      typeKey: resolveTypeKey(provider),
       city: provider.city || "-",
       status: provider.status,
       rating: Number(provider.rating || 0).toFixed(1),
@@ -96,6 +140,22 @@ export function ConsultantsPage() {
   return (
     <Stack spacing={3}>
       <PageHeader title={t("consultants.title")} subtitle={t("consultants.subtitle")} />
+
+      <Paper sx={{ p: 1.5 }}>
+        <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", gap: 0.75 }}>
+          {tabItems.map((item) => (
+            <Chip
+              key={item.code}
+              label={item.label}
+              clickable
+              color={tab === item.code ? "primary" : "default"}
+              variant={tab === item.code ? "filled" : "outlined"}
+              onClick={() => setTab(item.code)}
+              size="small"
+            />
+          ))}
+        </Stack>
+      </Paper>
 
       <DataTable<ConsultantRow>
         title={t("consultants.listTitle")}
@@ -116,7 +176,7 @@ export function ConsultantsPage() {
           {
             key: "type",
             label: t("consultants.col.type"),
-            render: (row) => typeLabel(row.type),
+            render: (row) => typeLabel(row.typeKey),
           },
           { key: "city", label: t("consultants.col.city") },
           {
@@ -169,7 +229,10 @@ export function ConsultantsPage() {
               size="small"
               sx={{ alignSelf: "flex-start" }}
             />
-            <DetailRow label={t("consultants.col.type")} value={typeLabel(detail.type)} />
+            <DetailRow
+              label={t("consultants.col.type")}
+              value={typeLabel(resolveTypeKey(detail), detail.otherTypeLabel)}
+            />
             <DetailRow label={t("consultants.col.city")} value={detail.city} />
             <DetailRow label={t("consultants.col.rating")} value={Number(detail.rating || 0).toFixed(1)} />
             <DetailRow label={t("consultants.phone")} value={detail.contactNumber || undefined} />

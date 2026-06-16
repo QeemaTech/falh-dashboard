@@ -37,6 +37,7 @@ export function BannerFormDrawer({ open, onClose, onSuccess }: Props) {
   const [linkType, setLinkType] = useState("");
   const [linkValue, setLinkValue] = useState("");
   const [sortOrder, setSortOrder] = useState(0);
+  const [displayDays, setDisplayDays] = useState<number | "">(7);
   const [isActive, setIsActive] = useState(true);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -49,6 +50,7 @@ export function BannerFormDrawer({ open, onClose, onSuccess }: Props) {
     setLinkType("");
     setLinkValue("");
     setSortOrder(0);
+    setDisplayDays(7);
     setIsActive(true);
     setImageFile(null);
     setPreviewUrl(null);
@@ -70,6 +72,9 @@ export function BannerFormDrawer({ open, onClose, onSuccess }: Props) {
       if (!titleAr.trim()) throw new Error(t("banners.titleRequired"));
       if (!titleEn.trim()) throw new Error(t("banners.errorTitleEn"));
       if (!imageFile) throw new Error(t("banners.imageRequired"));
+      if (displayDays !== "" && (Number.isNaN(Number(displayDays)) || Number(displayDays) < 1)) {
+        throw new Error(t("banners.errorDisplayDays"));
+      }
       return createAdminBannerApi({
         titleAr: titleAr.trim(),
         titleEn: titleEn.trim(),
@@ -77,6 +82,7 @@ export function BannerFormDrawer({ open, onClose, onSuccess }: Props) {
         linkType: linkType || undefined,
         linkValue: linkValue.trim() || undefined,
         sortOrder: Number(sortOrder),
+        displayDays: displayDays === "" ? null : Number(displayDays),
         isActive,
       });
     },
@@ -132,6 +138,20 @@ export function BannerFormDrawer({ open, onClose, onSuccess }: Props) {
           onChange={(e) => setLinkValue(e.target.value)}
           placeholder={t("banners.linkValuePlaceholder")}
           disabled={!linkType}
+        />
+        <TextField
+          size="small"
+          fullWidth
+          type="number"
+          label={t("banners.fieldDisplayDays")}
+          value={displayDays}
+          onChange={(e) => {
+            const raw = e.target.value;
+            setDisplayDays(raw === "" ? "" : Number(raw));
+          }}
+          placeholder={t("banners.fieldDisplayDaysHint")}
+          helperText={t("banners.fieldDisplayDaysHelp")}
+          slotProps={{ htmlInput: { min: 1 } }}
         />
         <TextField
           size="small"

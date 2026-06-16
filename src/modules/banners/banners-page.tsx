@@ -18,6 +18,22 @@ export function BannersPage() {
     language === "ar"
       ? banner.titleAr || banner.title
       : banner.titleEn || banner.titleAr || banner.title;
+
+  const bannerDisplayLabel = (banner: AdminBanner) => {
+    if (!banner.displayDays) return t("banners.unlimited");
+    const expired = banner.expiresAt && new Date(banner.expiresAt) <= new Date();
+    const daysLeft = banner.expiresAt
+      ? Math.max(0, Math.ceil((new Date(banner.expiresAt).getTime() - Date.now()) / 86400000))
+      : banner.displayDays;
+    if (expired) return t("banners.expired");
+    return t("banners.daysRemaining").replace("{{days}}", String(daysLeft));
+  };
+
+  const bannerStatusVariant = (banner: AdminBanner): "success" | "warning" | "neutral" => {
+    if (!banner.isActive) return "neutral";
+    if (banner.expiresAt && new Date(banner.expiresAt) <= new Date()) return "warning";
+    return "success";
+  };
   const queryClient = useQueryClient();
   const [formOpen, setFormOpen] = useState(false);
 
@@ -81,6 +97,7 @@ export function BannersPage() {
               <AppTableHeaderCell>{t("banners.colTitle")}</AppTableHeaderCell>
               <AppTableHeaderCell>{t("banners.colLinkType")}</AppTableHeaderCell>
               <AppTableHeaderCell>{t("banners.colSortOrder")}</AppTableHeaderCell>
+              <AppTableHeaderCell>{t("banners.colDisplay")}</AppTableHeaderCell>
               <AppTableHeaderCell>{t("banners.colStatus")}</AppTableHeaderCell>
               <AppTableHeaderCell>{t("banners.colActions")}</AppTableHeaderCell>
             </tr>
@@ -103,9 +120,14 @@ export function BannersPage() {
                 <AppTableCell>{bannerTitle(banner)}</AppTableCell>
                 <AppTableCell>{banner.linkType || "—"}</AppTableCell>
                 <AppTableCell>{banner.sortOrder ?? 0}</AppTableCell>
+                <AppTableCell>{bannerDisplayLabel(banner)}</AppTableCell>
                 <AppTableCell>
-                  <AppBadge variant={banner.isActive ? "success" : "neutral"}>
-                    {banner.isActive ? t("banners.active") : t("banners.inactive")}
+                  <AppBadge variant={bannerStatusVariant(banner)}>
+                    {!banner.isActive
+                      ? t("banners.inactive")
+                      : banner.expiresAt && new Date(banner.expiresAt) <= new Date()
+                        ? t("banners.expired")
+                        : t("banners.active")}
                   </AppBadge>
                 </AppTableCell>
                 <AppTableCell>
