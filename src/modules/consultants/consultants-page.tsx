@@ -174,7 +174,7 @@ export function ConsultantsPage() {
             ),
           },
           {
-            key: "type",
+            key: "typeKey",
             label: t("consultants.col.type"),
             render: (row) => typeLabel(row.typeKey),
           },
