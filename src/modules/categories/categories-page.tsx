@@ -2,7 +2,9 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Add, Delete, Edit } from "@mui/icons-material";
 import {
+  Box,
   Button,
+  Checkbox,
   CircularProgress,
   Grid,
   IconButton,
@@ -36,6 +38,7 @@ const emptyForm = {
   nameAr: "",
   nameEn: "",
   sortOrder: "0",
+  allowsAdvertisement: false,
   isActive: true,
 };
 
@@ -66,6 +69,7 @@ export function CategoriesPage() {
         nameAr: form.nameAr.trim(),
         nameEn: form.nameEn.trim(),
         sortOrder: Number(form.sortOrder) || 0,
+        allowsAdvertisement: form.allowsAdvertisement,
         isActive: form.isActive,
       };
       if (editingId) return updateAdminCategoryApi(editingId, payload);
@@ -106,6 +110,7 @@ export function CategoriesPage() {
       nameAr: category.nameAr || "",
       nameEn: category.nameEn || "",
       sortOrder: String(category.sortOrder ?? 0),
+      allowsAdvertisement: category.allowsAdvertisement === true,
       isActive: category.isActive !== false,
     });
   }
@@ -163,6 +168,32 @@ export function CategoriesPage() {
               <MenuItem value="false">{t("categories.inactive")}</MenuItem>
             </TextField>
           </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                minHeight: 40,
+                mt: { xs: 0, sm: 1 },
+              }}
+            >
+              <Checkbox
+                size="small"
+                checked={form.allowsAdvertisement}
+                onChange={(e) => setForm((f) => ({ ...f, allowsAdvertisement: e.target.checked }))}
+                sx={{ p: 0.5, flexShrink: 0 }}
+              />
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography variant="body2" fontWeight={600} lineHeight={1.35}>
+                  {t("categories.allowsAdvertisement")}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" lineHeight={1.35} sx={{ display: "block" }}>
+                  {t("categories.allowsAdvertisementHint")}
+                </Typography>
+              </Box>
+            </Box>
+          </Grid>
         </Grid>
         <Stack direction="row" spacing={1} sx={{ mt: 2, flexWrap: "wrap" }}>
           <Button
@@ -198,6 +229,7 @@ export function CategoriesPage() {
               <tr>
                 <AppTableHeaderCell>{t("categories.col.name")}</AppTableHeaderCell>
                 <AppTableHeaderCell>{t("categories.col.sort")}</AppTableHeaderCell>
+                <AppTableHeaderCell>{t("categories.col.adType")}</AppTableHeaderCell>
                 <AppTableHeaderCell>{t("categories.col.status")}</AppTableHeaderCell>
                 <AppTableHeaderCell>{t("categories.col.actions")}</AppTableHeaderCell>
               </tr>
@@ -208,6 +240,13 @@ export function CategoriesPage() {
                   <AppTableRow key={category.id}>
                     <AppTableCell>{categoryDisplayName(category, language)}</AppTableCell>
                     <AppTableCell>{category.sortOrder ?? 0}</AppTableCell>
+                    <AppTableCell>
+                      <AppBadge variant={category.allowsAdvertisement ? "success" : "neutral"}>
+                        {category.allowsAdvertisement
+                          ? t("categories.adType.advertisement")
+                          : t("categories.adType.ecommerce")}
+                      </AppBadge>
+                    </AppTableCell>
                     <AppTableCell>
                       <AppBadge variant={category.isActive ? "success" : "neutral"}>
                         {category.isActive ? t("categories.active") : t("categories.inactive")}
@@ -244,7 +283,7 @@ export function CategoriesPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={4}>
+                  <td colSpan={5}>
                     <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: "center" }}>
                       {t("categories.empty")}
                     </Typography>

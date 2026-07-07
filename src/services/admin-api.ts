@@ -518,6 +518,7 @@ export type AdminCategory = {
   nameAr?: string;
   nameEn?: string;
   sortOrder?: number;
+  allowsAdvertisement?: boolean;
   isActive?: boolean;
 };
 
@@ -565,6 +566,7 @@ export async function createAdminCategoryApi(payload: {
   nameEn?: string;
   image?: string;
   sortOrder?: number;
+  allowsAdvertisement: boolean;
   isActive?: boolean;
 }) {
   const { data } = await http.post<ApiResponse<AdminCategory>>("/admin/categories", payload);
@@ -573,7 +575,14 @@ export async function createAdminCategoryApi(payload: {
 
 export async function updateAdminCategoryApi(
   categoryId: string,
-  payload: Partial<{ nameAr: string; nameEn: string; image: string; sortOrder: number; isActive: boolean }>
+  payload: Partial<{
+    nameAr: string;
+    nameEn: string;
+    image: string;
+    sortOrder: number;
+    allowsAdvertisement: boolean;
+    isActive: boolean;
+  }>
 ) {
   const { data } = await http.patch<ApiResponse<AdminCategory>>(`/admin/categories/${categoryId}`, payload);
   return data.data;
