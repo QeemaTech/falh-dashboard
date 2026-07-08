@@ -18,7 +18,7 @@ export function ProtectedRoute() {
   }
 
   if (!isAdmin) {
-    return <Navigate to="/company/products" replace />;
+    return <Navigate to="/company" replace />;
   }
 
   const required = permissionForPath(location.pathname);

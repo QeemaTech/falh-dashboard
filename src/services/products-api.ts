@@ -9,6 +9,9 @@ export type CompanyQuota = {
   remaining: number;
   canAdd: boolean;
   companyStatus: string;
+  displayDays?: number;
+  listingExpiresAt?: string | null;
+  listingActive?: boolean;
 };
 
 export async function fetchMyProducts(params: {

@@ -14,6 +14,7 @@ import {
 import { AppDrawer } from "../../components/design-system";
 import { DataTable, EmptyState, PageHeader } from "../../components/layout";
 import { ProductFormDrawer } from "../products/product-form-drawer";
+import { useI18n } from "../../hooks/use-i18n";
 import {
   deleteCompanyProductApi,
   fetchCompanyQuota,
@@ -32,6 +33,7 @@ function statusChipColor(status: string): "success" | "warning" | "error" | "def
 }
 
 export function CompanyProductsPage() {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const [formOpen, setFormOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<AdminProduct | null>(null);
@@ -49,6 +51,7 @@ export function CompanyProductsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["company-products"] });
       queryClient.invalidateQueries({ queryKey: ["company-quota"] });
+      queryClient.invalidateQueries({ queryKey: ["company-dashboard"] });
       setDeleteId(null);
     },
   });
@@ -57,20 +60,23 @@ export function CompanyProductsPage() {
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["company-products"] });
     queryClient.invalidateQueries({ queryKey: ["company-quota"] });
+    queryClient.invalidateQueries({ queryKey: ["company-dashboard"] });
   };
 
   if (isError) {
-    return <EmptyState title="Failed to load products" description={(error as Error).message} />;
+    return (
+      <EmptyState title={t("company.products.loadFailed")} description={(error as Error).message} />
+    );
   }
 
   return (
     <Stack spacing={3}>
       <PageHeader
-        title="My Products"
+        title={t("company.products.title")}
         subtitle={
           quota
-            ? `Quota: ${quota.used ?? 0} / ${quota.maxProducts ?? 0} used (${quota.remaining} remaining)`
-            : "Manage your product catalog"
+            ? `${t("company.dashboard.quotaUsed")}: ${quota.used ?? 0} / ${quota.maxProducts ?? 0} · ${quota.remaining} ${t("company.dashboard.quotaRemaining")}`
+            : t("company.products.subtitle")
         }
         action={
           <Button
@@ -82,25 +88,23 @@ export function CompanyProductsPage() {
               setFormOpen(true);
             }}
           >
-            Add Product
+            {t("company.products.add")}
           </Button>
         }
       />
 
       {quota && !quota.canAdd ? (
-        <Alert severity="warning">
-          Product limit reached. Remove or wait for rejected items to free quota.
-        </Alert>
+        <Alert severity="warning">{t("company.dashboard.quotaFull")}</Alert>
       ) : null}
 
       <DataTable<ProductRow>
         loading={isLoading}
-        emptyMessage="No products yet. Create your first product."
+        emptyMessage={t("company.products.empty")}
         getRowKey={(row) => row.id}
         columns={[
           {
             key: "images",
-            label: "Image",
+            label: t("company.products.col.image"),
             render: (row) =>
               row.images?.[0]?.path ? (
                 <Avatar
@@ -113,23 +117,25 @@ export function CompanyProductsPage() {
                 <Avatar variant="rounded" sx={{ width: 40, height: 40, bgcolor: "grey.300" }} />
               ),
           },
-          { key: "title", label: "Title" },
+          { key: "title", label: t("company.products.col.title") },
           {
             key: "status",
-            label: "Status",
-            render: (row) => <Chip label={row.status} color={statusChipColor(row.status)} size="small" />,
+            label: t("company.products.col.status"),
+            render: (row) => (
+              <Chip label={row.status} color={statusChipColor(row.status)} size="small" />
+            ),
           },
           {
             key: "price",
-            label: "Price",
+            label: t("company.products.col.price"),
             render: (row) => (row.price ? `EGP ${row.price}` : "-"),
           },
           {
             key: "id",
-            label: "Actions",
+            label: t("company.products.col.actions"),
             render: (row) => (
               <Stack direction="row" spacing={0.5}>
-                <IconButton size="small" onClick={() => setViewProduct(row)} title="View">
+                <IconButton size="small" onClick={() => setViewProduct(row)} title={t("company.products.view")}>
                   <Visibility fontSize="small" />
                 </IconButton>
                 <IconButton
@@ -138,11 +144,11 @@ export function CompanyProductsPage() {
                     setEditProduct(row);
                     setFormOpen(true);
                   }}
-                  title="Edit"
+                  title={t("company.products.edit")}
                 >
                   <Edit fontSize="small" />
                 </IconButton>
-                <IconButton size="small" onClick={() => setDeleteId(row.id)} title="Delete">
+                <IconButton size="small" onClick={() => setDeleteId(row.id)} title={t("company.products.delete")}>
                   <Delete fontSize="small" />
                 </IconButton>
               </Stack>
@@ -164,31 +170,48 @@ export function CompanyProductsPage() {
         canAdd={quota?.canAdd ?? true}
       />
 
-      <AppDrawer open={Boolean(viewProduct)} onClose={() => setViewProduct(null)} title="Product Details">
+      <AppDrawer
+        open={Boolean(viewProduct)}
+        onClose={() => setViewProduct(null)}
+        title={t("company.products.details")}
+      >
         {viewProduct ? (
           <Stack spacing={1.5}>
             <Typography variant="body2">
-              <Box component="span" sx={{ fontWeight: 600 }}>Title:</Box> {viewProduct.title}
+              <Box component="span" sx={{ fontWeight: 600 }}>
+                {t("company.products.col.title")}:
+              </Box>{" "}
+              {viewProduct.title}
             </Typography>
             <Typography variant="body2">
-              <Box component="span" sx={{ fontWeight: 600 }}>Status:</Box> {viewProduct.status}
+              <Box component="span" sx={{ fontWeight: 600 }}>
+                {t("company.products.col.status")}:
+              </Box>{" "}
+              {viewProduct.status}
             </Typography>
             <Typography variant="body2">
-              <Box component="span" sx={{ fontWeight: 600 }}>Description:</Box> {viewProduct.description || "-"}
+              <Box component="span" sx={{ fontWeight: 600 }}>
+                {t("company.profile.description")}:
+              </Box>{" "}
+              {viewProduct.description || "-"}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Submitted products stay private until admin approves (ACTIVE).
+              {t("company.products.pendingHint")}
             </Typography>
           </Stack>
         ) : null}
       </AppDrawer>
 
-      <AppDrawer open={Boolean(deleteId)} onClose={() => setDeleteId(null)} title="Delete Product">
+      <AppDrawer open={Boolean(deleteId)} onClose={() => setDeleteId(null)} title={t("company.products.delete")}>
         <Typography variant="body2" sx={{ mb: 2 }}>
-          Delete this product permanently?
+          {t("company.products.deleteConfirm")}
         </Typography>
-        <Button variant="contained" color="error" onClick={() => deleteId && deleteMutation.mutate(deleteId)}>
-          Confirm Delete
+        <Button
+          variant="contained"
+          color="error"
+          onClick={() => deleteId && deleteMutation.mutate(deleteId)}
+        >
+          {t("company.products.deleteConfirmBtn")}
         </Button>
       </AppDrawer>
     </Stack>

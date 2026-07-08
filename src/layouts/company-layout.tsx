@@ -1,40 +1,34 @@
-import { Outlet, useNavigate } from "react-router-dom";
-import { AppBar, Box, Button, Container, Stack, Toolbar, Typography } from "@mui/material";
-import { AppLogo } from "../components/branding";
-import { useI18n } from "../hooks/use-i18n";
-import { useAuth } from "../store/auth-store";
+import { Outlet } from "react-router-dom";
+import { Box, Container } from "@mui/material";
+import { CompanySidebar } from "../components/company-sidebar";
+import { CompanyHeader } from "../components/company-header";
+import { SIDEBAR_WIDTH_COLLAPSED, SIDEBAR_WIDTH_OPEN } from "../components/sidebar";
 import { useUiStore } from "../store/ui-store";
 
 export function CompanyLayout() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-  const { t } = useI18n();
-  const { direction } = useUiStore();
+  const { direction, sidebarOpen } = useUiStore();
+  const drawerWidth = sidebarOpen ? SIDEBAR_WIDTH_OPEN : SIDEBAR_WIDTH_COLLAPSED;
 
   return (
-    <Box dir={direction} sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
-      <AppBar position="static" color="inherit" elevation={0} sx={{ borderBottom: 1, borderColor: "divider" }}>
-        <Toolbar>
-          <AppLogo size={32} showLabel />
-          <Stack spacing={0.25} sx={{ flex: 1, ml: 2, display: { xs: "none", sm: "flex" } }}>
-            <Typography variant="caption" color="text.secondary">
-              {user?.name}
-            </Typography>
-          </Stack>
-          <Button
-            variant="outlined"
-            onClick={() => {
-              logout();
-              navigate("/login");
-            }}
-          >
-            {t("common.logout")}
-          </Button>
-        </Toolbar>
-      </AppBar>
-      <Container maxWidth="lg" sx={{ py: 3 }}>
-        <Outlet />
-      </Container>
+    <Box dir={direction} sx={{ display: "flex", minHeight: "100vh", bgcolor: "background.default" }}>
+      <CompanySidebar />
+      <Box
+        component="main"
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          marginInlineStart: { lg: `${drawerWidth}px` },
+          display: "flex",
+          flexDirection: "column",
+          transition: (theme) =>
+            theme.transitions.create(["margin"], { duration: theme.transitions.duration.shortest }),
+        }}
+      >
+        <CompanyHeader />
+        <Container maxWidth={false} sx={{ py: { xs: 2, md: 2.5 }, px: { xs: 2, md: 3 }, flex: 1 }}>
+          <Outlet />
+        </Container>
+      </Box>
     </Box>
   );
 }

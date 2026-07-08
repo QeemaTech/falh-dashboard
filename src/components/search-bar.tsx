@@ -2,9 +2,9 @@ import { Search } from "@mui/icons-material";
 import { InputAdornment, TextField } from "@mui/material";
 import { useI18n } from "../hooks/use-i18n";
 
-type Props = { value: string; onChange: (value: string) => void };
+type Props = { value: string; onChange: (value: string) => void; placeholder?: string };
 
-export function SearchBar({ value, onChange }: Props) {
+export function SearchBar({ value, onChange, placeholder }: Props) {
   const { t } = useI18n();
   return (
     <TextField
@@ -12,7 +12,7 @@ export function SearchBar({ value, onChange }: Props) {
       size="small"
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      placeholder={t("search.placeholder")}
+      placeholder={placeholder || t("search.placeholder")}
       slotProps={{
         input: {
           startAdornment: (

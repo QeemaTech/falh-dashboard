@@ -28,6 +28,8 @@ import { CompanyProtectedRoute } from "./company-protected-route";
 import { CompanyLayout } from "../layouts/company-layout";
 import { JoinRequestsPage } from "../modules/join-us/join-requests-page";
 import { CompanyProductsPage } from "../modules/company-portal/company-products-page";
+import { CompanyDashboardPage } from "../modules/company-portal/company-dashboard-page";
+import { CompanyProfilePage } from "../modules/company-portal/company-profile-page";
 
 const placeholderRoutes = [
   { path: "order-tracking", title: "Order Tracking", description: "Track order states and shipment progress." },
@@ -109,7 +111,12 @@ export const router = createBrowserRouter([
       {
         path: "/company",
         element: <CompanyLayout />,
-        children: [{ path: "products", element: <CompanyProductsPage /> }],
+        children: [
+          { index: true, element: <CompanyDashboardPage /> },
+          { path: "products", element: <CompanyProductsPage /> },
+          { path: "profile", element: <CompanyProfilePage /> },
+          { path: "notifications", element: <NotificationsPage /> },
+        ],
       },
     ],
   },

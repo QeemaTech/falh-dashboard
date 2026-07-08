@@ -3,13 +3,15 @@ import { Link as RouterLink } from "react-router-dom";
 import { useBreadcrumbs } from "../hooks/use-breadcrumbs";
 import { useI18n } from "../hooks/use-i18n";
 
-export function Breadcrumbs() {
+type Props = { homeTo?: string };
+
+export function Breadcrumbs({ homeTo = "/" }: Props) {
   const { t } = useI18n();
   const crumbs = useBreadcrumbs();
 
   return (
     <MuiBreadcrumbs aria-label="breadcrumb" sx={{ fontSize: 13 }}>
-      <Link component={RouterLink} underline="hover" color="inherit" to="/">
+      <Link component={RouterLink} underline="hover" color="inherit" to={homeTo}>
         {t("common.home")}
       </Link>
       {crumbs.map((crumb, index) => {

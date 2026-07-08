@@ -29,10 +29,11 @@ export function UserMenu({ onOpen, dropdown: externalDropdown }: Props) {
   const { mode, toggleColorMode } = useColorMode();
   const { language, setLanguage } = useUiStore();
   const { t } = useI18n();
-  const { user, logout } = useAuth();
+  const { user, logout, isCompany } = useAuth();
   const navigate = useNavigate();
 
-  const name = user?.name || "Admin User";
+  const name = user?.name || (isCompany ? t("menu.companyUser") : "Admin User");
+  const roleLabel = isCompany ? t("menu.companyAccount") : t("menu.superAdmin");
   const menuAnchorHorizontal = theme.direction === "rtl" ? "left" : "right";
 
   const handleToggle = () => {
@@ -56,7 +57,7 @@ export function UserMenu({ onOpen, dropdown: externalDropdown }: Props) {
               {name}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              {t("menu.superAdmin")}
+              {roleLabel}
             </Typography>
           </Box>
         </Stack>

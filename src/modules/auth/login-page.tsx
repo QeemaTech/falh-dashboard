@@ -63,7 +63,13 @@ export function LoginPage() {
       await login(values);
       const stored = getStoredUser();
       const target =
-        stored?.role === "COMPANY" ? "/company/products" : redirectTo === "/company/products" ? "/" : redirectTo;
+        stored?.role === "COMPANY"
+          ? redirectTo?.startsWith("/company")
+            ? redirectTo
+            : "/company"
+          : redirectTo?.startsWith("/company")
+            ? "/"
+            : redirectTo;
       navigate(target, { replace: true });
     } catch (error) {
       const message =

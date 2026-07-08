@@ -27,9 +27,14 @@ import type { NotificationRecord } from "../services/notifications-api";
 type Props = {
   onOpen?: () => void;
   dropdown?: ReturnType<typeof useDropdown>;
+  viewAllPath?: string;
 };
 
-export function NotificationMenu({ onOpen, dropdown: externalDropdown }: Props) {
+export function NotificationMenu({
+  onOpen,
+  dropdown: externalDropdown,
+  viewAllPath = "/notifications",
+}: Props) {
   const theme = useTheme();
   const navigate = useNavigate();
   const internalDropdown = useDropdown();
@@ -49,7 +54,7 @@ export function NotificationMenu({ onOpen, dropdown: externalDropdown }: Props) 
       markAsRead(notification.id);
     }
     close();
-    navigate("/notifications");
+    navigate(viewAllPath);
   };
 
   return (
@@ -158,7 +163,7 @@ export function NotificationMenu({ onOpen, dropdown: externalDropdown }: Props) 
         <MenuItem
           onClick={() => {
             close();
-            navigate("/notifications");
+            navigate(viewAllPath);
           }}
           sx={{ justifyContent: "center", fontWeight: 600 }}
         >
