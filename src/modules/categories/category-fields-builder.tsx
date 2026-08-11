@@ -28,7 +28,13 @@ import {
   type DynamicField,
   type DynamicFieldType,
 } from "../../services/admin-api";
-import { dynamicFieldLabel, getDynamicFieldOptions } from "../products/product-dynamic-fields-utils";
+import {
+  dynamicFieldLabel,
+  getDynamicFieldOptionItems,
+  isOptionsInputMode,
+  resolveFieldInputMode,
+} from "../products/product-dynamic-fields-utils";
+import type { DynamicFieldInputMode } from "../../services/admin-api";
 
 const FIELD_TYPES: DynamicFieldType[] = [
   "TEXT",
@@ -78,17 +84,25 @@ const exampleTemplates = {
 };
 
 function defaultField(type: DynamicFieldType, t: (key: string) => string): Omit<DynamicField, "id" | "categoryId"> {
+  const inputMode: DynamicFieldInputMode = type === "SELECT" || type === "RADIO" ? "OPTIONS" : "VALUE";
   return {
     label: t("categories.fields.label"),
     labelEn: t("categories.fields.labelEn"),
     fieldKey: `field_${Date.now()}`,
     fieldType: type,
+    inputMode,
     placeholder: "",
     helpText: "",
     isRequired: false,
     isActive: true,
     sortOrder: 0,
-    options: type === "SELECT" || type === "RADIO" ? { items: ["Option 1", "Option 2"] } : undefined,
+    options:
+      inputMode === "OPTIONS"
+        ? [
+            { value: "option_1", label: "Option 1" },
+            { value: "option_2", label: "Option 2" },
+          ]
+        : null,
     validation: {},
   };
 }
@@ -109,27 +123,31 @@ function fieldPreview(field: DynamicField, language: "ar" | "en", t: (key: strin
       </Button>
     );
   }
-  if (field.fieldType === "SELECT") {
-    const options = getDynamicFieldOptions(field);
+  if (isOptionsInputMode(field) || field.fieldType === "SELECT" || field.fieldType === "RADIO") {
+    const options = getDynamicFieldOptionItems(field);
+    if (field.fieldType === "RADIO") {
+      return (
+        <RadioGroup row>
+          {options.map((option) => (
+            <FormControlLabel
+              key={option.value}
+              value={option.value}
+              control={<Radio disabled size="small" />}
+              label={option.label}
+            />
+          ))}
+        </RadioGroup>
+      );
+    }
     return (
       <TextField select size="small" fullWidth disabled value="">
         <MenuItem value="">{t("categories.fields.select")}</MenuItem>
         {options.map((option) => (
-          <MenuItem key={option} value={option}>
-            {option}
+          <MenuItem key={option.value} value={option.value}>
+            {option.label}
           </MenuItem>
         ))}
       </TextField>
-    );
-  }
-  if (field.fieldType === "RADIO") {
-    const options = getDynamicFieldOptions(field);
-    return (
-      <RadioGroup row>
-        {options.map((option) => (
-          <FormControlLabel key={option} value={option} control={<Radio disabled size="small" />} label={option} />
-        ))}
-      </RadioGroup>
     );
   }
   const type = field.fieldType === "NUMBER" ? "number" : field.fieldType === "DATE" ? "date" : "text";
@@ -206,12 +224,22 @@ export function CategoryFieldsBuilder({ categoryId, categoryLabel }: Props) {
           labelEn: item.labelEn,
           fieldKey: item.fieldKey,
           isRequired: item.isRequired,
+          inputMode: item.fieldType === "SELECT" || item.fieldType === "RADIO" ? "OPTIONS" : "VALUE",
           options:
             item.fieldType === "SELECT"
-              ? { items: ["Canal", "Well", "Nile", "Rain"] }
+              ? [
+                  { value: "canal", label: "Canal" },
+                  { value: "well", label: "Well" },
+                  { value: "nile", label: "Nile" },
+                  { value: "rain", label: "Rain" },
+                ]
               : item.fieldType === "RADIO"
-                ? { items: ["Owned", "Leased", "Shared"] }
-                : undefined,
+                ? [
+                    { value: "owned", label: "Owned" },
+                    { value: "leased", label: "Leased" },
+                    { value: "shared", label: "Shared" },
+                  ]
+                : null,
         },
       });
     }
@@ -319,7 +347,12 @@ export function CategoryFieldsBuilder({ categoryId, categoryLabel }: Props) {
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
                             {t(`categories.fieldTypes.${field.fieldType}` as "categories.fieldTypes.TEXT")} ·{" "}
-                            {field.isRequired ? t("categories.fields.required") : t("categories.fields.optional")}
+                            {t(
+                              `categories.fields.inputMode.${resolveFieldInputMode(field)}` as
+                                | "categories.fields.inputMode.OPTIONS"
+                                | "categories.fields.inputMode.VALUE"
+                            )}{" "}
+                            · {field.isRequired ? t("categories.fields.required") : t("categories.fields.optional")}
                           </Typography>
                         </Box>
                       </Stack>
@@ -379,6 +412,44 @@ export function CategoryFieldsBuilder({ categoryId, categoryLabel }: Props) {
                     value={selectedField.placeholder || ""}
                     onChange={(e) => updateSelectedField({ placeholder: e.target.value })}
                   />
+                  <TextField
+                    select
+                    label={t("categories.fields.inputModeLabel")}
+                    size="small"
+                    fullWidth
+                    value={resolveFieldInputMode(selectedField)}
+                    onChange={(e) => {
+                      const inputMode = e.target.value as DynamicFieldInputMode;
+                      if (inputMode === "OPTIONS") {
+                        updateSelectedField({
+                          inputMode,
+                          fieldType:
+                            selectedField.fieldType === "SELECT" || selectedField.fieldType === "RADIO"
+                              ? selectedField.fieldType
+                              : "SELECT",
+                          options: getDynamicFieldOptionItems(selectedField).length
+                            ? getDynamicFieldOptionItems(selectedField)
+                            : [
+                                { value: "option_1", label: "Option 1" },
+                                { value: "option_2", label: "Option 2" },
+                              ],
+                        });
+                      } else {
+                        updateSelectedField({
+                          inputMode,
+                          fieldType:
+                            selectedField.fieldType === "SELECT" || selectedField.fieldType === "RADIO"
+                              ? "TEXT"
+                              : selectedField.fieldType,
+                          options: null,
+                        });
+                      }
+                    }}
+                    helperText={t("categories.fields.inputModeHint")}
+                  >
+                    <MenuItem value="OPTIONS">{t("categories.fields.inputMode.OPTIONS")}</MenuItem>
+                    <MenuItem value="VALUE">{t("categories.fields.inputMode.VALUE")}</MenuItem>
+                  </TextField>
                   <FormControlLabel
                     control={
                       <Checkbox
@@ -388,28 +459,33 @@ export function CategoryFieldsBuilder({ categoryId, categoryLabel }: Props) {
                     }
                     label={t("categories.fields.required")}
                   />
-                  {(selectedField.fieldType === "SELECT" || selectedField.fieldType === "RADIO") && (
+                  {isOptionsInputMode(selectedField) ? (
                     <TextField
                       label={t("categories.fields.options")}
                       size="small"
                       fullWidth
-                      value={
-                        Array.isArray((selectedField.options as { items?: string[] } | undefined)?.items)
-                          ? ((selectedField.options as { items: string[] }).items || []).join(", ")
-                          : ""
-                      }
+                      multiline
+                      minRows={2}
+                      value={getDynamicFieldOptionItems(selectedField)
+                        .map((item) => (item.label === item.value ? item.value : `${item.value}|${item.label}`))
+                        .join(", ")}
+                      helperText={t("categories.fields.optionsHint")}
                       onChange={(e) =>
                         updateSelectedField({
-                          options: {
-                            items: e.target.value
-                              .split(",")
-                              .map((v) => v.trim())
-                              .filter(Boolean),
-                          },
+                          inputMode: "OPTIONS",
+                          options: e.target.value
+                            .split(",")
+                            .map((raw) => raw.trim())
+                            .filter(Boolean)
+                            .map((raw) => {
+                              const [valuePart, labelPart] = raw.split("|").map((part) => part.trim());
+                              const value = valuePart || raw;
+                              return { value, label: labelPart || value };
+                            }),
                         })
                       }
                     />
-                  )}
+                  ) : null}
                   <Paper variant="outlined" sx={{ p: 2 }}>
                     <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
                       {t("categories.fields.preview")}

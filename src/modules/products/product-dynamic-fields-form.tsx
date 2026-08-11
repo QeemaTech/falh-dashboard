@@ -20,7 +20,8 @@ import { resolveAssetUrl } from "../../utils/asset-url";
 import {
   dynamicFieldLabel,
   dynamicFieldPlaceholder,
-  getDynamicFieldOptions,
+  getDynamicFieldOptionItems,
+  isOptionsInputMode,
   sortedDynamicFields,
   type DynamicFieldValuesMap,
 } from "./product-dynamic-fields-utils";
@@ -105,8 +106,30 @@ function DynamicFieldInput({
     );
   }
 
-  if (field.fieldType === "SELECT") {
-    const options = getDynamicFieldOptions(field);
+  if (isOptionsInputMode(field) || field.fieldType === "SELECT" || field.fieldType === "RADIO") {
+    const options = getDynamicFieldOptionItems(field);
+    if (field.fieldType === "RADIO") {
+      return (
+        <FormControl fullWidth disabled={disabled}>
+          <FormLabel sx={{ fontSize: 14, mb: 0.5 }}>
+            {label}
+            {requiredMark}
+          </FormLabel>
+          <RadioGroup value={value.value} onChange={(e) => onChange({ ...value, value: e.target.value })}>
+            {options.map((option) => (
+              <FormControlLabel
+                key={option.value}
+                value={option.value}
+                control={<Radio size="small" />}
+                label={option.label}
+              />
+            ))}
+          </RadioGroup>
+          {field.helpText ? <FormHelperText>{field.helpText}</FormHelperText> : null}
+        </FormControl>
+      );
+    }
+
     return (
       <TextField
         select
@@ -120,29 +143,11 @@ function DynamicFieldInput({
       >
         <MenuItem value="">{t("products.form.selectOption")}</MenuItem>
         {options.map((option) => (
-          <MenuItem key={option} value={option}>
-            {option}
+          <MenuItem key={option.value} value={option.value}>
+            {option.label}
           </MenuItem>
         ))}
       </TextField>
-    );
-  }
-
-  if (field.fieldType === "RADIO") {
-    const options = getDynamicFieldOptions(field);
-    return (
-      <FormControl fullWidth disabled={disabled}>
-        <FormLabel sx={{ fontSize: 14, mb: 0.5 }}>
-          {label}
-          {requiredMark}
-        </FormLabel>
-        <RadioGroup value={value.value} onChange={(e) => onChange({ ...value, value: e.target.value })}>
-          {options.map((option) => (
-            <FormControlLabel key={option} value={option} control={<Radio size="small" />} label={option} />
-          ))}
-        </RadioGroup>
-        {field.helpText ? <FormHelperText>{field.helpText}</FormHelperText> : null}
-      </FormControl>
     );
   }
 

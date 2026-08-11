@@ -1,8 +1,13 @@
-import type { DynamicField } from "../../services/admin-api";
+import type { DynamicField, DynamicFieldInputMode } from "../../services/admin-api";
 
 export type DynamicFieldEntry = {
   value: string;
   fileUrl?: string;
+};
+
+export type DynamicFieldOptionItem = {
+  value: string;
+  label: string;
 };
 
 export type DynamicFieldValuesMap = Record<string, DynamicFieldEntry>;
@@ -17,15 +22,47 @@ export function dynamicFieldPlaceholder(field: DynamicField, language: "ar" | "e
   return dynamicFieldLabel(field, language);
 }
 
+export function resolveFieldInputMode(field: DynamicField): DynamicFieldInputMode {
+  if (field.inputMode === "OPTIONS" || field.inputMode === "VALUE") return field.inputMode;
+  if (field.fieldType === "SELECT" || field.fieldType === "RADIO") return "OPTIONS";
+  return "VALUE";
+}
+
+export function isOptionsInputMode(field: DynamicField) {
+  return resolveFieldInputMode(field) === "OPTIONS";
+}
+
+export function getDynamicFieldOptionItems(field: DynamicField): DynamicFieldOptionItem[] {
+  const options = field.options as
+    | Array<string | { value?: string; label?: string }>
+    | { items?: Array<string | { value?: string; label?: string }> }
+    | null
+    | undefined;
+
+  const list = Array.isArray(options)
+    ? options
+    : options && Array.isArray(options.items)
+      ? options.items
+      : [];
+
+  return list
+    .map((item) => {
+      if (typeof item === "string" || typeof item === "number" || typeof item === "boolean") {
+        const value = String(item).trim();
+        return value ? { value, label: value } : null;
+      }
+      if (!item || typeof item !== "object") return null;
+      const value = String(item.value ?? item.label ?? "").trim();
+      if (!value) return null;
+      const label = String(item.label ?? value).trim() || value;
+      return { value, label };
+    })
+    .filter((item): item is DynamicFieldOptionItem => Boolean(item));
+}
+
+/** @deprecated prefer getDynamicFieldOptionItems — kept for callers that only need values */
 export function getDynamicFieldOptions(field: DynamicField): string[] {
-  const options = field.options as { items?: string[] } | string[] | null | undefined;
-  if (Array.isArray(options)) {
-    return options.map((item) => String(typeof item === "object" && item ? (item as { value?: string }).value ?? item : item));
-  }
-  if (options && Array.isArray(options.items)) {
-    return options.items.map((item) => String(item));
-  }
-  return [];
+  return getDynamicFieldOptionItems(field).map((item) => item.value);
 }
 
 export function buildDynamicFieldsPayload(fields: DynamicField[], values: DynamicFieldValuesMap) {

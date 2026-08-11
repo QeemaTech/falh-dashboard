@@ -532,6 +532,8 @@ export type DynamicFieldType =
   | "BOOLEAN"
   | "TEXTAREA";
 
+export type DynamicFieldInputMode = "OPTIONS" | "VALUE";
+
 export type DynamicField = {
   id: string;
   categoryId: string;
@@ -539,6 +541,8 @@ export type DynamicField = {
   labelEn?: string;
   fieldKey: string;
   fieldType: DynamicFieldType;
+  /** OPTIONS = choose from options; VALUE = free typed input */
+  inputMode?: DynamicFieldInputMode;
   placeholder?: string;
   helpText?: string;
   isRequired: boolean;
