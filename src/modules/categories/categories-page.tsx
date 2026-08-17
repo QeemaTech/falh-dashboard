@@ -185,10 +185,10 @@ export function CategoriesPage() {
                 sx={{ p: 0.5, flexShrink: 0 }}
               />
               <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography variant="body2" fontWeight={600} lineHeight={1.35}>
+                <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.35 }}>
                   {t("categories.allowsAdvertisement")}
                 </Typography>
-                <Typography variant="caption" color="text.secondary" lineHeight={1.35} sx={{ display: "block" }}>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", lineHeight: 1.35 }}>
                   {t("categories.allowsAdvertisementHint")}
                 </Typography>
               </Box>
