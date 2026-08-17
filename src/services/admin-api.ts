@@ -822,10 +822,13 @@ export type SystemSettings = {
   contact: {
     phone: string;
     email: string;
+    partnersEmail: string;
+    supportEmail: string;
     whatsapp: string;
     address: string;
   };
   social: {
+    whatsapp: string;
     facebook: string;
     instagram: string;
     x: string;

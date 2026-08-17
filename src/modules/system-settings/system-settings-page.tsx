@@ -36,8 +36,22 @@ type AssetKey = "logo";
 
 const initialSettings: SystemSettings = {
   general: { projectName: "", logo: "", favicon: "", footerText: "" },
-  contact: { phone: "", email: "", whatsapp: "", address: "" },
-  social: { facebook: "", instagram: "", x: "", tiktok: "", youtube: "" },
+  contact: {
+    phone: "",
+    email: "",
+    partnersEmail: "",
+    supportEmail: "",
+    whatsapp: "",
+    address: "",
+  },
+  social: {
+    whatsapp: "",
+    facebook: "",
+    instagram: "",
+    x: "",
+    tiktok: "",
+    youtube: "",
+  },
   application: {
     currency: "EGP",
     language: "ar",
@@ -165,7 +179,16 @@ export function SystemSettingsPage() {
   });
 
   useEffect(() => {
-    if (settingsQuery.data) setForm(settingsQuery.data);
+    if (!settingsQuery.data) return;
+    const data = settingsQuery.data;
+    setForm({
+      ...initialSettings,
+      ...data,
+      general: { ...initialSettings.general, ...data.general },
+      contact: { ...initialSettings.contact, ...data.contact },
+      social: { ...initialSettings.social, ...data.social },
+      application: { ...initialSettings.application, ...data.application },
+    });
   }, [settingsQuery.data]);
 
   const saveMutation = useMutation({
@@ -282,13 +305,26 @@ export function SystemSettingsPage() {
                 label={t("systemSettings.contact.phone")}
                 value={form.contact.phone}
                 onChange={(e) => setValue("contact", "phone", e.target.value)}
+                helperText={t("systemSettings.contact.phoneHint")}
               />
               <TextField
                 size="small"
                 fullWidth
-                label={t("systemSettings.contact.email")}
-                value={form.contact.email}
-                onChange={(e) => setValue("contact", "email", e.target.value)}
+                label={t("systemSettings.contact.partnersEmail")}
+                value={form.contact.partnersEmail || ""}
+                onChange={(e) => setValue("contact", "partnersEmail", e.target.value)}
+                helperText={t("systemSettings.contact.partnersEmailHint")}
+              />
+              <TextField
+                size="small"
+                fullWidth
+                label={t("systemSettings.contact.supportEmail")}
+                value={form.contact.supportEmail || form.contact.email || ""}
+                onChange={(e) => {
+                  setValue("contact", "supportEmail", e.target.value);
+                  setValue("contact", "email", e.target.value);
+                }}
+                helperText={t("systemSettings.contact.supportEmailHint")}
               />
               <TextField
                 size="small"
@@ -296,6 +332,7 @@ export function SystemSettingsPage() {
                 label={t("systemSettings.contact.whatsapp")}
                 value={form.contact.whatsapp}
                 onChange={(e) => setValue("contact", "whatsapp", e.target.value)}
+                helperText={t("systemSettings.contact.whatsappHint")}
               />
               <TextField
                 size="small"
@@ -316,6 +353,14 @@ export function SystemSettingsPage() {
               <TextField
                 size="small"
                 fullWidth
+                label={t("systemSettings.social.whatsapp")}
+                value={form.social.whatsapp || ""}
+                onChange={(e) => setValue("social", "whatsapp", e.target.value)}
+                placeholder="https://wa.me/201509099022"
+              />
+              <TextField
+                size="small"
+                fullWidth
                 label={t("systemSettings.social.facebook")}
                 value={form.social.facebook}
                 onChange={(e) => setValue("social", "facebook", e.target.value)}
@@ -330,13 +375,6 @@ export function SystemSettingsPage() {
               <TextField
                 size="small"
                 fullWidth
-                label={t("systemSettings.social.x")}
-                value={form.social.x}
-                onChange={(e) => setValue("social", "x", e.target.value)}
-              />
-              <TextField
-                size="small"
-                fullWidth
                 label={t("systemSettings.social.tiktok")}
                 value={form.social.tiktok}
                 onChange={(e) => setValue("social", "tiktok", e.target.value)}
@@ -347,6 +385,13 @@ export function SystemSettingsPage() {
                 label={t("systemSettings.social.youtube")}
                 value={form.social.youtube}
                 onChange={(e) => setValue("social", "youtube", e.target.value)}
+              />
+              <TextField
+                size="small"
+                fullWidth
+                label={t("systemSettings.social.x")}
+                value={form.social.x}
+                onChange={(e) => setValue("social", "x", e.target.value)}
               />
             </Stack>
           </SettingsSection>
