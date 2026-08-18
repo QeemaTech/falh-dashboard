@@ -1,8 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
-import { Business, Email, LocationOn, Phone, WhatsApp } from "@mui/icons-material";
+import { useRef } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Business, Email, LocationOn, Phone, PhotoCamera, WhatsApp } from "@mui/icons-material";
 import {
   Avatar,
+  Box,
+  Button,
   Chip,
+  CircularProgress,
   Divider,
   Grid,
   Paper,
@@ -11,8 +15,10 @@ import {
   Typography,
 } from "@mui/material";
 import { EmptyState, PageHeader } from "../../components/layout";
+import { toast } from "../../components/ui/sonner";
 import { useI18n } from "../../hooks/use-i18n";
-import { fetchCompanyProfile } from "../../services/company-api";
+import { fetchCompanyProfile, uploadCompanyLogoApi } from "../../services/company-api";
+import { getApiErrorMessage } from "../../utils/api-error";
 import { resolveAssetUrl } from "../../utils/asset-url";
 
 function ProfileSkeleton() {
@@ -39,9 +45,24 @@ function InfoRow({ label, value }: { label: string; value?: string | null }) {
 
 export function CompanyProfilePage() {
   const { t } = useI18n();
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["company-profile"],
     queryFn: fetchCompanyProfile,
+  });
+
+  const uploadMutation = useMutation({
+    mutationFn: uploadCompanyLogoApi,
+    onSuccess: (profile) => {
+      queryClient.setQueryData(["company-profile"], profile);
+      queryClient.invalidateQueries({ queryKey: ["company-dashboard"] });
+      toast.success(t("company.profile.logoUploadSuccess"));
+    },
+    onError: (err: unknown) => {
+      toast.error(getApiErrorMessage(err, t("company.profile.logoUploadFailed")));
+    },
   });
 
   if (isLoading) return <ProfileSkeleton />;
@@ -61,14 +82,31 @@ export function CompanyProfilePage() {
 
       <Paper sx={{ p: { xs: 2.5, md: 3 } }}>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2.5} sx={{ alignItems: { sm: "center" }, mb: 3 }}>
-          <Avatar
-            variant="rounded"
-            src={data.logo ? resolveAssetUrl(data.logo) : undefined}
-            sx={{ width: 72, height: 72, bgcolor: "primary.main" }}
-          >
-            <Business />
-          </Avatar>
-          <Stack spacing={0.5} sx={{ flex: 1 }}>
+          <Box sx={{ position: "relative" }}>
+            <Avatar
+              variant="rounded"
+              src={data.logo ? resolveAssetUrl(data.logo) : undefined}
+              sx={{ width: 88, height: 88, bgcolor: "primary.main" }}
+            >
+              <Business />
+            </Avatar>
+            {uploadMutation.isPending ? (
+              <Box
+                sx={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "grid",
+                  placeItems: "center",
+                  bgcolor: "rgba(0,0,0,0.35)",
+                  borderRadius: 1,
+                }}
+              >
+                <CircularProgress size={28} sx={{ color: "common.white" }} />
+              </Box>
+            ) : null}
+          </Box>
+
+          <Stack spacing={1} sx={{ flex: 1 }}>
             <Typography variant="h5" sx={{ fontWeight: 800 }}>
               {data.name}
             </Typography>
@@ -86,6 +124,36 @@ export function CompanyProfilePage() {
                     ? t("company.dashboard.listingActive")
                     : t("company.dashboard.listingInactive")
                 }
+              />
+            </Stack>
+            <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap", gap: 1 }}>
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<PhotoCamera />}
+                disabled={uploadMutation.isPending}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {data.logo ? t("company.profile.changeLogo") : t("company.profile.uploadLogo")}
+              </Button>
+              <Typography variant="caption" color="text.secondary">
+                {t("company.profile.logoHint")}
+              </Typography>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                hidden
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (!file) return;
+                  if (file.size > 5 * 1024 * 1024) {
+                    toast.error(t("company.profile.logoTooLarge"));
+                    return;
+                  }
+                  uploadMutation.mutate(file);
+                }}
               />
             </Stack>
           </Stack>

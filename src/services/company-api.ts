@@ -49,6 +49,13 @@ export async function fetchCompanyProfile() {
   return data.data;
 }
 
+export async function uploadCompanyLogoApi(file: File) {
+  const formData = new FormData();
+  formData.append("logo", file);
+  const { data } = await http.post<ApiResponse<CompanyProfile>>("/company/me/logo", formData);
+  return data.data;
+}
+
 export async function fetchCompanyDashboard() {
   const { data } = await http.get<ApiResponse<CompanyDashboard>>("/company/dashboard");
   return data.data;

@@ -996,6 +996,12 @@ const en = {
   "company.profile.days": "days",
   "company.profile.rating": "Rating",
   "company.profile.description": "Description",
+  "company.profile.uploadLogo": "Upload logo",
+  "company.profile.changeLogo": "Change logo",
+  "company.profile.logoHint": "JPEG, PNG, WebP or GIF · max 5MB",
+  "company.profile.logoUploadSuccess": "Company logo updated",
+  "company.profile.logoUploadFailed": "Failed to upload company logo",
+  "company.profile.logoTooLarge": "Logo must be 5MB or smaller",
 };
 
 const ar: typeof en = {
@@ -1994,6 +2000,12 @@ const ar: typeof en = {
   "company.profile.days": "يوم",
   "company.profile.rating": "التقييم",
   "company.profile.description": "الوصف",
+  "company.profile.uploadLogo": "رفع الشعار",
+  "company.profile.changeLogo": "تغيير الشعار",
+  "company.profile.logoHint": "JPEG أو PNG أو WebP أو GIF · بحد أقصى 5MB",
+  "company.profile.logoUploadSuccess": "تم تحديث شعار الشركة",
+  "company.profile.logoUploadFailed": "تعذر رفع شعار الشركة",
+  "company.profile.logoTooLarge": "الشعار يجب ألا يتجاوز 5 ميجابايت",
 };
 
 const translations: Record<TranslationLanguage, Record<string, string>> = { en, ar };
