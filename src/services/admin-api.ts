@@ -582,12 +582,11 @@ export async function fetchAdminCategories(params?: {
 export async function createAdminCategoryApi(payload: {
   nameAr: string;
   nameEn?: string;
-  image?: string;
+  image?: string | null;
   sortOrder?: number;
   allowsAdvertisement: boolean;
   requiresGovernorate?: boolean;
   isActive?: boolean;
-  image?: string | null;
 }) {
   const { data } = await http.post<ApiResponse<AdminCategory>>("/admin/categories", payload);
   return data.data;
@@ -598,12 +597,11 @@ export async function updateAdminCategoryApi(
   payload: Partial<{
     nameAr: string;
     nameEn: string;
-    image: string;
+    image: string | null;
     sortOrder: number;
     allowsAdvertisement: boolean;
     requiresGovernorate: boolean;
     isActive: boolean;
-    image?: string | null;
   }>
 ) {
   const { data } = await http.patch<ApiResponse<AdminCategory>>(`/admin/categories/${categoryId}`, payload);
