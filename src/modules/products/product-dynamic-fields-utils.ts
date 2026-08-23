@@ -1,5 +1,4 @@
 import type { DynamicField, DynamicFieldInputMode } from "../../services/admin-api";
-
 export type DynamicFieldEntry = {
   value: string;
   fileUrl?: string;
@@ -32,10 +31,10 @@ export function isOptionsInputMode(field: DynamicField) {
   return resolveFieldInputMode(field) === "OPTIONS";
 }
 
-export function getDynamicFieldOptionItems(field: DynamicField): DynamicFieldOptionItem[] {
+export function getDynamicFieldOptionItems(field: DynamicField, language: "ar" | "en" = "ar"): DynamicFieldOptionItem[] {
   const options = field.options as
-    | Array<string | { value?: string; label?: string }>
-    | { items?: Array<string | { value?: string; label?: string }> }
+    | Array<string | { value?: string; label?: string; labelEn?: string }>
+    | { items?: Array<string | { value?: string; label?: string; labelEn?: string }> }
     | null
     | undefined;
 
@@ -54,7 +53,9 @@ export function getDynamicFieldOptionItems(field: DynamicField): DynamicFieldOpt
       if (!item || typeof item !== "object") return null;
       const value = String(item.value ?? item.label ?? "").trim();
       if (!value) return null;
-      const label = String(item.label ?? value).trim() || value;
+      const labelAr = String(item.label ?? value).trim() || value;
+      const labelEn = String(item.labelEn ?? "").trim();
+      const label = language === "en" ? labelEn || labelAr : labelAr || labelEn;
       return { value, label };
     })
     .filter((item): item is DynamicFieldOptionItem => Boolean(item));

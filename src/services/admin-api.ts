@@ -519,6 +519,7 @@ export type AdminCategory = {
   nameEn?: string;
   sortOrder?: number;
   allowsAdvertisement?: boolean;
+  requiresGovernorate?: boolean;
   isActive?: boolean;
 };
 
@@ -547,6 +548,7 @@ export type DynamicField = {
   helpText?: string;
   isRequired: boolean;
   isActive: boolean;
+  showInFilter?: boolean;
   sortOrder: number;
   options?: unknown;
   validation?: unknown;
@@ -571,6 +573,7 @@ export async function createAdminCategoryApi(payload: {
   image?: string;
   sortOrder?: number;
   allowsAdvertisement: boolean;
+  requiresGovernorate?: boolean;
   isActive?: boolean;
 }) {
   const { data } = await http.post<ApiResponse<AdminCategory>>("/admin/categories", payload);
@@ -585,6 +588,7 @@ export async function updateAdminCategoryApi(
     image: string;
     sortOrder: number;
     allowsAdvertisement: boolean;
+    requiresGovernorate: boolean;
     isActive: boolean;
   }>
 ) {

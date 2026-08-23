@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Add, Delete, DragIndicator, Save } from "@mui/icons-material";
 import {
@@ -26,6 +26,7 @@ import {
   reorderDynamicFieldsApi,
   updateDynamicFieldApi,
   type DynamicField,
+  type DynamicFieldInputMode,
   type DynamicFieldType,
 } from "../../services/admin-api";
 import {
@@ -34,7 +35,6 @@ import {
   isOptionsInputMode,
   resolveFieldInputMode,
 } from "../products/product-dynamic-fields-utils";
-import type { DynamicFieldInputMode } from "../../services/admin-api";
 
 const FIELD_TYPES: DynamicFieldType[] = [
   "TEXT",
@@ -95,6 +95,7 @@ function defaultField(type: DynamicFieldType, t: (key: string) => string): Omit<
     helpText: "",
     isRequired: false,
     isActive: true,
+    showInFilter: false,
     sortOrder: 0,
     options:
       inputMode === "OPTIONS"
@@ -124,7 +125,7 @@ function fieldPreview(field: DynamicField, language: "ar" | "en", t: (key: strin
     );
   }
   if (isOptionsInputMode(field) || field.fieldType === "SELECT" || field.fieldType === "RADIO") {
-    const options = getDynamicFieldOptionItems(field);
+    const options = getDynamicFieldOptionItems(field, language);
     if (field.fieldType === "RADIO") {
       return (
         <RadioGroup row>
@@ -151,14 +152,164 @@ function fieldPreview(field: DynamicField, language: "ar" | "en", t: (key: strin
     );
   }
   const type = field.fieldType === "NUMBER" ? "number" : field.fieldType === "DATE" ? "date" : "text";
+  return <TextField type={type} size="small" fullWidth placeholder={field.placeholder || label} disabled />;
+}
+
+function FieldSettingsPanel({
+  field,
+  language,
+  t,
+  saving,
+  onSave,
+}: {
+  field: DynamicField;
+  language: "ar" | "en";
+  t: (key: string) => string;
+  saving: boolean;
+  onSave: (payload: Partial<DynamicField>) => void;
+}) {
+  const [draft, setDraft] = useState<DynamicField>(field);
+
+  useEffect(() => {
+    setDraft(field);
+  }, [field.id]);
+
+  const patchDraft = (patch: Partial<DynamicField>) => {
+    setDraft((current) => ({ ...current, ...patch }));
+  };
+
+  const save = () => {
+    onSave({
+      label: draft.label,
+      labelEn: draft.labelEn,
+      fieldKey: draft.fieldKey,
+      placeholder: draft.placeholder,
+      helpText: draft.helpText,
+      isRequired: draft.isRequired,
+      showInFilter: draft.showInFilter !== false,
+      fieldType: draft.fieldType,
+      inputMode: resolveFieldInputMode(draft),
+      options: isOptionsInputMode(draft) ? draft.options : null,
+    });
+  };
+
   return (
-    <TextField
-      type={type}
-      size="small"
-      fullWidth
-      placeholder={field.placeholder || label}
-      disabled
-    />
+    <Stack spacing={2}>
+      <TextField
+        label={t("categories.fields.label")}
+        size="small"
+        fullWidth
+        value={draft.label}
+        onChange={(e) => patchDraft({ label: e.target.value })}
+      />
+      <TextField
+        label={t("categories.fields.labelEn")}
+        size="small"
+        fullWidth
+        value={draft.labelEn || ""}
+        onChange={(e) => patchDraft({ labelEn: e.target.value })}
+      />
+      <TextField
+        label={t("categories.fields.fieldKey")}
+        size="small"
+        fullWidth
+        value={draft.fieldKey}
+        onChange={(e) => patchDraft({ fieldKey: e.target.value })}
+      />
+      <TextField
+        label={t("categories.fields.placeholder")}
+        size="small"
+        fullWidth
+        value={draft.placeholder || ""}
+        onChange={(e) => patchDraft({ placeholder: e.target.value })}
+      />
+      <TextField
+        select
+        label={t("categories.fields.inputModeLabel")}
+        size="small"
+        fullWidth
+        value={resolveFieldInputMode(draft)}
+        onChange={(e) => {
+          const inputMode = e.target.value as DynamicFieldInputMode;
+          if (inputMode === "OPTIONS") {
+            patchDraft({
+              inputMode,
+              fieldType: draft.fieldType === "SELECT" || draft.fieldType === "RADIO" ? draft.fieldType : "SELECT",
+              options: getDynamicFieldOptionItems(draft, language).length
+                ? getDynamicFieldOptionItems(draft, language)
+                : [
+                    { value: "option_1", label: "Option 1" },
+                    { value: "option_2", label: "Option 2" },
+                  ],
+            });
+          } else {
+            patchDraft({
+              inputMode,
+              fieldType: draft.fieldType === "SELECT" || draft.fieldType === "RADIO" ? "TEXT" : draft.fieldType,
+              options: null,
+            });
+          }
+        }}
+        helperText={t("categories.fields.inputModeHint")}
+      >
+        <MenuItem value="OPTIONS">{t("categories.fields.inputMode.OPTIONS")}</MenuItem>
+        <MenuItem value="VALUE">{t("categories.fields.inputMode.VALUE")}</MenuItem>
+      </TextField>
+      <FormControlLabel
+        control={
+          <Checkbox checked={draft.isRequired} onChange={(e) => patchDraft({ isRequired: e.target.checked })} />
+        }
+        label={t("categories.fields.required")}
+      />
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={draft.showInFilter !== false}
+            onChange={(e) => patchDraft({ showInFilter: e.target.checked })}
+          />
+        }
+        label={t("categories.fields.showInFilter")}
+      />
+      {isOptionsInputMode(draft) ? (
+        <TextField
+          label={t("categories.fields.options")}
+          size="small"
+          fullWidth
+          multiline
+          minRows={2}
+          value={getDynamicFieldOptionItems(draft, language)
+            .map((item) => (item.label === item.value ? item.value : `${item.value}|${item.label}`))
+            .join(", ")}
+          helperText={t("categories.fields.optionsHint")}
+          onChange={(e) =>
+            patchDraft({
+              inputMode: "OPTIONS",
+              options: e.target.value
+                .split(",")
+                .map((raw) => raw.trim())
+                .filter(Boolean)
+                .map((raw) => {
+                  const [valuePart, labelPart] = raw.split("|").map((part) => part.trim());
+                  const value = valuePart || raw;
+                  return { value, label: labelPart || value };
+                }),
+            })
+          }
+        />
+      ) : null}
+      <Paper variant="outlined" sx={{ p: 2 }}>
+        <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
+          {t("categories.fields.preview")}
+        </Typography>
+        <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+          {dynamicFieldLabel(draft, language)} {draft.isRequired ? "*" : ""}
+        </Typography>
+        {fieldPreview(draft, language, t)}
+      </Paper>
+      <Button variant="contained" fullWidth startIcon={<Save />} disabled={saving} onClick={save}>
+        {saving ? t("common.saving") : t("categories.fields.save")}
+      </Button>
+    </Stack>
   );
 }
 
@@ -181,7 +332,10 @@ export function CategoryFieldsBuilder({ categoryId, categoryLabel }: Props) {
 
   const createMutation = useMutation({
     mutationFn: ({ type }: { type: DynamicFieldType }) => createDynamicFieldApi(categoryId, defaultField(type, t)),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["category-dynamic-fields", categoryId] }),
+    onSuccess: (created) => {
+      queryClient.invalidateQueries({ queryKey: ["category-dynamic-fields", categoryId] });
+      if (created?.id) setSelectedFieldId(created.id);
+    },
   });
 
   const updateMutation = useMutation({
@@ -246,25 +400,14 @@ export function CategoryFieldsBuilder({ categoryId, categoryLabel }: Props) {
     queryClient.invalidateQueries({ queryKey: ["category-dynamic-fields", categoryId] });
   };
 
-  const updateSelectedField = (patch: Partial<DynamicField>) => {
-    if (!selectedField) return;
-    updateMutation.mutate({ fieldId: selectedField.id, payload: patch });
-  };
-
   if (!categoryId) {
-    return (
-      <EmptyState title={t("categories.fields.emptyTitle")} description={t("categories.fields.emptyHint")} />
-    );
+    return <EmptyState title={t("categories.fields.emptyTitle")} description={t("categories.fields.emptyHint")} />;
   }
 
   return (
     <Stack spacing={3} sx={{ minWidth: 0 }}>
       <Paper sx={{ p: 2 }}>
-        <Stack
-          direction={{ xs: "column", sm: "row" }}
-          spacing={2}
-          sx={{ alignItems: { sm: "center" }, flexWrap: "wrap" }}
-        >
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ alignItems: { sm: "center" }, flexWrap: "wrap" }}>
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography variant="body2" sx={{ fontWeight: 600 }}>
               {t("categories.fields.title")}
@@ -383,127 +526,18 @@ export function CategoryFieldsBuilder({ categoryId, categoryLabel }: Props) {
           <Paper sx={{ p: 2 }}>
             <PageSection title={t("categories.fields.settingsTitle")}>
               {selectedField ? (
-                <Stack spacing={2}>
-                  <TextField
-                    label={t("categories.fields.label")}
-                    size="small"
-                    fullWidth
-                    value={selectedField.label}
-                    onChange={(e) => updateSelectedField({ label: e.target.value })}
-                  />
-                  <TextField
-                    label={t("categories.fields.labelEn")}
-                    size="small"
-                    fullWidth
-                    value={selectedField.labelEn || ""}
-                    onChange={(e) => updateSelectedField({ labelEn: e.target.value })}
-                  />
-                  <TextField
-                    label={t("categories.fields.fieldKey")}
-                    size="small"
-                    fullWidth
-                    value={selectedField.fieldKey}
-                    onChange={(e) => updateSelectedField({ fieldKey: e.target.value })}
-                  />
-                  <TextField
-                    label={t("categories.fields.placeholder")}
-                    size="small"
-                    fullWidth
-                    value={selectedField.placeholder || ""}
-                    onChange={(e) => updateSelectedField({ placeholder: e.target.value })}
-                  />
-                  <TextField
-                    select
-                    label={t("categories.fields.inputModeLabel")}
-                    size="small"
-                    fullWidth
-                    value={resolveFieldInputMode(selectedField)}
-                    onChange={(e) => {
-                      const inputMode = e.target.value as DynamicFieldInputMode;
-                      if (inputMode === "OPTIONS") {
-                        updateSelectedField({
-                          inputMode,
-                          fieldType:
-                            selectedField.fieldType === "SELECT" || selectedField.fieldType === "RADIO"
-                              ? selectedField.fieldType
-                              : "SELECT",
-                          options: getDynamicFieldOptionItems(selectedField).length
-                            ? getDynamicFieldOptionItems(selectedField)
-                            : [
-                                { value: "option_1", label: "Option 1" },
-                                { value: "option_2", label: "Option 2" },
-                              ],
-                        });
-                      } else {
-                        updateSelectedField({
-                          inputMode,
-                          fieldType:
-                            selectedField.fieldType === "SELECT" || selectedField.fieldType === "RADIO"
-                              ? "TEXT"
-                              : selectedField.fieldType,
-                          options: null,
-                        });
-                      }
-                    }}
-                    helperText={t("categories.fields.inputModeHint")}
-                  >
-                    <MenuItem value="OPTIONS">{t("categories.fields.inputMode.OPTIONS")}</MenuItem>
-                    <MenuItem value="VALUE">{t("categories.fields.inputMode.VALUE")}</MenuItem>
-                  </TextField>
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={selectedField.isRequired}
-                        onChange={(e) => updateSelectedField({ isRequired: e.target.checked })}
-                      />
-                    }
-                    label={t("categories.fields.required")}
-                  />
-                  {isOptionsInputMode(selectedField) ? (
-                    <TextField
-                      label={t("categories.fields.options")}
-                      size="small"
-                      fullWidth
-                      multiline
-                      minRows={2}
-                      value={getDynamicFieldOptionItems(selectedField)
-                        .map((item) => (item.label === item.value ? item.value : `${item.value}|${item.label}`))
-                        .join(", ")}
-                      helperText={t("categories.fields.optionsHint")}
-                      onChange={(e) =>
-                        updateSelectedField({
-                          inputMode: "OPTIONS",
-                          options: e.target.value
-                            .split(",")
-                            .map((raw) => raw.trim())
-                            .filter(Boolean)
-                            .map((raw) => {
-                              const [valuePart, labelPart] = raw.split("|").map((part) => part.trim());
-                              const value = valuePart || raw;
-                              return { value, label: labelPart || value };
-                            }),
-                        })
-                      }
-                    />
-                  ) : null}
-                  <Paper variant="outlined" sx={{ p: 2 }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
-                      {t("categories.fields.preview")}
-                    </Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                      {dynamicFieldLabel(selectedField, language)} {selectedField.isRequired ? "*" : ""}
-                    </Typography>
-                    {fieldPreview(selectedField, language, t)}
-                  </Paper>
-                </Stack>
+                <FieldSettingsPanel
+                  field={selectedField}
+                  language={language}
+                  t={t}
+                  saving={updateMutation.isPending}
+                  onSave={(payload) => updateMutation.mutate({ fieldId: selectedField.id, payload })}
+                />
               ) : (
                 <Typography variant="body2" color="text.secondary">
                   {t("categories.fields.selectHint")}
                 </Typography>
               )}
-              <Button variant="outlined" fullWidth disabled startIcon={<Save />} sx={{ mt: 2 }}>
-                {t("categories.fields.autoSaved")}
-              </Button>
             </PageSection>
           </Paper>
         </Grid>

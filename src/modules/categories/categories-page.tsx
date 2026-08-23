@@ -39,6 +39,7 @@ const emptyForm = {
   nameEn: "",
   sortOrder: "0",
   allowsAdvertisement: false,
+  requiresGovernorate: false,
   isActive: true,
 };
 
@@ -70,6 +71,7 @@ export function CategoriesPage() {
         nameEn: form.nameEn.trim(),
         sortOrder: Number(form.sortOrder) || 0,
         allowsAdvertisement: form.allowsAdvertisement,
+        requiresGovernorate: form.requiresGovernorate,
         isActive: form.isActive,
       };
       if (editingId) return updateAdminCategoryApi(editingId, payload);
@@ -111,6 +113,7 @@ export function CategoriesPage() {
       nameEn: category.nameEn || "",
       sortOrder: String(category.sortOrder ?? 0),
       allowsAdvertisement: category.allowsAdvertisement === true,
+      requiresGovernorate: category.requiresGovernorate === true,
       isActive: category.isActive !== false,
     });
   }
@@ -190,6 +193,32 @@ export function CategoriesPage() {
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ display: "block", lineHeight: 1.35 }}>
                   {t("categories.allowsAdvertisementHint")}
+                </Typography>
+              </Box>
+            </Box>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                minHeight: 40,
+                mt: { xs: 0, sm: 1 },
+              }}
+            >
+              <Checkbox
+                size="small"
+                checked={form.requiresGovernorate}
+                onChange={(e) => setForm((f) => ({ ...f, requiresGovernorate: e.target.checked }))}
+                sx={{ p: 0.5, flexShrink: 0 }}
+              />
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.35 }}>
+                  {t("categories.requiresGovernorate")}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", lineHeight: 1.35 }}>
+                  {t("categories.requiresGovernorateHint")}
                 </Typography>
               </Box>
             </Box>

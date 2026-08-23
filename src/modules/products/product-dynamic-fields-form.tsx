@@ -107,7 +107,7 @@ function DynamicFieldInput({
   }
 
   if (isOptionsInputMode(field) || field.fieldType === "SELECT" || field.fieldType === "RADIO") {
-    const options = getDynamicFieldOptionItems(field);
+    const options = getDynamicFieldOptionItems(field, language);
     if (field.fieldType === "RADIO") {
       return (
         <FormControl fullWidth disabled={disabled}>

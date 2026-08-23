@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Button,
@@ -11,6 +11,7 @@ import {
   Typography,
 } from "@mui/material";
 import { AppDrawer } from "../../components/design-system";
+import { governorateOptions } from "../../constants/egypt-governorates";
 import { useI18n } from "../../hooks/use-i18n";
 import {
   createAdminProductApi,
@@ -152,6 +153,16 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
     }
     previousCategoryId.current = categoryId;
   }, [categoryId, open, isEdit]);
+
+  const selectedCategory = useMemo(
+    () => categories.find((cat) => cat.id === categoryId),
+    [categories, categoryId]
+  );
+  const requiresGovernorate = selectedCategory?.requiresGovernorate === true;
+  const governorateOpts = useMemo(() => governorateOptions(language), [language]);
+  const citySelectValue = requiresGovernorate
+    ? governorateOpts.find((option) => option.value === city || option.label === city)?.value ?? ""
+    : city;
 
   const categoryName = (cat: { nameAr?: string; nameEn?: string; id: string }) =>
     language === "ar" ? cat.nameAr || cat.nameEn || cat.id : cat.nameEn || cat.nameAr || cat.id;
@@ -361,13 +372,34 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
           onChange={(e) => setPrice(Number(e.target.value))}
           slotProps={{ htmlInput: { min: 0 } }}
         />
-        <TextField
-          size="small"
-          fullWidth
-          label={t("products.form.city")}
-          value={city}
-          onChange={(e) => setCity(e.target.value)}
-        />
+        {requiresGovernorate ? (
+          <TextField
+            select
+            size="small"
+            fullWidth
+            label={t("products.form.city")}
+            value={citySelectValue}
+            onChange={(e) => {
+              const selected = governorateOpts.find((option) => option.value === e.target.value);
+              setCity(selected?.label ?? e.target.value);
+            }}
+          >
+            <MenuItem value="">{t("categories.fields.select")}</MenuItem>
+            {governorateOpts.map((option) => (
+              <MenuItem key={option.value} value={option.value}>
+                {option.label}
+              </MenuItem>
+            ))}
+          </TextField>
+        ) : (
+          <TextField
+            size="small"
+            fullWidth
+            label={t("products.form.city")}
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+          />
+        )}
         <TextField
           select
           size="small"
