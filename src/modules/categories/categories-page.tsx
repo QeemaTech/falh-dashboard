@@ -30,9 +30,16 @@ import {
   deleteAdminCategoryApi,
   fetchAdminCategories,
   updateAdminCategoryApi,
+  uploadAdminCategoryImageApi,
   type AdminCategory,
 } from "../../services/admin-api";
 import { CategoryFieldsBuilder } from "./category-fields-builder";
+import {
+  CategoryImagePicker,
+  resolveCategoryImagePath,
+  type CategoryImageState,
+} from "./category-image-picker";
+import { resolveAssetUrl } from "../../utils/asset-url";
 
 const emptyForm = {
   nameAr: "",
@@ -52,6 +59,7 @@ export function CategoriesPage() {
   const { t, language } = useI18n();
   const queryClient = useQueryClient();
   const [form, setForm] = useState(emptyForm);
+  const [imageState, setImageState] = useState<CategoryImageState>({ kind: "none" });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
 
@@ -66,6 +74,7 @@ export function CategoriesPage() {
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!form.nameEn.trim()) throw new Error(t("categories.nameEnRequired"));
+      const image = await resolveCategoryImagePath(imageState, uploadAdminCategoryImageApi);
       const payload = {
         nameAr: form.nameAr.trim(),
         nameEn: form.nameEn.trim(),
@@ -73,6 +82,7 @@ export function CategoriesPage() {
         allowsAdvertisement: form.allowsAdvertisement,
         requiresGovernorate: form.requiresGovernorate,
         isActive: form.isActive,
+        ...(image !== null ? { image } : editingId ? { image: null } : {}),
       };
       if (editingId) return updateAdminCategoryApi(editingId, payload);
       return createAdminCategoryApi(payload);
@@ -82,6 +92,7 @@ export function CategoriesPage() {
       queryClient.invalidateQueries({ queryKey: ["admin-categories-all"] });
       queryClient.invalidateQueries({ queryKey: ["product-categories"] });
       setForm(emptyForm);
+      setImageState({ kind: "none" });
       setEditingId(null);
       if (!selectedCategoryId && saved?.id) setSelectedCategoryId(saved.id);
       toast.success(editingId ? t("categories.updated") : t("categories.created"));
@@ -99,6 +110,7 @@ export function CategoriesPage() {
       if (editingId === categoryId) {
         setEditingId(null);
         setForm(emptyForm);
+        setImageState({ kind: "none" });
       }
       toast.success(t("categories.deleted"));
     },
@@ -116,11 +128,13 @@ export function CategoriesPage() {
       requiresGovernorate: category.requiresGovernorate === true,
       isActive: category.isActive !== false,
     });
+    setImageState(category.image ? { kind: "existing", path: category.image } : { kind: "none" });
   }
 
   function cancelEdit() {
     setEditingId(null);
     setForm(emptyForm);
+    setImageState({ kind: "none" });
   }
 
   return (
@@ -223,6 +237,16 @@ export function CategoriesPage() {
               </Box>
             </Box>
           </Grid>
+          <Grid size={{ xs: 12 }}>
+            <CategoryImagePicker
+              value={imageState}
+              onChange={setImageState}
+              label={t("categories.image")}
+              hint={t("categories.imageHint")}
+              addLabel={t("categories.imageAdd")}
+              disabled={saveMutation.isPending}
+            />
+          </Grid>
         </Grid>
         <Stack direction="row" spacing={1} sx={{ mt: 2, flexWrap: "wrap" }}>
           <Button
@@ -256,6 +280,7 @@ export function CategoriesPage() {
           <AppTable>
             <AppTableHead>
               <tr>
+                <AppTableHeaderCell>{t("categories.col.image")}</AppTableHeaderCell>
                 <AppTableHeaderCell>{t("categories.col.name")}</AppTableHeaderCell>
                 <AppTableHeaderCell>{t("categories.col.sort")}</AppTableHeaderCell>
                 <AppTableHeaderCell>{t("categories.col.adType")}</AppTableHeaderCell>
@@ -267,6 +292,27 @@ export function CategoriesPage() {
               {categories.length ? (
                 categories.map((category) => (
                   <AppTableRow key={category.id}>
+                    <AppTableCell>
+                      {category.image ? (
+                        <Box
+                          component="img"
+                          src={resolveAssetUrl(category.image)}
+                          alt=""
+                          sx={{
+                            width: 40,
+                            height: 40,
+                            objectFit: "cover",
+                            borderRadius: 1,
+                            border: 1,
+                            borderColor: "divider",
+                          }}
+                        />
+                      ) : (
+                        <Typography variant="caption" color="text.secondary">
+                          —
+                        </Typography>
+                      )}
+                    </AppTableCell>
                     <AppTableCell>{categoryDisplayName(category, language)}</AppTableCell>
                     <AppTableCell>{category.sortOrder ?? 0}</AppTableCell>
                     <AppTableCell>
@@ -312,7 +358,7 @@ export function CategoriesPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5}>
+                  <td colSpan={6}>
                     <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: "center" }}>
                       {t("categories.empty")}
                     </Typography>

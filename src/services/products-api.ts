@@ -24,7 +24,13 @@ export async function fetchMyProducts(params: {
   return { items: data.data, meta: data.meta };
 }
 
-export type ProductCategory = { id: string; nameAr?: string; nameEn?: string; requiresGovernorate?: boolean };
+export type ProductCategory = {
+  id: string;
+  nameAr?: string;
+  nameEn?: string;
+  image?: string | null;
+  requiresGovernorate?: boolean;
+};
 
 export async function fetchProductCategories() {
   const { data } = await http.get<ApiResponse<ProductCategory[]>>("/products/categories");

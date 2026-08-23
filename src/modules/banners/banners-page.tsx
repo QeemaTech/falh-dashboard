@@ -95,7 +95,7 @@ export function BannersPage() {
             <tr>
               <AppTableHeaderCell>{t("banners.colImage")}</AppTableHeaderCell>
               <AppTableHeaderCell>{t("banners.colTitle")}</AppTableHeaderCell>
-              <AppTableHeaderCell>{t("banners.colLinkType")}</AppTableHeaderCell>
+              <AppTableHeaderCell>{t("banners.colCompany")}</AppTableHeaderCell>
               <AppTableHeaderCell>{t("banners.colSortOrder")}</AppTableHeaderCell>
               <AppTableHeaderCell>{t("banners.colDisplay")}</AppTableHeaderCell>
               <AppTableHeaderCell>{t("banners.colStatus")}</AppTableHeaderCell>
@@ -118,7 +118,7 @@ export function BannersPage() {
                   )}
                 </AppTableCell>
                 <AppTableCell>{bannerTitle(banner)}</AppTableCell>
-                <AppTableCell>{banner.linkType || "—"}</AppTableCell>
+                <AppTableCell>{banner.company?.name || "—"}</AppTableCell>
                 <AppTableCell>{banner.sortOrder ?? 0}</AppTableCell>
                 <AppTableCell>{bannerDisplayLabel(banner)}</AppTableCell>
                 <AppTableCell>

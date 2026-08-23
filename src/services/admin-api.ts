@@ -88,6 +88,8 @@ export type AdminBanner = {
   titleAr?: string;
   titleEn?: string;
   imagePath: string;
+  companyId?: string | null;
+  company?: { id: string; name?: string; city?: string; status?: string; logo?: string | null } | null;
   linkType?: string;
   linkValue?: string;
   sortOrder: number;
@@ -517,6 +519,7 @@ export type AdminCategory = {
   id: string;
   nameAr?: string;
   nameEn?: string;
+  image?: string | null;
   sortOrder?: number;
   allowsAdvertisement?: boolean;
   requiresGovernorate?: boolean;
@@ -554,6 +557,15 @@ export type DynamicField = {
   validation?: unknown;
 };
 
+export async function uploadAdminCategoryImageApi(file: File) {
+  const formData = new FormData();
+  formData.append("image", file);
+  const { data } = await http.post<ApiResponse<{ path: string }>>("/admin/categories/upload-image", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data.data.path;
+}
+
 export async function fetchAdminCategories(params?: {
   page?: number;
   limit?: number;
@@ -575,6 +587,7 @@ export async function createAdminCategoryApi(payload: {
   allowsAdvertisement: boolean;
   requiresGovernorate?: boolean;
   isActive?: boolean;
+  image?: string | null;
 }) {
   const { data } = await http.post<ApiResponse<AdminCategory>>("/admin/categories", payload);
   return data.data;
@@ -590,6 +603,7 @@ export async function updateAdminCategoryApi(
     allowsAdvertisement: boolean;
     requiresGovernorate: boolean;
     isActive: boolean;
+    image?: string | null;
   }>
 ) {
   const { data } = await http.patch<ApiResponse<AdminCategory>>(`/admin/categories/${categoryId}`, payload);
@@ -736,8 +750,7 @@ export type BannerFormPayload = {
   titleAr: string;
   titleEn: string;
   image: File;
-  linkType?: string;
-  linkValue?: string;
+  companyId: string;
   sortOrder?: number;
   isActive?: boolean;
   displayDays?: number | null;
@@ -748,8 +761,7 @@ export async function createAdminBannerApi(payload: BannerFormPayload) {
   formData.append("titleAr", payload.titleAr);
   formData.append("titleEn", payload.titleEn);
   formData.append("image", payload.image);
-  if (payload.linkType) formData.append("linkType", payload.linkType);
-  if (payload.linkValue) formData.append("linkValue", payload.linkValue);
+  formData.append("companyId", payload.companyId);
   formData.append("sortOrder", String(payload.sortOrder ?? 0));
   if (payload.displayDays != null && payload.displayDays > 0) {
     formData.append("displayDays", String(payload.displayDays));
