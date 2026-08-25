@@ -7,16 +7,14 @@ export type AiSettings = {
   systemPrompt: string;
   temperature: number;
   maxTokens: number;
+  dailyLimitPerUser: number;
   createdAt?: string;
   updatedAt?: string;
 };
 
 export type AiSettingsPayload = {
-  provider?: AiProvider;
-  model?: string;
   systemPrompt?: string;
-  temperature?: number;
-  maxTokens?: number;
+  dailyLimitPerUser?: number;
 };
 
 export type AiChatMessagePayload = {
@@ -27,6 +25,11 @@ export type AiChatMessagePayload = {
 export type AiChatResponse = {
   conversationId: string;
   answer: string;
+  usageLimit?: {
+    dailyLimit: number;
+    usedToday: number;
+    remainingToday: number;
+  };
   createdAt: string;
 };
 
@@ -71,17 +74,17 @@ Respond in the same language the user writes in. Be accurate, helpful, and well-
 
 export const DEFAULT_AI_SETTINGS: AiSettings = {
   id: "default",
-  provider: "openai",
-  model: "gpt-4o-mini",
+  provider: "gemini",
+  model: "gemini-3.5-flash",
   systemPrompt: DEFAULT_AI_SYSTEM_PROMPT,
   temperature: 0.7,
   maxTokens: 2048,
+  dailyLimitPerUser: 10,
 };
 
 export function normalizeAiSettings(raw: Partial<AiSettings> | null | undefined): AiSettings {
-  const provider = raw?.provider === "gemini" ? "gemini" : "openai";
-  const modelPool: readonly string[] = provider === "gemini" ? GEMINI_MODELS : OPENAI_MODELS;
-  const model = raw?.model && modelPool.includes(raw.model) ? raw.model : modelPool[0];
+  const provider = "gemini";
+  const model = raw?.model || DEFAULT_AI_SETTINGS.model;
 
   return {
     id: raw?.id || DEFAULT_AI_SETTINGS.id,
@@ -94,6 +97,9 @@ export function normalizeAiSettings(raw: Partial<AiSettings> | null | undefined)
     maxTokens: Number.isFinite(Number(raw?.maxTokens))
       ? Number(raw?.maxTokens)
       : DEFAULT_AI_SETTINGS.maxTokens,
+    dailyLimitPerUser: Number.isFinite(Number(raw?.dailyLimitPerUser))
+      ? Number(raw?.dailyLimitPerUser)
+      : DEFAULT_AI_SETTINGS.dailyLimitPerUser,
     createdAt: raw?.createdAt,
     updatedAt: raw?.updatedAt,
   };

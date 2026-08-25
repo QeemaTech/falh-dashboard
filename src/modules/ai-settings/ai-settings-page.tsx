@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Refresh, Save, SmartToy } from "@mui/icons-material";
 import {
@@ -6,9 +6,7 @@ import {
   Button,
   CircularProgress,
   Grid,
-  MenuItem,
   Paper,
-  Slider,
   Stack,
   TextField,
   Typography,
@@ -21,10 +19,7 @@ import { getApiErrorMessage } from "../../utils/api-error";
 import { useI18n } from "../../hooks/use-i18n";
 import {
   DEFAULT_AI_SETTINGS,
-  GEMINI_MODELS,
   normalizeAiSettings,
-  OPENAI_MODELS,
-  type AiProvider,
   type AiSettings,
 } from "../../types/ai";
 
@@ -36,6 +31,7 @@ export function AiSettingsPage() {
   const { t, isArabic } = useI18n();
   const queryClient = useQueryClient();
   const [form, setForm] = useState<AiSettings>(() => settingsToForm(DEFAULT_AI_SETTINGS));
+  const [dailyLimitInput, setDailyLimitInput] = useState<string>(() => String(DEFAULT_AI_SETTINGS.dailyLimitPerUser));
   const [dirty, setDirty] = useState(false);
 
   const settingsQuery = useQuery({
@@ -47,26 +43,26 @@ export function AiSettingsPage() {
 
   useEffect(() => {
     if (!settingsQuery.data) return;
-    setForm(settingsToForm(settingsQuery.data));
+    const normalized = settingsToForm(settingsQuery.data);
+    setForm(normalized);
+    setDailyLimitInput(String(normalized.dailyLimitPerUser));
     setDirty(false);
   }, [settingsQuery.data]);
 
-  const modelOptions = useMemo(() => {
-    return form.provider === "gemini" ? [...GEMINI_MODELS] : [...OPENAI_MODELS];
-  }, [form.provider]);
-
   const saveMutation = useMutation({
-    mutationFn: () =>
-      updateAiSettingsApi({
-        provider: form.provider,
-        model: form.model,
+    mutationFn: () => {
+      const parsed = Number.parseInt(dailyLimitInput, 10);
+      const finalLimit = Number.isFinite(parsed) && parsed > 0 ? parsed : 10;
+      return updateAiSettingsApi({
         systemPrompt: form.systemPrompt,
-        temperature: form.temperature,
-        maxTokens: form.maxTokens,
-      }),
+        dailyLimitPerUser: finalLimit,
+      });
+    },
     onSuccess: (saved) => {
       queryClient.setQueryData(["ai-settings"], saved);
-      setForm(settingsToForm(saved));
+      const normalized = settingsToForm(saved);
+      setForm(normalized);
+      setDailyLimitInput(String(normalized.dailyLimitPerUser));
       setDirty(false);
       toast.success(t("ai.saved"));
     },
@@ -139,12 +135,12 @@ export function AiSettingsPage() {
       </Paper>
 
       <Grid container spacing={2}>
-        <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
-          <AppStatCard title={t("ai.provider")} value={form.provider === "gemini" ? t("ai.provider.gemini") : t("ai.provider.openai")} />
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <AppStatCard title={t("ai.dailyLimitPerUser")} value={dailyLimitInput || "10"} trend="neutral" />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, xl: 3 }}><AppStatCard title={t("ai.model")} value={form.model} /></Grid>
-        <Grid size={{ xs: 12, sm: 6, xl: 3 }}><AppStatCard title={t("ai.temperature")} value={form.temperature.toFixed(1)} trend="neutral" /></Grid>
-        <Grid size={{ xs: 12, sm: 6, xl: 3 }}><AppStatCard title={t("ai.maxTokens")} value={form.maxTokens} trend="neutral" /></Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <AppStatCard title={isArabic ? "مزود الذكاء الاصطناعي" : "AI Engine"} value="Google Gemini" />
+        </Grid>
       </Grid>
 
       <Paper sx={{ p: 3 }}>
@@ -161,41 +157,23 @@ export function AiSettingsPage() {
             {dirty ? <AppBadge variant="warning">{t("ai.unsavedChanges")}</AppBadge> : null}
           </Stack>
 
-          <Grid container spacing={2}>
-            <Grid size={{ xs: 12, lg: 6 }}>
-              <TextField
-                select
-                fullWidth
-                size="small"
-                label={t("ai.provider")}
-                value={form.provider}
-                onChange={(event) => {
-                  const provider = event.target.value as AiProvider;
-                  const defaultModel = provider === "gemini" ? GEMINI_MODELS[0] : OPENAI_MODELS[0];
-                  patchForm({ provider, model: defaultModel });
-                }}
-              >
-                <MenuItem value="openai">{t("ai.provider.openai")}</MenuItem>
-                <MenuItem value="gemini">{t("ai.provider.gemini")}</MenuItem>
-              </TextField>
-            </Grid>
-            <Grid size={{ xs: 12, lg: 6 }}>
-              <TextField
-                select
-                fullWidth
-                size="small"
-                label={t("ai.model")}
-                value={form.model}
-                onChange={(event) => patchForm({ model: event.target.value })}
-              >
-                {modelOptions.map((model) => (
-                  <MenuItem key={model} value={model}>
-                    {model}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Grid>
-          </Grid>
+          <TextField
+            type="number"
+            fullWidth
+            size="small"
+            label={t("ai.dailyLimitPerUser")}
+            value={dailyLimitInput}
+            onChange={(event) => {
+              const val = event.target.value;
+              setDailyLimitInput(val);
+              const parsed = Number.parseInt(val, 10);
+              const finalLimit = Number.isFinite(parsed) && parsed > 0 ? parsed : 10;
+              setForm((prev) => ({ ...prev, dailyLimitPerUser: finalLimit }));
+              setDirty(true);
+            }}
+            helperText={t("ai.dailyLimitPerUserHint")}
+            slotProps={{ htmlInput: { min: 1, max: 1000 } }}
+          />
 
           <TextField
             multiline
@@ -208,49 +186,13 @@ export function AiSettingsPage() {
             slotProps={{ htmlInput: { dir: "auto" } }}
           />
 
-          <Grid container spacing={2}>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
-                {t("ai.temperature")} ({form.temperature.toFixed(1)})
-              </Typography>
-              <Slider
-                min={0}
-                max={2}
-                step={0.1}
-                value={form.temperature}
-                onChange={(_, value) => patchForm({ temperature: value as number })}
-                color="primary"
-              />
-              <Typography variant="caption" color="text.secondary">
-                {t("ai.temperatureHint")}
-              </Typography>
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                type="number"
-                fullWidth
-                size="small"
-                label={t("ai.maxTokens")}
-                value={form.maxTokens}
-                onChange={(event) => patchForm({ maxTokens: Number(event.target.value) || 2048 })}
-                helperText={t("ai.maxTokensHint")}
-                slotProps={{ htmlInput: { min: 256, max: 8192 } }}
-              />
-            </Grid>
-          </Grid>
-
-          <Paper variant="outlined" sx={{ p: 2, bgcolor: "action.hover" }}>
-            <Typography variant="caption" color="text.secondary">
-              {t("ai.mobileApiHint")}
-            </Typography>
-          </Paper>
-
           <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end", pt: 1, borderTop: 1, borderColor: "divider" }}>
             <Button
               variant="outlined"
               onClick={() => {
-                if (settingsQuery.data) setForm(settingsToForm(settingsQuery.data));
-                else setForm(settingsToForm(DEFAULT_AI_SETTINGS));
+                const currentData = settingsQuery.data ? settingsToForm(settingsQuery.data) : settingsToForm(DEFAULT_AI_SETTINGS);
+                setForm(currentData);
+                setDailyLimitInput(String(currentData.dailyLimitPerUser));
                 setDirty(false);
               }}
               disabled={!dirty || saveMutation.isPending}

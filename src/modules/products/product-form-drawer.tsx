@@ -5,12 +5,15 @@ import {
   Checkbox,
   FormControlLabel,
   Grid,
+  IconButton,
   MenuItem,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
+import { AddLocationAlt, Clear, LocationOn } from "@mui/icons-material";
 import { AppDrawer } from "../../components/design-system";
+import { LocationPickerDialog } from "../../components/location/location-picker-dialog";
 import { governorateOptions } from "../../constants/egypt-governorates";
 import { useI18n } from "../../hooks/use-i18n";
 import {
@@ -56,23 +59,24 @@ type Props = {
 };
 
 export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, canAdd = true }: Props) {
-  const { t, language } = useI18n();
+  const { t, language, isArabic } = useI18n();
   const isEdit = Boolean(product);
   const [titleAr, setTitleAr] = useState("");
   const [titleEn, setTitleEn] = useState("");
   const [descriptionAr, setDescriptionAr] = useState("");
   const [descriptionEn, setDescriptionEn] = useState("");
   const [categoryId, setCategoryId] = useState("");
-  const [quantity, setQuantity] = useState(1);
-  const [unit, setUnit] = useState("kg");
   const [price, setPrice] = useState(0);
   const [city, setCity] = useState("");
-  const [target, setTarget] = useState<"LOCAL" | "EXPORT">("LOCAL");
+  const [latInput, setLatInput] = useState("");
+  const [lngInput, setLngInput] = useState("");
+  const [target, setTarget] = useState<"LOCAL" | "EXPORT" | "">("");
   const [imageItems, setImageItems] = useState<ProductImageItem[]>([]);
   const [companyId, setCompanyId] = useState("");
   const [publishActive, setPublishActive] = useState(false);
   const [saveAsDraft, setSaveAsDraft] = useState(false);
   const [dynamicValues, setDynamicValues] = useState<DynamicFieldValuesMap>({});
+  const [isMapOpen, setIsMapOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const previousCategoryId = useRef("");
 
@@ -112,11 +116,11 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
       setDescriptionAr(source.descriptionAr || source.description || "");
       setDescriptionEn(source.descriptionEn || "");
       setCategoryId(source.category?.id || "");
-      setQuantity(source.quantity ?? 1);
-      setUnit(source.unit || "kg");
       setPrice(source.price || 0);
-      setTarget((source.target as "LOCAL" | "EXPORT") || "LOCAL");
+      setTarget((source.target as "LOCAL" | "EXPORT") || "");
       setCity(source.city || "");
+      setLatInput(source.lat !== undefined && source.lat !== null ? String(source.lat) : "");
+      setLngInput(source.lng !== undefined && source.lng !== null ? String(source.lng) : "");
       setImageItems(productImagesToItems(source));
       setCompanyId(source.company?.id || "");
       setPublishActive(source.status === "ACTIVE");
@@ -127,11 +131,11 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
       setDescriptionAr("");
       setDescriptionEn("");
       setCategoryId("");
-      setQuantity(1);
-      setUnit("kg");
       setPrice(0);
       setCity("");
-      setTarget("LOCAL");
+      setLatInput("");
+      setLngInput("");
+      setTarget("");
       setImageItems([]);
       setCompanyId("");
       setPublishActive(true);
@@ -170,18 +174,10 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!titleAr.trim() || titleAr.trim().length < 2) throw new Error(t("products.form.errorTitle"));
-      if (!titleEn.trim() || titleEn.trim().length < 2) throw new Error(t("products.form.errorTitleEn"));
       if (!descriptionAr.trim() || descriptionAr.trim().length < 5) {
         throw new Error(t("products.form.errorDescription"));
       }
-      if (!descriptionEn.trim() || descriptionEn.trim().length < 5) {
-        throw new Error(t("products.form.errorDescriptionEn"));
-      }
       if (!categoryId) throw new Error(t("products.form.errorCategory"));
-      if (!unit.trim()) throw new Error(t("products.form.errorUnit"));
-      if (Number.isNaN(Number(quantity)) || Number(quantity) < 0) {
-        throw new Error(t("products.form.errorQuantity"));
-      }
       if (Number.isNaN(Number(price)) || Number(price) < 0) {
         throw new Error(t("products.form.errorPrice"));
       }
@@ -196,17 +192,20 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
         (label) => t("products.form.fieldRequired").replace("{{label}}", label)
       );
 
+      const parsedLat = latInput.trim() !== "" && !Number.isNaN(Number(latInput)) ? Number(latInput) : undefined;
+      const parsedLng = lngInput.trim() !== "" && !Number.isNaN(Number(lngInput)) ? Number(lngInput) : undefined;
+
       const payload: ProductFormPayload = {
         titleAr: titleAr.trim(),
-        titleEn: titleEn.trim(),
+        titleEn: titleEn.trim() || titleAr.trim(),
         descriptionAr: descriptionAr.trim(),
-        descriptionEn: descriptionEn.trim(),
+        descriptionEn: descriptionEn.trim() || descriptionAr.trim(),
         categoryId,
-        quantity: Number(quantity),
-        unit,
         price: Number(price),
-        city: city || undefined,
-        target,
+        city: requiresGovernorate ? (city || undefined) : undefined,
+        lat: parsedLat,
+        lng: parsedLng,
+        target: target ? target : null,
         images,
         dynamicFields: buildDynamicFieldsPayload(categoryFields, dynamicValues),
       };
@@ -341,28 +340,6 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
             t={t}
           />
         ) : null}
-        <Grid container spacing={2}>
-          <Grid size={6}>
-            <TextField
-              size="small"
-              fullWidth
-              type="number"
-              label={t("products.form.quantity")}
-              value={quantity}
-              onChange={(e) => setQuantity(Number(e.target.value))}
-              slotProps={{ htmlInput: { min: 0 } }}
-            />
-          </Grid>
-          <Grid size={6}>
-            <TextField
-              size="small"
-              fullWidth
-              label={t("products.form.unit")}
-              value={unit}
-              onChange={(e) => setUnit(e.target.value)}
-            />
-          </Grid>
-        </Grid>
         <TextField
           size="small"
           fullWidth
@@ -391,26 +368,58 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
               </MenuItem>
             ))}
           </TextField>
-        ) : (
-          <TextField
-            size="small"
-            fullWidth
-            label={t("products.form.city")}
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-          />
-        )}
+        ) : null}
+
         <TextField
           select
           size="small"
           fullWidth
           label={t("products.form.target")}
           value={target}
-          onChange={(e) => setTarget(e.target.value as "LOCAL" | "EXPORT")}
+          onChange={(e) => setTarget(e.target.value as "LOCAL" | "EXPORT" | "")}
         >
+          <MenuItem value="">{t("products.form.targetNone")}</MenuItem>
           <MenuItem value="LOCAL">{t("products.form.targetLocal")}</MenuItem>
           <MenuItem value="EXPORT">{t("products.form.targetExport")}</MenuItem>
         </TextField>
+
+        {latInput && lngInput ? (
+          <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+            <Button
+              fullWidth
+              size="small"
+              variant="outlined"
+              color="success"
+              startIcon={<LocationOn />}
+              onClick={() => setIsMapOpen(true)}
+            >
+              {isArabic
+                ? `الموقع المحدد: (${latInput}, ${lngInput})`
+                : `Location Set: (${latInput}, ${lngInput})`}
+            </Button>
+            <IconButton
+              size="small"
+              color="error"
+              onClick={() => {
+                setLatInput("");
+                setLngInput("");
+              }}
+              title={isArabic ? "مسح الموقع" : "Clear location"}
+            >
+              <Clear />
+            </IconButton>
+          </Stack>
+        ) : (
+          <Button
+            fullWidth
+            size="small"
+            variant="outlined"
+            startIcon={<AddLocationAlt />}
+            onClick={() => setIsMapOpen(true)}
+          >
+            {isArabic ? "تحديد الموقع على الخريطة (اختياري)" : "Select Location on Map (Optional)"}
+          </Button>
+        )}
         <ProductImagePicker
           items={imageItems}
           onChange={setImageItems}
@@ -448,6 +457,22 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
           />
         )}
       </Stack>
+
+      <LocationPickerDialog
+        open={isMapOpen}
+        onClose={() => setIsMapOpen(false)}
+        initialLat={latInput ? Number(latInput) : undefined}
+        initialLng={lngInput ? Number(lngInput) : undefined}
+        onSelect={(coords) => {
+          if (coords) {
+            setLatInput(String(coords.lat));
+            setLngInput(String(coords.lng));
+          } else {
+            setLatInput("");
+            setLngInput("");
+          }
+        }}
+      />
     </AppDrawer>
   );
 }

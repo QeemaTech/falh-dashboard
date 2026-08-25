@@ -201,11 +201,13 @@ export type ProductFormPayload = {
   descriptionAr: string;
   descriptionEn: string;
   categoryId: string;
-  quantity: number;
-  unit: string;
+  quantity?: number;
+  unit?: string;
   price: number;
   city?: string;
-  target?: "LOCAL" | "EXPORT";
+  lat?: number;
+  lng?: number;
+  target?: "LOCAL" | "EXPORT" | null;
   images?: string[];
   companyId?: string;
   publishActive?: boolean;
