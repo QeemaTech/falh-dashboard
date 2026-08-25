@@ -113,6 +113,8 @@ export type AdminProduct = {
   unit?: string;
   target?: string;
   city?: string;
+  lat?: number | null;
+  lng?: number | null;
   createdAt: string;
   category?: { id: string; nameAr?: string; nameEn?: string };
   user?: { id: string; name?: string };

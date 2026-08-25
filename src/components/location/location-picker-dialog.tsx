@@ -215,10 +215,6 @@ export function LocationPickerDialog({
       maxWidth="md"
       fullWidth
       keepMounted={false}
-      TransitionProps={{
-        onEntered: markDialogReady,
-        onExited: () => setDialogReady(false),
-      }}
       slotProps={{
         transition: {
           onEntered: markDialogReady,
@@ -259,20 +255,22 @@ export function LocationPickerDialog({
             onKeyDown={(e) => {
               if (e.key === "Enter") handleSearch();
             }}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <Button
-                    size="small"
-                    variant="contained"
-                    onClick={handleSearch}
-                    disabled={searching || !searchQuery.trim()}
-                    startIcon={searching ? <CircularProgress size={14} color="inherit" /> : <Search />}
-                  >
-                    {isArabic ? "بحث" : "Search"}
-                  </Button>
-                </InputAdornment>
-              ),
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <Button
+                      size="small"
+                      variant="contained"
+                      onClick={handleSearch}
+                      disabled={searching || !searchQuery.trim()}
+                      startIcon={searching ? <CircularProgress size={14} color="inherit" /> : <Search />}
+                    >
+                      {isArabic ? "بحث" : "Search"}
+                    </Button>
+                  </InputAdornment>
+                ),
+              },
             }}
           />
 
