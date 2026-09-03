@@ -16,6 +16,7 @@ import {
   SmartToy,
   WbSunny,
   AccountBalance,
+  Article,
 } from "@mui/icons-material";
 import {
   Box,
@@ -63,8 +64,10 @@ const sections: Array<{ titleKey: string; items: NavItem[] }> = [
     items: [
       { to: "/banners", labelKey: "nav.banners", icon: Campaign, permission: "banners.view" },
       { to: "/notifications", labelKey: "nav.notifications", icon: Notifications, permission: "notifications.view" },
+      { to: "/content-management", labelKey: "nav.contentManagement", icon: Article, permission: "settings.view" },
     ],
   },
+
   {
     titleKey: "nav.section.services",
     items: [

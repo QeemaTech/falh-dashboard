@@ -155,6 +155,24 @@ function fieldPreview(field: DynamicField, language: "ar" | "en", t: (key: strin
   return <TextField type={type} size="small" fullWidth placeholder={field.placeholder || label} disabled />;
 }
 
+function formatOptionsInput(field: DynamicField, language: "ar" | "en") {
+  return getDynamicFieldOptionItems(field, language)
+    .map((item) => (item.label === item.value ? item.value : `${item.value}|${item.label}`))
+    .join(", ");
+}
+
+function parseOptionsInput(value: string) {
+  return value
+    .split(",")
+    .map((raw) => raw.trim())
+    .filter(Boolean)
+    .map((raw) => {
+      const [valuePart, labelPart] = raw.split("|").map((part) => part.trim());
+      const optionValue = valuePart || raw;
+      return { value: optionValue, label: labelPart || optionValue };
+    });
+}
+
 function FieldSettingsPanel({
   field,
   language,
@@ -169,10 +187,12 @@ function FieldSettingsPanel({
   onSave: (payload: Partial<DynamicField>) => void;
 }) {
   const [draft, setDraft] = useState<DynamicField>(field);
+  const [optionsInput, setOptionsInput] = useState(() => formatOptionsInput(field, language));
 
   useEffect(() => {
     setDraft(field);
-  }, [field.id]);
+    setOptionsInput(formatOptionsInput(field, language));
+  }, [field.id, language]);
 
   const patchDraft = (patch: Partial<DynamicField>) => {
     setDraft((current) => ({ ...current, ...patch }));
@@ -232,16 +252,22 @@ function FieldSettingsPanel({
         onChange={(e) => {
           const inputMode = e.target.value as DynamicFieldInputMode;
           if (inputMode === "OPTIONS") {
+            const options = getDynamicFieldOptionItems(draft, language).length
+              ? getDynamicFieldOptionItems(draft, language)
+              : [
+                  { value: "option_1", label: "Option 1" },
+                  { value: "option_2", label: "Option 2" },
+                ];
             patchDraft({
               inputMode,
               fieldType: draft.fieldType === "SELECT" || draft.fieldType === "RADIO" ? draft.fieldType : "SELECT",
-              options: getDynamicFieldOptionItems(draft, language).length
-                ? getDynamicFieldOptionItems(draft, language)
-                : [
-                    { value: "option_1", label: "Option 1" },
-                    { value: "option_2", label: "Option 2" },
-                  ],
+              options,
             });
+            setOptionsInput(
+              options
+                .map((item) => (item.label === item.value ? item.value : `${item.value}|${item.label}`))
+                .join(", ")
+            );
           } else {
             patchDraft({
               inputMode,
@@ -277,24 +303,16 @@ function FieldSettingsPanel({
           fullWidth
           multiline
           minRows={2}
-          value={getDynamicFieldOptionItems(draft, language)
-            .map((item) => (item.label === item.value ? item.value : `${item.value}|${item.label}`))
-            .join(", ")}
+          value={optionsInput}
           helperText={t("categories.fields.optionsHint")}
-          onChange={(e) =>
+          onChange={(e) => {
+            const value = e.target.value;
+            setOptionsInput(value);
             patchDraft({
               inputMode: "OPTIONS",
-              options: e.target.value
-                .split(",")
-                .map((raw) => raw.trim())
-                .filter(Boolean)
-                .map((raw) => {
-                  const [valuePart, labelPart] = raw.split("|").map((part) => part.trim());
-                  const value = valuePart || raw;
-                  return { value, label: labelPart || value };
-                }),
-            })
-          }
+              options: parseOptionsInput(value),
+            });
+          }}
         />
       ) : null}
       <Paper variant="outlined" sx={{ p: 2 }}>

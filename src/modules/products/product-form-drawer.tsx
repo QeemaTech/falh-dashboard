@@ -69,7 +69,6 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
   const [city, setCity] = useState("");
   const [latInput, setLatInput] = useState("");
   const [lngInput, setLngInput] = useState("");
-  const [target, setTarget] = useState<"LOCAL" | "EXPORT" | "">("");
   const [imageItems, setImageItems] = useState<ProductImageItem[]>([]);
   const [companyId, setCompanyId] = useState("");
   const [publishActive, setPublishActive] = useState(false);
@@ -116,7 +115,6 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
       setDescriptionEn(source.descriptionEn || "");
       setCategoryId(source.category?.id || "");
       setPrice(source.price || 0);
-      setTarget((source.target as "LOCAL" | "EXPORT") || "");
       setCity(source.city || "");
       setLatInput(source.lat !== undefined && source.lat !== null ? String(source.lat) : "");
       setLngInput(source.lng !== undefined && source.lng !== null ? String(source.lng) : "");
@@ -134,7 +132,6 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
       setCity("");
       setLatInput("");
       setLngInput("");
-      setTarget("");
       setImageItems([]);
       setCompanyId("");
       setPublishActive(true);
@@ -204,7 +201,6 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
         city: requiresGovernorate ? (city || undefined) : undefined,
         lat: parsedLat,
         lng: parsedLng,
-        target: target ? target : null,
         images,
         dynamicFields: buildDynamicFieldsPayload(categoryFields, dynamicValues),
       };
@@ -368,19 +364,6 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
             ))}
           </TextField>
         ) : null}
-
-        <TextField
-          select
-          size="small"
-          fullWidth
-          label={t("products.form.target")}
-          value={target}
-          onChange={(e) => setTarget(e.target.value as "LOCAL" | "EXPORT" | "")}
-        >
-          <MenuItem value="">{t("products.form.targetNone")}</MenuItem>
-          <MenuItem value="LOCAL">{t("products.form.targetLocal")}</MenuItem>
-          <MenuItem value="EXPORT">{t("products.form.targetExport")}</MenuItem>
-        </TextField>
 
         {latInput && lngInput ? (
           <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>

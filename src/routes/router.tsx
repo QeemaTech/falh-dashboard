@@ -30,6 +30,7 @@ import { JoinRequestsPage } from "../modules/join-us/join-requests-page";
 import { CompanyProductsPage } from "../modules/company-portal/company-products-page";
 import { CompanyDashboardPage } from "../modules/company-portal/company-dashboard-page";
 import { CompanyProfilePage } from "../modules/company-portal/company-profile-page";
+import { ContentManagementPage } from "../modules/content-management/content-management-page";
 
 const placeholderRoutes = [
   { path: "order-tracking", title: "Order Tracking", description: "Track order states and shipment progress." },
@@ -47,12 +48,6 @@ const placeholderRoutes = [
   { path: "reports", title: "Reports", description: "View analytics and downloadable reports." },
   { path: "activity-logs", title: "Activity Logs", description: "Audit admin and system activities." },
   { path: "admins", title: "Admins", description: "Manage admin users, access levels, and sessions." },
-  {
-    path: "content-management",
-    title: "Content Management",
-    description: "Manage static content, pages, and localized texts.",
-  },
-  { path: "faq", title: "FAQ", description: "Manage frequently asked questions and answers." },
   {
     path: "contact-requests",
     title: "Contact Requests",
@@ -88,6 +83,10 @@ export const router = createBrowserRouter([
           { path: "categories", element: <CategoriesPage /> },
           { path: "banners", element: <BannersPage /> },
           { path: "notifications", element: <NotificationsPage /> },
+          { path: "content-management", element: <ContentManagementPage /> },
+          { path: "faq", element: <ContentManagementPage /> },
+          { path: "terms", element: <ContentManagementPage /> },
+          { path: "privacy-policy", element: <ContentManagementPage /> },
           { path: "consultants", element: <ConsultantsPage /> },
           { path: "crop-prices", element: <CropPricesPage /> },
           { path: "market", element: <MarketPage /> },
@@ -103,6 +102,7 @@ export const router = createBrowserRouter([
           })),
         ],
       },
+
     ],
   },
   {

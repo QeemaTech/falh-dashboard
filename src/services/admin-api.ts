@@ -1195,3 +1195,124 @@ export async function rejectJoinUsApplicationApi(
   );
   return data.data;
 }
+
+// Content Management APIs
+export type PrivacyPolicy = {
+  id: string;
+  titleAr: string;
+  titleEn?: string | null;
+  contentAr: string;
+  contentEn?: string | null;
+  isPublished: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type FaqItem = {
+  id: string;
+  questionAr: string;
+  questionEn?: string | null;
+  answerAr: string;
+  answerEn?: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TermsItem = {
+  id: string;
+  titleAr: string;
+  titleEn?: string | null;
+  contentAr: string;
+  contentEn?: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export async function fetchAdminPrivacyPolicy() {
+  const { data } = await http.get<ApiResponse<PrivacyPolicy>>("/admin/content/privacy-policy");
+  return data.data;
+}
+
+export async function updateAdminPrivacyPolicyApi(payload: Partial<PrivacyPolicy>) {
+  const { data } = await http.patch<ApiResponse<PrivacyPolicy>>("/admin/content/privacy-policy", payload);
+  return data.data;
+}
+
+export async function fetchAdminFaqs() {
+  const { data } = await http.get<ApiResponse<FaqItem[]>>("/admin/content/faq");
+  return data.data;
+}
+
+export async function createAdminFaqApi(payload: {
+  questionAr: string;
+  questionEn?: string;
+  answerAr: string;
+  answerEn?: string;
+  sortOrder?: number;
+  isActive?: boolean;
+}) {
+  const { data } = await http.post<ApiResponse<FaqItem>>("/admin/content/faq", payload);
+  return data.data;
+}
+
+export async function updateAdminFaqApi(
+  faqId: string,
+  payload: Partial<{
+    questionAr: string;
+    questionEn?: string;
+    answerAr: string;
+    answerEn?: string;
+    sortOrder?: number;
+    isActive?: boolean;
+  }>
+) {
+  const { data } = await http.patch<ApiResponse<FaqItem>>(`/admin/content/faq/${faqId}`, payload);
+  return data.data;
+}
+
+export async function deleteAdminFaqApi(faqId: string) {
+  const { data } = await http.delete<ApiResponse<{ success: boolean }>>(`/admin/content/faq/${faqId}`);
+  return data;
+}
+
+export async function fetchAdminTerms() {
+  const { data } = await http.get<ApiResponse<TermsItem[]>>("/admin/content/terms");
+  return data.data;
+}
+
+export async function createAdminTermApi(payload: {
+  titleAr: string;
+  titleEn?: string;
+  contentAr: string;
+  contentEn?: string;
+  sortOrder?: number;
+  isActive?: boolean;
+}) {
+  const { data } = await http.post<ApiResponse<TermsItem>>("/admin/content/terms", payload);
+  return data.data;
+}
+
+export async function updateAdminTermApi(
+  termId: string,
+  payload: Partial<{
+    titleAr: string;
+    titleEn?: string;
+    contentAr: string;
+    contentEn?: string;
+    sortOrder?: number;
+    isActive?: boolean;
+  }>
+) {
+  const { data } = await http.patch<ApiResponse<TermsItem>>(`/admin/content/terms/${termId}`, payload);
+  return data.data;
+}
+
+export async function deleteAdminTermApi(termId: string) {
+  const { data } = await http.delete<ApiResponse<{ success: boolean }>>(`/admin/content/terms/${termId}`);
+  return data;
+}
+

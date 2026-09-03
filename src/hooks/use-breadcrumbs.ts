@@ -23,6 +23,10 @@ export function useBreadcrumbs() {
       "crop-prices": "nav.market",
       market: "nav.market",
       "weather-settings": "nav.weatherSettings",
+      "content-management": "nav.contentManagement",
+      faq: "nav.contentManagement",
+      terms: "nav.contentManagement",
+      "privacy-policy": "nav.contentManagement",
       "system-settings": "nav.systemSettings",
       "roles-permissions": "nav.rolesPermissions",
     };
