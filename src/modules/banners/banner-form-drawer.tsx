@@ -68,7 +68,6 @@ export function BannerFormDrawer({ open, onClose, onSuccess }: Props) {
       if (!titleAr.trim()) throw new Error(t("banners.titleRequired"));
       if (!titleEn.trim()) throw new Error(t("banners.errorTitleEn"));
       if (!imageFile) throw new Error(t("banners.imageRequired"));
-      if (!companyId) throw new Error(t("banners.companyRequired"));
       if (displayDays !== "" && (Number.isNaN(Number(displayDays)) || Number(displayDays) < 1)) {
         throw new Error(t("banners.errorDisplayDays"));
       }
@@ -76,7 +75,7 @@ export function BannerFormDrawer({ open, onClose, onSuccess }: Props) {
         titleAr: titleAr.trim(),
         titleEn: titleEn.trim(),
         image: imageFile,
-        companyId,
+        companyId: companyId || undefined,
         sortOrder: Number(sortOrder),
         displayDays: displayDays === "" ? null : Number(displayDays),
         isActive,

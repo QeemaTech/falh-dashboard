@@ -377,10 +377,10 @@ export function ContentManagementPage() {
                 <TableHead>
                   <TableRow>
                     <TableCell width="60">{isArabic ? "الترتيب" : "Sort"}</TableCell>
-                    <TableCell>{isArabic ? "عنوان البند" : "Title"}</TableCell>
-                    <TableCell>{isArabic ? "المحتوى" : "Content"}</TableCell>
-                    <TableCell width="100">{isArabic ? "الحالة" : "Status"}</TableCell>
-                    <TableCell width="120" align="center">
+                    <TableCell width="240" style={{ textAlign: "right" }}>{isArabic ? "عنوان البند" : "Title"}</TableCell>
+                    <TableCell align="center">{isArabic ? "المحتوى" : "Content"}</TableCell>
+                    <TableCell width="150">{isArabic ? "الحالة" : "Status"}</TableCell>
+                    <TableCell width="100" align="center">
                       {isArabic ? "إجراءات" : "Actions"}
                     </TableCell>
                   </TableRow>
@@ -402,21 +402,22 @@ export function ContentManagementPage() {
                     terms.map((item) => (
                       <TableRow key={item.id} hover>
                         <TableCell>{item.sortOrder}</TableCell>
-                        <TableCell>
-                          <Typography variant="body2" sx={{ fontWeight: "bold" }}>
+                        <TableCell style={{ textAlign: "right" }}>
+                          <Typography variant="body2" style={{ textAlign: "right" }} sx={{ fontWeight: "bold" }}>
                             {item.titleAr}
                           </Typography>
                           {item.titleEn && (
-                            <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                            <Typography variant="caption" color="text.secondary" style={{ textAlign: "right" }} sx={{ display: "block" }}>
                               {item.titleEn}
                             </Typography>
                           )}
                         </TableCell>
-                        <TableCell sx={{ maxWidth: 350 }}>
+                        <TableCell align="center">
                           <Typography
                             variant="body2"
                             color="text.secondary"
                             sx={{
+                              textAlign: "center",
                               display: "-webkit-box",
                               WebkitLineClamp: 2,
                               WebkitBoxOrient: "vertical",
@@ -427,23 +428,24 @@ export function ContentManagementPage() {
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          <Switch
-                            size="small"
-                            checked={item.isActive}
-                            onChange={(e) =>
-                              toggleTermActiveMutation.mutate({
-                                id: item.id,
-                                isActive: e.target.checked,
-                              })
-                            }
-                          />
-                          <Chip
-                            size="small"
-                            label={item.isActive ? (isArabic ? "نشط" : "Active") : isArabic ? "مُعطل" : "Disabled"}
-                            color={item.isActive ? "success" : "default"}
-                            variant="outlined"
-                            sx={{ ml: 1 }}
-                          />
+                          <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "nowrap" }}>
+                            <Chip
+                              size="small"
+                              label={item.isActive ? (isArabic ? "نشط" : "Active") : isArabic ? "مُعطل" : "Disabled"}
+                              color={item.isActive ? "success" : "default"}
+                              variant="outlined"
+                            />
+                            <Switch
+                              size="small"
+                              checked={item.isActive}
+                              onChange={(e) =>
+                                toggleTermActiveMutation.mutate({
+                                  id: item.id,
+                                  isActive: e.target.checked,
+                                })
+                              }
+                            />
+                          </Stack>
                         </TableCell>
                         <TableCell align="center">
                           <IconButton
@@ -501,10 +503,10 @@ export function ContentManagementPage() {
                 <TableHead>
                   <TableRow>
                     <TableCell width="60">{isArabic ? "الترتيب" : "Sort"}</TableCell>
-                    <TableCell>{isArabic ? "السؤال" : "Question"}</TableCell>
-                    <TableCell>{isArabic ? "الإجابة" : "Answer"}</TableCell>
-                    <TableCell width="100">{isArabic ? "الحالة" : "Status"}</TableCell>
-                    <TableCell width="120" align="center">
+                    <TableCell width="240" style={{ textAlign: "right" }}>{isArabic ? "السؤال" : "Question"}</TableCell>
+                    <TableCell align="center">{isArabic ? "الإجابة" : "Answer"}</TableCell>
+                    <TableCell width="150">{isArabic ? "الحالة" : "Status"}</TableCell>
+                    <TableCell width="100" align="center">
                       {isArabic ? "إجراءات" : "Actions"}
                     </TableCell>
                   </TableRow>
@@ -526,21 +528,22 @@ export function ContentManagementPage() {
                     faqs.map((item) => (
                       <TableRow key={item.id} hover>
                         <TableCell>{item.sortOrder}</TableCell>
-                        <TableCell>
-                          <Typography variant="body2" sx={{ fontWeight: "bold" }}>
+                        <TableCell style={{ textAlign: "right" }}>
+                          <Typography variant="body2" style={{ textAlign: "right" }} sx={{ fontWeight: "bold" }}>
                             {item.questionAr}
                           </Typography>
                           {item.questionEn && (
-                            <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                            <Typography variant="caption" color="text.secondary" style={{ textAlign: "right" }} sx={{ display: "block" }}>
                               {item.questionEn}
                             </Typography>
                           )}
                         </TableCell>
-                        <TableCell sx={{ maxWidth: 350 }}>
+                        <TableCell align="center">
                           <Typography
                             variant="body2"
                             color="text.secondary"
                             sx={{
+                              textAlign: "center",
                               display: "-webkit-box",
                               WebkitLineClamp: 2,
                               WebkitBoxOrient: "vertical",
@@ -551,23 +554,24 @@ export function ContentManagementPage() {
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          <Switch
-                            size="small"
-                            checked={item.isActive}
-                            onChange={(e) =>
-                              toggleFaqActiveMutation.mutate({
-                                id: item.id,
-                                isActive: e.target.checked,
-                              })
-                            }
-                          />
-                          <Chip
-                            size="small"
-                            label={item.isActive ? (isArabic ? "نشط" : "Active") : isArabic ? "مُعطل" : "Disabled"}
-                            color={item.isActive ? "success" : "default"}
-                            variant="outlined"
-                            sx={{ ml: 1 }}
-                          />
+                          <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "nowrap" }}>
+                            <Chip
+                              size="small"
+                              label={item.isActive ? (isArabic ? "نشط" : "Active") : isArabic ? "مُعطل" : "Disabled"}
+                              color={item.isActive ? "success" : "default"}
+                              variant="outlined"
+                            />
+                            <Switch
+                              size="small"
+                              checked={item.isActive}
+                              onChange={(e) =>
+                                toggleFaqActiveMutation.mutate({
+                                  id: item.id,
+                                  isActive: e.target.checked,
+                                })
+                              }
+                            />
+                          </Stack>
                         </TableCell>
                         <TableCell align="center">
                           <IconButton

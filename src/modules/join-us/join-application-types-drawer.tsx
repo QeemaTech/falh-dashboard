@@ -28,7 +28,6 @@ const PROVIDER_TYPE_OPTIONS = [
   "CONSULTANT",
   "LAND_BROKER",
   "TRANSPORT",
-  "SOLAR_ENERGY",
   "OTHER",
 ] as const;
 

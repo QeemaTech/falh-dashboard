@@ -752,7 +752,7 @@ export type BannerFormPayload = {
   titleAr: string;
   titleEn: string;
   image: File;
-  companyId: string;
+  companyId?: string | null;
   sortOrder?: number;
   isActive?: boolean;
   displayDays?: number | null;
@@ -763,7 +763,9 @@ export async function createAdminBannerApi(payload: BannerFormPayload) {
   formData.append("titleAr", payload.titleAr);
   formData.append("titleEn", payload.titleEn);
   formData.append("image", payload.image);
-  formData.append("companyId", payload.companyId);
+  if (payload.companyId) {
+    formData.append("companyId", payload.companyId);
+  }
   formData.append("sortOrder", String(payload.sortOrder ?? 0));
   if (payload.displayDays != null && payload.displayDays > 0) {
     formData.append("displayDays", String(payload.displayDays));
