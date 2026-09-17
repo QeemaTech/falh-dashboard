@@ -107,6 +107,11 @@ export type AdminProduct = {
   description?: string;
   descriptionAr?: string;
   descriptionEn?: string;
+  advertiserName?: string | null;
+  contactPhone?: string | null;
+  whatsappNumber?: string | null;
+  isFeaturedMostRequested?: boolean;
+  mostRequestedSortOrder?: number;
   status: string;
   price?: number;
   quantity?: number;
@@ -184,6 +189,17 @@ export async function reviewProductApi(
   return data.data;
 }
 
+export async function setProductMostRequestedApi(
+  productId: string,
+  payload: { isFeaturedMostRequested?: boolean; mostRequestedSortOrder?: number }
+) {
+  const { data } = await http.patch<ApiResponse<AdminProduct>>(
+    `/products/${productId}/most-requested`,
+    payload
+  );
+  return data.data;
+}
+
 export async function deleteProductApi(productId: string) {
   await http.delete(`/admin/products/${productId}`);
 }
@@ -201,7 +217,10 @@ export type ProductFormPayload = {
   titleAr: string;
   titleEn: string;
   descriptionAr: string;
-  descriptionEn: string;
+  descriptionEn?: string;
+  advertiserName?: string;
+  contactPhone?: string;
+  whatsappNumber?: string;
   categoryId: string;
   quantity?: number;
   unit?: string;

@@ -63,7 +63,9 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
   const [titleAr, setTitleAr] = useState("");
   const [titleEn, setTitleEn] = useState("");
   const [descriptionAr, setDescriptionAr] = useState("");
-  const [descriptionEn, setDescriptionEn] = useState("");
+  const [advertiserName, setAdvertiserName] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [whatsappNumber, setWhatsappNumber] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [price, setPrice] = useState(0);
   const [city, setCity] = useState("");
@@ -112,7 +114,9 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
       setTitleAr(source.titleAr || source.title);
       setTitleEn(source.titleEn || "");
       setDescriptionAr(source.descriptionAr || source.description || "");
-      setDescriptionEn(source.descriptionEn || "");
+      setAdvertiserName(source.advertiserName || "");
+      setContactPhone(source.contactPhone || "");
+      setWhatsappNumber(source.whatsappNumber || "");
       setCategoryId(source.category?.id || "");
       setPrice(source.price || 0);
       setCity(source.city || "");
@@ -126,7 +130,9 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
       setTitleAr("");
       setTitleEn("");
       setDescriptionAr("");
-      setDescriptionEn("");
+      setAdvertiserName("");
+      setContactPhone("");
+      setWhatsappNumber("");
       setCategoryId("");
       setPrice(0);
       setCity("");
@@ -195,7 +201,9 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
         titleAr: titleAr.trim(),
         titleEn: titleEn.trim() || titleAr.trim(),
         descriptionAr: descriptionAr.trim(),
-        descriptionEn: descriptionEn.trim() || descriptionAr.trim(),
+        advertiserName: advertiserName.trim() || undefined,
+        contactPhone: contactPhone.trim() || undefined,
+        whatsappNumber: whatsappNumber.trim() || undefined,
         categoryId,
         price: Number(price),
         city: requiresGovernorate ? (city || undefined) : undefined,
