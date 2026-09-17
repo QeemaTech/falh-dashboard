@@ -7,13 +7,14 @@ import {
 
 export const NOTIFICATIONS_QUERY_KEY = ["my-notifications"] as const;
 
-export function useNotifications(limit = 20) {
+export function useNotifications(limit = 20, page = 1) {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: [...NOTIFICATIONS_QUERY_KEY, limit],
-    queryFn: () => fetchMyNotifications({ page: 1, limit }),
+    queryKey: [...NOTIFICATIONS_QUERY_KEY, page, limit],
+    queryFn: () => fetchMyNotifications({ page, limit }),
     refetchInterval: 60_000,
+    placeholderData: (previousData) => previousData,
   });
 
   const markReadMutation = useMutation({
@@ -34,6 +35,7 @@ export function useNotifications(limit = 20) {
     ...query,
     unreadCount: query.data?.unreadCount ?? 0,
     items: query.data?.items ?? [],
+    meta: query.data?.meta,
     markAsRead: markReadMutation.mutate,
     markAllAsRead: markAllReadMutation.mutate,
     isMarkingRead: markReadMutation.isPending || markAllReadMutation.isPending,

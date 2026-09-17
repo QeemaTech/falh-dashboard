@@ -609,9 +609,12 @@ export async function fetchAdminCategories(params?: {
   sortOrder?: "asc" | "desc";
 }) {
   const { data } = await http.get<ApiResponse<AdminCategory[]>>("/admin/categories", {
-    params: { page: 1, limit: 100, sortBy: "nameAr", sortOrder: "asc", ...(params || {}) },
+    params: { page: 1, limit: 20, sortBy: "sortOrder", sortOrder: "asc", ...(params || {}) },
   });
-  return data.data;
+  return {
+    items: data.data,
+    meta: data.meta as { page?: number; limit?: number; total?: number; totalPages?: number },
+  };
 }
 
 export async function createAdminCategoryApi(payload: {

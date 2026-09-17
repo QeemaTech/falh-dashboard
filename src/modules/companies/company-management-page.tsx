@@ -28,7 +28,7 @@ import {
   AppTableHeaderCell,
   AppTableRow,
 } from "../../components/design-system";
-import { EmptyState, FilterBar, PageHeader, TableRowActions } from "../../components/layout";
+import { EmptyState, FilterBar, PageHeader, TablePaginationBar, TableRowActions, resolveTotalPages } from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
 import {
   fetchAdminCompanies,
@@ -88,6 +88,8 @@ export function CompanyManagementPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [resetPasswordCompany, setResetPasswordCompany] = useState<AdminCompany | null>(null);
   const [resetPasswordInput, setResetPasswordInput] = useState("");
   const [resetPasswordResult, setResetPasswordResult] = useState<{
@@ -100,12 +102,16 @@ export function CompanyManagementPage() {
     return () => window.clearTimeout(timer);
   }, [search]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, status, pageSize]);
+
   const { data, isLoading, isError, error, isFetching } = useQuery({
-    queryKey: ["admin-companies", debouncedSearch, status],
+    queryKey: ["admin-companies", debouncedSearch, status, page, pageSize],
     queryFn: () =>
       fetchAdminCompanies({
-        page: 1,
-        limit: 50,
+        page,
+        limit: pageSize,
         search: debouncedSearch || undefined,
         status: status || undefined,
         sortBy: "createdAt",
@@ -115,6 +121,7 @@ export function CompanyManagementPage() {
   });
 
   const companies = data?.items || [];
+  const totalPages = resolveTotalPages(data?.meta);
   const totalRevenue = useMemo(
     () => companies.reduce((sum, company) => sum + (company.revenue || 0), 0),
     [companies]

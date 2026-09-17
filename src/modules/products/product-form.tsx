@@ -96,7 +96,13 @@ export function ProductForm({
 
   const { data: categories = [] } = useQuery({
     queryKey: ["product-categories", scope],
-    queryFn: () => (scope === "admin" ? fetchAdminCategories() : fetchProductCategories()),
+    queryFn: async () => {
+      if (scope === "admin") {
+        const result = await fetchAdminCategories({ page: 1, limit: 200, sortBy: "sortOrder", sortOrder: "asc" });
+        return result.items;
+      }
+      return fetchProductCategories();
+    },
     enabled: active,
   });
 

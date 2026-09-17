@@ -6,6 +6,7 @@ export { DataTable, type DataTableColumn } from "./DataTable";
 export { FormPageShell } from "./FormPageShell";
 export { DetailPageShell, DetailField, DetailGrid } from "./DetailPageShell";
 export { TableRowActions } from "./TableRowActions";
+export { TablePaginationBar, resolveTotalPages } from "./TablePaginationBar";
 export {
   DetailBackButton,
   DetailHero,

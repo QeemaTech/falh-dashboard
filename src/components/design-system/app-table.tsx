@@ -5,6 +5,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  type TableCellProps,
   TableContainer,
   TableHead,
   TableRow,
@@ -16,9 +17,16 @@ type AppTableProps = PropsWithChildren<{
   actions?: ReactNode;
   className?: string;
   containerClassName?: string;
+  minWidth?: number | string;
 }>;
 
-export function AppTable({ title, actions, className, children }: AppTableProps) {
+export function AppTable({
+  title,
+  actions,
+  className,
+  children,
+  minWidth = 960,
+}: AppTableProps) {
   return (
     <Paper
       className={className}
@@ -47,8 +55,10 @@ export function AppTable({ title, actions, className, children }: AppTableProps)
           {actions}
         </Stack>
       ) : null}
-      <TableContainer>
-        <Table size="small">{children}</Table>
+      <TableContainer sx={{ overflowX: "auto" }}>
+        <Table size="small" sx={{ minWidth, tableLayout: "auto" }}>
+          {children}
+        </Table>
       </TableContainer>
     </Paper>
   );
@@ -58,17 +68,53 @@ export function AppTableHead({ children }: PropsWithChildren) {
   return <TableHead>{children}</TableHead>;
 }
 
-export function AppTableRow({ children, className }: PropsWithChildren<{ className?: string }>) {
-  return <TableRow className={className}>{children}</TableRow>;
-}
-
-export function AppTableCell({ children, className }: PropsWithChildren<{ className?: string }>) {
-  return <TableCell className={className}>{children}</TableCell>;
-}
-
-export function AppTableHeaderCell({ children, className }: PropsWithChildren<{ className?: string }>) {
+export function AppTableRow({
+  children,
+  className,
+  hover = true,
+}: PropsWithChildren<{ className?: string; hover?: boolean }>) {
   return (
-    <TableCell className={className} sx={{ fontWeight: 700, textTransform: "uppercase", fontSize: 12 }}>
+    <TableRow hover={hover} className={className}>
+      {children}
+    </TableRow>
+  );
+}
+
+type AppTableCellProps = PropsWithChildren<{
+  className?: string;
+  align?: TableCellProps["align"];
+  width?: number | string;
+  sx?: TableCellProps["sx"];
+  colSpan?: number;
+}>;
+
+export function AppTableCell({ children, className, align, width, sx, colSpan }: AppTableCellProps) {
+  return (
+    <TableCell className={className} align={align} colSpan={colSpan} sx={{ width, ...((sx as object) || {}) }}>
+      {children}
+    </TableCell>
+  );
+}
+
+export function AppTableHeaderCell({
+  children,
+  className,
+  align,
+  width,
+  sx,
+}: AppTableCellProps) {
+  return (
+    <TableCell
+      className={className}
+      align={align}
+      sx={{
+        width,
+        whiteSpace: "nowrap",
+        fontWeight: 700,
+        fontSize: "0.75rem",
+        ...((sx as object) || {}),
+      }}
+    >
       {children}
     </TableCell>
   );

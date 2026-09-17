@@ -17,15 +17,25 @@ type AppModalProps = PropsWithChildren<{
   description?: string;
   footer?: ReactNode;
   className?: string;
+  maxWidth?: "xs" | "sm" | "md" | "lg" | "xl" | false;
 }>;
 
-export function AppModal({ open, onClose, title, description, footer, className, children }: AppModalProps) {
+export function AppModal({
+  open,
+  onClose,
+  title,
+  description,
+  footer,
+  className,
+  children,
+  maxWidth = "sm",
+}: AppModalProps) {
   return (
     <Dialog
       open={open}
       onClose={onClose}
       fullWidth
-      maxWidth="sm"
+      maxWidth={maxWidth}
       className={className}
       slotProps={{ paper: { sx: { borderRadius: "8px" } } }}
     >

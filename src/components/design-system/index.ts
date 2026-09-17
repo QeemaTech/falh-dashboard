@@ -7,4 +7,4 @@ export { AppInput } from "./app-input";
 export { AppModal } from "./app-modal";
 export { AppSelect } from "./app-select";
 export { AppStatCard } from "./app-stat-card";
-export { AppTable, AppTableCell, AppTableHead, AppTableHeaderCell, AppTableRow } from "./app-table";
+export { AppTable, AppTableCell, AppTableHead, AppTableHeaderCell, AppTableRow, TableBody } from "./app-table";

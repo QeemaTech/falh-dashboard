@@ -20,6 +20,7 @@ import {
   AppTableHead,
   AppTableHeaderCell,
   AppTableRow,
+  TableBody,
 } from "../../components/design-system";
 import { EmptyState, FilterBar, PageHeader } from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
@@ -239,21 +240,23 @@ export function PendingProductsPage() {
 
               <AppTable>
                 <AppTableHead>
-                  <tr>
-                    <AppTableHeaderCell />
-                    <AppTableHeaderCell>{t("products.col.images")}</AppTableHeaderCell>
-                    <AppTableHeaderCell>{t("products.col.title")}</AppTableHeaderCell>
+                  <AppTableRow hover={false}>
+                    <AppTableHeaderCell width={48} sx={{ pr: 0 }} />
+                    <AppTableHeaderCell width={72}>{t("products.col.images")}</AppTableHeaderCell>
+                    <AppTableHeaderCell sx={{ minWidth: 180 }}>{t("products.col.title")}</AppTableHeaderCell>
                     <AppTableHeaderCell>{t("products.col.category")}</AppTableHeaderCell>
                     <AppTableHeaderCell>{t("products.col.price")}</AppTableHeaderCell>
                     <AppTableHeaderCell>{t("products.col.location")}</AppTableHeaderCell>
                     <AppTableHeaderCell>{t("products.col.created")}</AppTableHeaderCell>
-                    <AppTableHeaderCell>{t("products.col.actions")}</AppTableHeaderCell>
-                  </tr>
+                    <AppTableHeaderCell align="right" width={140}>
+                      {t("products.col.actions")}
+                    </AppTableHeaderCell>
+                  </AppTableRow>
                 </AppTableHead>
-                <tbody>
+                <TableBody>
                   {group.products.map((product) => (
                     <AppTableRow key={product.id}>
-                      <AppTableCell>
+                      <AppTableCell sx={{ pr: 0 }}>
                         <Checkbox
                           size="small"
                           checked={selected.includes(product.id)}
@@ -264,17 +267,29 @@ export function PendingProductsPage() {
                         <ProductImageThumb product={product} size={52} />
                       </AppTableCell>
                       <AppTableCell>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontWeight: 600,
+                            maxWidth: 240,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                          title={product.title}
+                        >
                           {product.title}
                         </Typography>
                       </AppTableCell>
                       <AppTableCell>{categoryLabel(product, language)}</AppTableCell>
-                      <AppTableCell>
+                      <AppTableCell sx={{ whiteSpace: "nowrap" }}>
                         {product.price ? `${t("market.currency")} ${product.price}` : "-"}
                       </AppTableCell>
                       <AppTableCell>{product.city || "-"}</AppTableCell>
-                      <AppTableCell>{new Date(product.createdAt).toLocaleDateString(locale)}</AppTableCell>
-                      <AppTableCell>
+                      <AppTableCell sx={{ whiteSpace: "nowrap" }}>
+                        {new Date(product.createdAt).toLocaleDateString(locale)}
+                      </AppTableCell>
+                      <AppTableCell align="right">
                         <ProductRowActions
                           product={product}
                           language={language}
@@ -294,7 +309,7 @@ export function PendingProductsPage() {
                       </AppTableCell>
                     </AppTableRow>
                   ))}
-                </tbody>
+                </TableBody>
               </AppTable>
             </Paper>
           );

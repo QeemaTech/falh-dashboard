@@ -184,11 +184,14 @@ export function createAppTheme(mode: PaletteMode, direction: "ltr" | "rtl" = "lt
           root: {
             backgroundColor: mode === "light" ? "#F3F5F4" : "#0D1510",
             "& .MuiTableCell-head": {
-              color: mode === "light" ? "#6B7280" : "#9CA3AF",
-              fontWeight: 600,
+              color: mode === "light" ? "#4B5563" : "#9CA3AF",
+              fontWeight: 700,
               fontSize: "0.75rem",
-              textTransform: "uppercase",
-              letterSpacing: "0.04em",
+              letterSpacing: "0.01em",
+              whiteSpace: "nowrap",
+              verticalAlign: "middle",
+              lineHeight: 1.3,
+              borderBottom: `1px solid ${mode === "light" ? "#E8EFEA" : "#1D2A22"}`,
             },
           },
         },
@@ -206,7 +209,11 @@ export function createAppTheme(mode: PaletteMode, direction: "ltr" | "rtl" = "lt
         styleOverrides: {
           root: {
             borderColor: mode === "light" ? "#E8EFEA" : "#1D2A22",
-            padding: "12px 16px",
+            padding: "10px 14px",
+            verticalAlign: "middle",
+          },
+          head: {
+            padding: "12px 14px",
           },
         },
       },
