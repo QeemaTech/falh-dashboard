@@ -9,7 +9,7 @@ import { PermissionProvider } from "./store/permission-context";
 import { AppThemeProvider } from "./theme/AppThemeProvider";
 import "./index.css";
 
-/* eslint-disable */
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
