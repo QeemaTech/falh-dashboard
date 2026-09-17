@@ -43,6 +43,7 @@ import {
   ProductRowActions,
   statusChipColor,
 } from "./product-shared";
+import { formatCurrency, formatDate } from "../../utils/format";
 
 type ProductStatus = AdminProduct["status"];
 
@@ -388,10 +389,10 @@ export function ProductManagementPage() {
                     />
                   </AppTableCell>
                   <AppTableCell>
-                    {product.price ? `${t("market.currency")} ${product.price}` : "-"}
+                    {product.price ? formatCurrency(product.price, language, t("market.currency")) : "-"}
                   </AppTableCell>
                   <AppTableCell>{product.city || "-"}</AppTableCell>
-                  <AppTableCell>{new Date(product.createdAt).toLocaleDateString(locale)}</AppTableCell>
+                  <AppTableCell>{formatDate(product.createdAt, language)}</AppTableCell>
                   <AppTableCell>
                     <ProductRowActions
                       product={product}

@@ -281,6 +281,7 @@ export function PendingProductsPage() {
                           language={language}
                           t={t}
                           onView={() => navigate(`/pending-products/${product.id}`)}
+                          onEdit={() => navigate(`/products/${product.id}/edit`)}
                           onApprove={() => approveMutation.mutate(product.id)}
                           onReject={() =>
                             rejectMutation.mutate({

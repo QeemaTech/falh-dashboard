@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Add, Campaign, Delete } from "@mui/icons-material";
-import { Box, Button, CircularProgress, IconButton, Stack, Typography } from "@mui/material";
+import { Add, Campaign } from "@mui/icons-material";
+import { Box, Button, CircularProgress, Stack, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import {
   AppBadge,
@@ -12,7 +12,7 @@ import {
   AppTableHeaderCell,
   AppTableRow,
 } from "../../components/design-system";
-import { EmptyState, PageHeader } from "../../components/layout";
+import { EmptyState, PageHeader, TableRowActions } from "../../components/layout";
 import { deleteAdminBannerApi, fetchAdminBanners, type AdminBanner } from "../../services/admin-api";
 import { resolveAssetUrl } from "../../utils/asset-url";
 import { getApiErrorMessage } from "../../utils/api-error";
@@ -141,14 +141,7 @@ export function BannersPage() {
                   </AppBadge>
                 </AppTableCell>
                 <AppTableCell>
-                  <IconButton
-                    color="error"
-                    size="small"
-                    disabled={deleteMutation.isPending}
-                    onClick={() => setConfirmDeleteId(banner.id)}
-                  >
-                    <Delete fontSize="small" />
-                  </IconButton>
+                  <TableRowActions onDelete={() => setConfirmDeleteId(banner.id)} disableDelete={deleteMutation.isPending} />
                 </AppTableCell>
               </AppTableRow>
             ))}

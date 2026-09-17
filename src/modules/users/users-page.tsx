@@ -1,9 +1,8 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Visibility } from "@mui/icons-material";
-import { Button, Chip, MenuItem, Stack, TextField, Typography } from "@mui/material";
+import { Chip, MenuItem, Stack, TextField, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { DataTable, EmptyState, FilterBar, PageHeader } from "../../components/layout";
+import { DataTable, EmptyState, FilterBar, PageHeader, TableRowActions } from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
 import { fetchUsers } from "../../services/admin-api";
 import type { User } from "../../types/dashboard";
@@ -49,7 +48,7 @@ export function UsersPage() {
   }
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={2.5}>
       <PageHeader title={t("users.title")} subtitle={t("users.subtitle")} />
 
       <FilterBar>
@@ -122,13 +121,10 @@ export function UsersPage() {
             key: "id",
             label: t("users.col.actions"),
             render: (row) => (
-              <Button
-                size="small"
-                startIcon={<Visibility fontSize="small" />}
-                onClick={() => navigate(`/users/${row.id}`)}
-              >
-                {t("users.view")}
-              </Button>
+              <TableRowActions
+                onView={() => navigate(`/users/${row.id}`)}
+                onEdit={() => navigate(`/users/${row.id}`)}
+              />
             ),
           },
         ]}

@@ -3,10 +3,12 @@ import {
   Box,
   Button,
   Divider,
+  IconButton,
   Menu,
   MenuItem,
   Stack,
   Typography,
+  useMediaQuery,
   useTheme,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
@@ -24,6 +26,7 @@ type Props = {
 
 export function UserMenu({ onOpen, dropdown: externalDropdown }: Props) {
   const theme = useTheme();
+  const isCompact = useMediaQuery(theme.breakpoints.down("sm"));
   const internalDropdown = useDropdown();
   const { open, close, toggle, containerRef, anchorEl } = externalDropdown ?? internalDropdown;
   const { mode, toggleColorMode } = useColorMode();
@@ -43,25 +46,42 @@ export function UserMenu({ onOpen, dropdown: externalDropdown }: Props) {
 
   return (
     <Box ref={containerRef}>
-      <Button
-        onClick={handleToggle}
-        variant="outlined"
-        color="inherit"
-        endIcon={<ExpandMore fontSize="small" />}
-        sx={{ borderRadius: "8px", px: 1.25, py: 0.5, textTransform: "none", minHeight: 40 }}
-      >
-        <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+      {isCompact ? (
+        <IconButton
+          onClick={handleToggle}
+          size="small"
+          sx={{
+            borderRadius: "8px",
+            border: 1,
+            borderColor: "divider",
+            width: 36,
+            height: 36,
+            p: 0.25,
+          }}
+        >
           <AppAvatar name={name} size="sm" />
-          <Box sx={{ display: { xs: "none", sm: "block" }, textAlign: "start" }}>
-            <Typography variant="body2" sx={{ fontWeight: 700 }}>
-              {name}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {roleLabel}
-            </Typography>
-          </Box>
-        </Stack>
-      </Button>
+        </IconButton>
+      ) : (
+        <Button
+          onClick={handleToggle}
+          variant="outlined"
+          color="inherit"
+          endIcon={<ExpandMore fontSize="small" />}
+          sx={{ borderRadius: "8px", px: 1.25, py: 0.5, textTransform: "none", minHeight: 40 }}
+        >
+          <Stack direction="row" spacing={1.25} sx={{ alignItems: "center" }}>
+            <AppAvatar name={name} size="sm" />
+            <Box sx={{ textAlign: "start" }}>
+              <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
+                {name}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.2 }}>
+                {roleLabel}
+              </Typography>
+            </Box>
+          </Stack>
+        </Button>
+      )}
 
       <Menu
         anchorEl={anchorEl}
@@ -69,7 +89,17 @@ export function UserMenu({ onOpen, dropdown: externalDropdown }: Props) {
         onClose={close}
         anchorOrigin={{ vertical: "bottom", horizontal: menuAnchorHorizontal }}
         transformOrigin={{ vertical: "top", horizontal: menuAnchorHorizontal }}
+        slotProps={{ paper: { sx: { borderRadius: "8px", mt: 1, minWidth: 220 } } }}
       >
+        <Box sx={{ px: 2, py: 1.5 }}>
+          <Typography variant="body2" sx={{ fontWeight: 700 }}>
+            {name}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {roleLabel}
+          </Typography>
+        </Box>
+        <Divider />
         <MenuItem onClick={toggleColorMode}>
           {mode === "dark" ? <LightMode fontSize="small" /> : <DarkMode fontSize="small" />}
           <Typography sx={{ ml: 1.5 }}>{mode === "dark" ? t("menu.lightMode") : t("menu.darkMode")}</Typography>
@@ -87,6 +117,7 @@ export function UserMenu({ onOpen, dropdown: externalDropdown }: Props) {
                 setLanguage("ar");
                 close();
               }}
+              sx={{ borderRadius: "8px" }}
             >
               {t("menu.arabic")}
             </Button>
@@ -97,6 +128,7 @@ export function UserMenu({ onOpen, dropdown: externalDropdown }: Props) {
                 setLanguage("en");
                 close();
               }}
+              sx={{ borderRadius: "8px" }}
             >
               {t("menu.english")}
             </Button>

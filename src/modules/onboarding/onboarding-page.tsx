@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Add, Delete, ViewCarousel } from "@mui/icons-material";
-import { Box, Button, CircularProgress, IconButton, Stack, Typography } from "@mui/material";
+import { Add, ViewCarousel } from "@mui/icons-material";
+import { Box, Button, CircularProgress, Stack, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import {
   AppBadge,
@@ -12,7 +12,7 @@ import {
   AppTableHeaderCell,
   AppTableRow,
 } from "../../components/design-system";
-import { EmptyState, PageHeader } from "../../components/layout";
+import { EmptyState, PageHeader, TableRowActions } from "../../components/layout";
 import {
   deleteAdminOnboardingSlideApi,
   fetchAdminOnboardingSlides,
@@ -118,14 +118,10 @@ export function OnboardingPage() {
                   </AppBadge>
                 </AppTableCell>
                 <AppTableCell>
-                  <IconButton
-                    color="error"
-                    size="small"
-                    disabled={deleteMutation.isPending}
-                    onClick={() => setConfirmDeleteId(slide.id)}
-                  >
-                    <Delete fontSize="small" />
-                  </IconButton>
+                  <TableRowActions
+                    onDelete={() => setConfirmDeleteId(slide.id)}
+                    disableDelete={deleteMutation.isPending}
+                  />
                 </AppTableCell>
               </AppTableRow>
             ))}

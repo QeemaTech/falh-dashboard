@@ -1,9 +1,8 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Visibility } from "@mui/icons-material";
-import { Button, Chip, Paper, Stack, Typography } from "@mui/material";
+import { Chip, Paper, Stack, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { DataTable, EmptyState, PageHeader } from "../../components/layout";
+import { DataTable, EmptyState, PageHeader, TableRowActions } from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
 import {
   fetchAdminServiceProviders,
@@ -170,13 +169,10 @@ export function ConsultantsPage() {
             key: "id",
             label: t("consultants.col.actions"),
             render: (row) => (
-              <Button
-                size="small"
-                startIcon={<Visibility fontSize="small" />}
-                onClick={() => navigate(`/consultants/${row.id}`)}
-              >
-                {t("consultants.view")}
-              </Button>
+              <TableRowActions
+                onView={() => navigate(`/consultants/${row.id}`)}
+                onEdit={() => navigate(`/consultants/${row.id}`)}
+              />
             ),
           },
         ]}

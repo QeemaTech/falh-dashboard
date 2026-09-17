@@ -21,7 +21,7 @@ import {
   AppTableHead,
   AppTableHeaderCell,
 } from "../../components/design-system";
-import { EmptyState, FilterBar, PageHeader } from "../../components/layout";
+import { EmptyState, FilterBar, PageHeader, TableRowActions } from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
 import { fetchFinanceOverview, type CompanyFinanceSummary } from "../../services/admin-api";
 
@@ -159,16 +159,12 @@ export function FinancePage() {
               <AppTableHeaderCell>{t("finance.col.commission")}</AppTableHeaderCell>
               <AppTableHeaderCell>{t("finance.col.net")}</AppTableHeaderCell>
               <AppTableHeaderCell>{t("companies.col.status")}</AppTableHeaderCell>
+              <AppTableHeaderCell>{t("common.edit", "Edit")}</AppTableHeaderCell>
             </tr>
           </AppTableHead>
           <TableBody>
             {rows.map((row) => (
-              <TableRow
-                key={row.companyId}
-                hover
-                sx={{ cursor: "pointer" }}
-                onClick={() => navigate(`/finance/${row.companyId}`)}
-              >
+              <TableRow key={row.companyId} hover>
                 <AppTableCell>
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
                     {row.companyName}
@@ -188,6 +184,12 @@ export function FinancePage() {
                     label={statusLabel(row.companyStatus)}
                     color={statusChipColor(row.companyStatus)}
                     variant="outlined"
+                  />
+                </AppTableCell>
+                <AppTableCell>
+                  <TableRowActions
+                    onView={() => navigate(`/finance/${row.companyId}`)}
+                    onEdit={() => navigate(`/finance/${row.companyId}`)}
                   />
                 </AppTableCell>
               </TableRow>

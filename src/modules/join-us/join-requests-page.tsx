@@ -12,7 +12,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { DataTable, EmptyState, FilterBar, PageHeader } from "../../components/layout";
+import { DataTable, EmptyState, FilterBar, PageHeader, TableRowActions } from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
 import {
   fetchJoinUsApplications,
@@ -188,9 +188,10 @@ export function JoinRequestsPage() {
             key: "id",
             label: t("joinUs.col.actions"),
             render: (row) => (
-              <Button size="small" onClick={() => navigate(`/join-requests/${row.id}`)}>
-                {t("joinUs.view")}
-              </Button>
+              <TableRowActions
+                onView={() => navigate(`/join-requests/${row.id}`)}
+                onEdit={() => navigate(`/join-requests/${row.id}`)}
+              />
             ),
           },
         ]}

@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Button, MenuItem, Stack, TextField, Typography } from "@mui/material";
+import { MenuItem, Stack, TextField, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { DataTable, EmptyState, FilterBar, PageHeader } from "../../components/layout";
+import { DataTable, EmptyState, FilterBar, PageHeader, TableRowActions } from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
 import { fetchAdminOrders, type AdminOrder, type AdminOrderStatus } from "../../services/admin-api";
 
@@ -60,7 +60,7 @@ export function OrdersPage() {
   }
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={2.5}>
       <PageHeader title={t("orders.title")} subtitle={t("orders.subtitle")} />
       <FilterBar>
         <TextField
@@ -101,9 +101,10 @@ export function OrdersPage() {
             key: "actions",
             label: t("orders.col.actions"),
             render: (row) => (
-              <Button size="small" onClick={() => navigate(`/orders/${row.id}`)}>
-                {t("orders.view")}
-              </Button>
+              <TableRowActions
+                onView={() => navigate(`/orders/${row.id}`)}
+                onEdit={() => navigate(`/orders/${row.id}`)}
+              />
             ),
           },
         ]}

@@ -78,25 +78,11 @@ export function ProductImageThumb({ product, size = 48 }: ProductImageThumbProps
   );
 }
 
-function productActionsGridColumns(
-  language: "ar" | "en",
-  includeEditDelete: boolean,
-  moderatable: boolean
-) {
-  const moderateCol = language === "ar" ? "68px" : "64px";
-  const moderateCols = moderatable ? ` ${moderateCol} ${moderateCol}` : "";
-  if (includeEditDelete) {
-    return `32px${moderateCols} 32px 32px`;
-  }
-  return `32px${moderateCols}`;
-}
-
 const actionBtnSx = {
-  width: "100%",
   minWidth: 0,
-  justifySelf: "stretch",
   whiteSpace: "nowrap",
-  px: 0.75,
+  px: 1,
+  borderRadius: "8px",
 } as const;
 
 type ProductRowActionsProps = {
@@ -112,9 +98,17 @@ type ProductRowActionsProps = {
   rejectPending?: boolean;
 };
 
+const actionIconSx = {
+  borderRadius: "8px",
+  border: "1px solid",
+  borderColor: "divider",
+  width: 34,
+  height: 34,
+  bgcolor: "background.paper",
+} as const;
+
 export function ProductRowActions({
   product,
-  language,
   t,
   onView,
   onApprove,
@@ -124,24 +118,37 @@ export function ProductRowActions({
   approvePending,
   rejectPending,
 }: ProductRowActionsProps) {
-  const includeEditDelete = Boolean(onEdit || onDelete);
   const moderatable = canModerate(product.status);
 
   return (
     <Box
       sx={{
-        display: "grid",
-        gridTemplateColumns: productActionsGridColumns(language, includeEditDelete, moderatable),
-        columnGap: 0.75,
+        display: "flex",
+        flexDirection: "row",
+        flexWrap: "nowrap",
+        gap: 0.75,
         alignItems: "center",
         width: "max-content",
       }}
     >
       <Tooltip title={t("products.view")}>
-        <IconButton size="small" onClick={onView}>
-          <Visibility fontSize="small" />
+        <IconButton size="small" onClick={onView} aria-label={t("products.view")} sx={actionIconSx}>
+          <Visibility sx={{ fontSize: 18 }} />
         </IconButton>
       </Tooltip>
+      {onEdit ? (
+        <Tooltip title={t("products.edit")}>
+          <IconButton
+            size="small"
+            color="primary"
+            onClick={onEdit}
+            aria-label={t("products.edit")}
+            sx={{ ...actionIconSx, borderColor: "primary.light", color: "primary.main" }}
+          >
+            <Edit sx={{ fontSize: 18 }} />
+          </IconButton>
+        </Tooltip>
+      ) : null}
       {moderatable ? (
         <>
           <Button
@@ -166,17 +173,16 @@ export function ProductRowActions({
           </Button>
         </>
       ) : null}
-      {onEdit ? (
-        <Tooltip title={t("products.edit")}>
-          <IconButton size="small" onClick={onEdit}>
-            <Edit fontSize="small" />
-          </IconButton>
-        </Tooltip>
-      ) : null}
       {onDelete ? (
         <Tooltip title={t("products.delete")}>
-          <IconButton size="small" color="error" onClick={onDelete}>
-            <Delete fontSize="small" />
+          <IconButton
+            size="small"
+            color="error"
+            onClick={onDelete}
+            aria-label={t("products.delete")}
+            sx={{ ...actionIconSx, borderColor: "error.light" }}
+          >
+            <Delete sx={{ fontSize: 18 }} />
           </IconButton>
         </Tooltip>
       ) : null}

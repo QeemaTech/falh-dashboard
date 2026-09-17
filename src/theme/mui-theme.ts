@@ -73,6 +73,13 @@ export function createAppTheme(mode: PaletteMode, direction: "ltr" | "rtl" = "lt
               backgroundColor:
                 theme.palette.mode === "dark" ? "rgba(77, 154, 91, 0.08)" : "rgba(35, 103, 58, 0.06)",
             },
+            "&.Mui-disabled": {
+              opacity: theme.palette.mode === "dark" ? 0.38 : 0.5,
+              ...(theme.palette.mode === "dark" && {
+                color: "rgba(255,255,255,0.3)",
+                borderColor: "rgba(255,255,255,0.12)",
+              }),
+            },
           }),
         },
       },

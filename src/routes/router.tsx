@@ -32,7 +32,7 @@ import { WeatherSettingsPage } from "../modules/weather/weather-settings-page";
 import { AiSettingsPage } from "../modules/ai-settings/ai-settings-page";
 import { PlaceholderPage } from "../pages/placeholder-page";
 import { LoginPage } from "../modules/auth/login-page";
-import { ForgotPasswordPage } from "../modules/auth/forgot-password-page";
+import { NotFoundPage, RouteErrorPage } from "../pages/not-found-page";
 import { ProtectedRoute } from "./protected-route";
 import { CompanyProtectedRoute } from "./company-protected-route";
 import { CompanyLayout } from "../layouts/company-layout";
@@ -72,17 +72,20 @@ export const router = createBrowserRouter([
   {
     path: "/login",
     element: <LoginPage />,
+    errorElement: <RouteErrorPage />,
   },
   {
     path: "/forgot-password",
-    element: <ForgotPasswordPage />,
+    element: <Navigate to="/login" replace />,
   },
   {
     element: <ProtectedRoute />,
+    errorElement: <RouteErrorPage />,
     children: [
       {
         path: "/",
         element: <DashboardLayout />,
+        errorElement: <RouteErrorPage />,
         children: [
           { index: true, element: <DashboardPage /> },
           { path: "users", element: <UsersPage /> },
@@ -130,12 +133,14 @@ export const router = createBrowserRouter([
             path: route.path,
             element: <PlaceholderPage title={route.title} description={route.description} />,
           })),
+          { path: "*", element: <NotFoundPage /> },
         ],
       },
     ],
   },
   {
     element: <CompanyProtectedRoute />,
+    errorElement: <RouteErrorPage />,
     children: [
       {
         path: "/company",
@@ -145,8 +150,10 @@ export const router = createBrowserRouter([
           { path: "products", element: <CompanyProductsPage /> },
           { path: "profile", element: <CompanyProfilePage /> },
           { path: "notifications", element: <NotificationsPage /> },
+          { path: "*", element: <NotFoundPage /> },
         ],
       },
     ],
   },
+  { path: "*", element: <NotFoundPage /> },
 ]);

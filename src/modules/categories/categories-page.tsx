@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Add, Delete, Edit } from "@mui/icons-material";
+import { Add } from "@mui/icons-material";
 import {
   Box,
   Button,
   Checkbox,
   CircularProgress,
   Grid,
-  IconButton,
   MenuItem,
   Paper,
   Stack,
@@ -22,7 +21,7 @@ import {
   AppTableHeaderCell,
   AppTableRow,
 } from "../../components/design-system";
-import { EmptyState, PageHeader, PageSection } from "../../components/layout";
+import { EmptyState, PageHeader, PageSection, TableRowActions } from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
 import { toast } from "../../components/ui/sonner";
 import {
@@ -328,30 +327,24 @@ export function CategoriesPage() {
                       </AppBadge>
                     </AppTableCell>
                     <AppTableCell>
-                      <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
+                      <Stack direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
                         <Button
                           size="small"
                           variant={selectedCategoryId === category.id ? "contained" : "outlined"}
                           onClick={() => setSelectedCategoryId(category.id)}
+                          sx={{ borderRadius: "8px" }}
                         >
                           {t("categories.fields")}
                         </Button>
-                        <IconButton size="small" onClick={() => startEdit(category)} aria-label={t("categories.update")}>
-                          <Edit fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          color="error"
-                          aria-label={t("categories.deleted")}
-                          onClick={() => {
+                        <TableRowActions
+                          onEdit={() => startEdit(category)}
+                          onDelete={() => {
                             const name = categoryDisplayName(category, language);
                             if (window.confirm(t("categories.deleteConfirm").replace("{{name}}", name))) {
                               deleteMutation.mutate(category.id);
                             }
                           }}
-                        >
-                          <Delete fontSize="small" />
-                        </IconButton>
+                        />
                       </Stack>
                     </AppTableCell>
                   </AppTableRow>

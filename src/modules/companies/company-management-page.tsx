@@ -28,7 +28,7 @@ import {
   AppTableHeaderCell,
   AppTableRow,
 } from "../../components/design-system";
-import { EmptyState, FilterBar, PageHeader } from "../../components/layout";
+import { EmptyState, FilterBar, PageHeader, TableRowActions } from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
 import {
   fetchAdminCompanies,
@@ -39,6 +39,7 @@ import {
 } from "../../services/admin-api";
 import { generatePassword } from "../../utils/generate-password";
 import { prefillCompanyLoginEmail } from "../../utils/company-approval-email";
+import { formatCurrency, formatDate } from "../../utils/format";
 import { toast } from "../../components/ui/sonner";
 
 type CompanyStatus = AdminCompany["status"];
@@ -83,7 +84,6 @@ export function CompanyManagementPage() {
   const { t, language } = useI18n();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const locale = language === "ar" ? "ar-EG" : "en-US";
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -265,7 +265,7 @@ export function CompanyManagementPage() {
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <AppStatCard
             title={t("companies.statRevenue")}
-            value={`${t("market.currency")} ${totalRevenue.toLocaleString(locale)}`}
+            value={formatCurrency(totalRevenue, language, t("market.currency"))}
             trend="up"
           />
         </Grid>
@@ -374,13 +374,13 @@ export function CompanyManagementPage() {
                 <AppTableCell>{company.productsCount}</AppTableCell>
                 <AppTableCell>
                   {company.listingExpiresAt
-                    ? new Date(company.listingExpiresAt).toLocaleDateString(locale)
+                    ? formatDate(company.listingExpiresAt, language)
                     : company.status === "APPROVED"
                       ? t("companies.listingActive")
                       : "-"}
                 </AppTableCell>
                 <AppTableCell>
-                  {t("market.currency")} {Number(company.revenue || 0).toLocaleString(locale)}
+                  {formatCurrency(company.revenue, language, t("market.currency"))}
                 </AppTableCell>
                 <AppTableCell>{Number(company.rating || 0).toFixed(1)}</AppTableCell>
                 <AppTableCell>
@@ -402,6 +402,11 @@ export function CompanyManagementPage() {
                   />
                 </AppTableCell>
                 <AppTableCell>
+                  <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "nowrap" }}>
+                    <TableRowActions
+                      onView={() => navigate(`/companies/${company.id}`)}
+                      onEdit={() => navigate(`/companies/${company.id}`)}
+                    />
                   <Box sx={companyActionsGridSx(language)}>
                     {company.status === "PENDING" ? (
                       <>
@@ -431,7 +436,7 @@ export function CompanyManagementPage() {
                       <>
                         <Button
                           size="small"
-                          variant="text"
+                          variant="outlined"
                           color="warning"
                           sx={companyActionPrimaryBtnSx}
                           onClick={() =>
@@ -474,7 +479,7 @@ export function CompanyManagementPage() {
                       <>
                         <Button
                           size="small"
-                          variant="text"
+                          variant="outlined"
                           color="success"
                           sx={companyActionPrimaryBtnSx}
                           onClick={() =>
@@ -514,6 +519,7 @@ export function CompanyManagementPage() {
                       </>
                     ) : null}
                   </Box>
+                  </Stack>
                 </AppTableCell>
               </AppTableRow>
             ))}
