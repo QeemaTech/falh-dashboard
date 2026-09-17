@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 import { Box, Card, CardContent, Stack, Typography } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import { AppBadge } from "./app-badge";
+
+type IconColor = "primary" | "secondary" | "info" | "warning" | "success" | "error";
 
 type AppStatCardProps = {
   title: string;
@@ -9,9 +12,18 @@ type AppStatCardProps = {
   icon?: ReactNode;
   change?: string;
   trend?: "up" | "down" | "neutral";
+  iconColor?: IconColor;
 };
 
-export function AppStatCard({ title, value, hint, icon, change, trend = "neutral" }: AppStatCardProps) {
+export function AppStatCard({
+  title,
+  value,
+  hint,
+  icon,
+  change,
+  trend = "neutral",
+  iconColor = "primary",
+}: AppStatCardProps) {
   return (
     <Card>
       <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
@@ -37,9 +49,8 @@ export function AppStatCard({ title, value, hint, icon, change, trend = "neutral
                 borderRadius: "8px",
                 display: "grid",
                 placeItems: "center",
-                bgcolor: (theme) =>
-                  theme.palette.mode === "dark" ? "rgba(77, 154, 91, 0.12)" : "rgba(35, 103, 58, 0.08)",
-                color: "primary.main",
+                bgcolor: (theme) => alpha(theme.palette[iconColor].main, theme.palette.mode === "dark" ? 0.16 : 0.1),
+                color: `${iconColor}.main`,
               }}
             >
               {icon}

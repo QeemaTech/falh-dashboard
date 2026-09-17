@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis } from "recharts";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Link as RouterLink } from "react-router-dom";
 import {
   Box,
@@ -41,6 +41,7 @@ import {
   fetchServiceProvidersCount,
   fetchUsers,
 } from "../../services/admin-api";
+import { formatCurrency } from "../../utils/format";
 
 type DashboardPeriod = "today" | "week" | "month";
 
@@ -233,25 +234,30 @@ export function DashboardPage() {
     [t]
   );
 
+  const chartValueLabels: Record<string, string> = {
+    sales: t("dashboard.chart.sales"),
+    orders: t("dashboard.chart.orders"),
+    visitors: t("dashboard.chart.visitors"),
+    sessions: t("dashboard.chart.sessions"),
+    clicks: t("dashboard.chart.clicks"),
+    value: t("dashboard.col.amount"),
+    count: t("dashboard.stats.totalProducts"),
+  };
+
   const chartTooltipFormatter = (
     value: number | string | readonly (number | string)[] | undefined,
     name?: string | number
   ) => {
-    const labels: Record<string, string> = {
-      sales: t("dashboard.chart.sales"),
-      orders: t("dashboard.chart.orders"),
-      visitors: t("dashboard.chart.visitors"),
-      sessions: t("dashboard.chart.sessions"),
-      clicks: t("dashboard.chart.clicks"),
-      value: t("dashboard.col.amount"),
-      count: t("dashboard.stats.totalProducts"),
-    };
     const raw = Array.isArray(value) ? value[0] : value;
     const numeric = typeof raw === "number" ? raw : Number(raw);
     const display = Number.isFinite(numeric) ? numeric.toLocaleString(locale) : String(raw ?? "");
     const nameKey = String(name ?? "");
-    return [display, labels[nameKey] || nameKey];
+    return [display, chartValueLabels[nameKey] || nameKey];
   };
+
+  const legendFormatter = (value: string) => chartValueLabels[value] || value;
+
+  const yAxisTickFormatter = (value: number) => value.toLocaleString(locale);
 
   const isLoading = statsLoading || usersLoading || ordersLoading || productsLoading || providersLoading;
   if (isLoading) return <DashboardSkeleton />;
@@ -309,28 +315,28 @@ export function DashboardPage() {
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
-          <AnalyticsWidget title={t("dashboard.stats.totalUsers")} value={period === "month" ? stats.totalUsers : periodUsers.length} icon={<People fontSize="small" />} change="+12.4%" hint={periodLabel} sparkline={[22, 30, 18, 40, 65, 55].map((v) => Math.round(v * scale))} />
+          <AnalyticsWidget title={t("dashboard.stats.totalUsers")} value={period === "month" ? stats.totalUsers : periodUsers.length} icon={<People fontSize="small" />} change="+12.4%" hint={periodLabel} sparkline={[22, 30, 18, 40, 65, 55].map((v) => Math.round(v * scale))} iconColor="primary" />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
-          <AnalyticsWidget title={t("dashboard.stats.totalCompanies")} value={Math.round(stats.totalCompanies * scale)} icon={<Business fontSize="small" />} change="+8.7%" hint={periodLabel} sparkline={[28, 45, 34, 50, 68, 72].map((v) => Math.round(v * scale))} />
+          <AnalyticsWidget title={t("dashboard.stats.totalCompanies")} value={Math.round(stats.totalCompanies * scale)} icon={<Business fontSize="small" />} change="+8.7%" hint={periodLabel} sparkline={[28, 45, 34, 50, 68, 72].map((v) => Math.round(v * scale))} iconColor="info" />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
-          <AnalyticsWidget title={t("dashboard.stats.totalProducts")} value={period === "month" ? stats.totalProducts : periodProducts.length} icon={<Inventory2 fontSize="small" />} change="+15.2%" hint={periodLabel} sparkline={[15, 30, 42, 46, 58, 66].map((v) => Math.round(v * scale))} />
+          <AnalyticsWidget title={t("dashboard.stats.totalProducts")} value={period === "month" ? stats.totalProducts : periodProducts.length} icon={<Inventory2 fontSize="small" />} change="+15.2%" hint={periodLabel} sparkline={[15, 30, 42, 46, 58, 66].map((v) => Math.round(v * scale))} iconColor="warning" />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
-          <AnalyticsWidget title={t("dashboard.stats.totalOrders")} value={period === "month" ? stats.totalOrders : periodOrders.length} icon={<LocalShipping fontSize="small" />} change="+6.1%" hint={periodLabel} sparkline={[20, 25, 32, 29, 52, 60].map((v) => Math.round(v * scale))} />
+          <AnalyticsWidget title={t("dashboard.stats.totalOrders")} value={period === "month" ? stats.totalOrders : periodOrders.length} icon={<LocalShipping fontSize="small" />} change="+6.1%" hint={periodLabel} sparkline={[20, 25, 32, 29, 52, 60].map((v) => Math.round(v * scale))} iconColor="secondary" />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
-          <AnalyticsWidget title={t("dashboard.stats.totalRevenue")} value={`${currency} ${Math.round(Number(stats.revenue) * scale).toLocaleString(locale)}`} icon={<MonetizationOn fontSize="small" />} change="+19.8%" hint={periodLabel} sparkline={[12, 21, 30, 41, 52, 74].map((v) => Math.round(v * scale))} />
+          <AnalyticsWidget title={t("dashboard.stats.totalRevenue")} value={formatCurrency(Math.round(Number(stats.revenue) * scale), language, currency)} icon={<MonetizationOn fontSize="small" />} change="+19.8%" hint={periodLabel} sparkline={[12, 21, 30, 41, 52, 74].map((v) => Math.round(v * scale))} iconColor="success" />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
-          <AnalyticsWidget title={t("dashboard.stats.serviceProviders")} value={Math.round((serviceProvidersCount || 0) * scale)} icon={<Warehouse fontSize="small" />} change="+4.1%" hint={periodLabel} sparkline={[18, 23, 31, 38, 44, 48].map((v) => Math.round(v * scale))} />
+          <AnalyticsWidget title={t("dashboard.stats.serviceProviders")} value={Math.round((serviceProvidersCount || 0) * scale)} icon={<Warehouse fontSize="small" />} change="+4.1%" hint={periodLabel} sparkline={[18, 23, 31, 38, 44, 48].map((v) => Math.round(v * scale))} iconColor="info" />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
-          <AnalyticsWidget title={t("dashboard.stats.pendingProducts")} value={Math.round(stats.pendingProducts * scale)} icon={<PendingActions fontSize="small" />} change="-2.3%" trend="down" hint={t("dashboard.hint.moderation")} sparkline={[62, 55, 52, 40, 37, 28].map((v) => Math.round(v * scale))} />
+          <AnalyticsWidget title={t("dashboard.stats.pendingProducts")} value={Math.round(stats.pendingProducts * scale)} icon={<PendingActions fontSize="small" />} change="-2.3%" trend="down" hint={t("dashboard.hint.moderation")} sparkline={[62, 55, 52, 40, 37, 28].map((v) => Math.round(v * scale))} iconColor="error" />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
-          <AnalyticsWidget title={t("dashboard.stats.pendingCompanies")} value={Math.round(stats.pendingCompanies * scale)} icon={<Storefront fontSize="small" />} change="-1.7%" trend="down" hint={t("dashboard.hint.applicationQueue")} sparkline={[45, 42, 38, 30, 26, 23].map((v) => Math.round(v * scale))} />
+          <AnalyticsWidget title={t("dashboard.stats.pendingCompanies")} value={Math.round(stats.pendingCompanies * scale)} icon={<Storefront fontSize="small" />} change="-1.7%" trend="down" hint={t("dashboard.hint.applicationQueue")} sparkline={[45, 42, 38, 30, 26, 23].map((v) => Math.round(v * scale))} iconColor="error" />
         </Grid>
       </Grid>
 
@@ -347,7 +353,9 @@ export function DashboardPage() {
                 </defs>
                 <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#E4E7EC" />
                 <XAxis axisLine={false} tickLine={false} dataKey="name" />
+                <YAxis axisLine={false} tickLine={false} width={44} tick={{ fontSize: 11 }} tickFormatter={yAxisTickFormatter} />
                 <Tooltip formatter={chartTooltipFormatter} />
+                <Legend formatter={legendFormatter} />
                 <Area type="monotone" dataKey="sales" stroke="#23673A" strokeWidth={2.5} fill="url(#salesPrimary)" />
                 <Area type="monotone" dataKey="orders" stroke="#69A87B" strokeWidth={2} fill="transparent" />
               </AreaChart>
@@ -360,6 +368,7 @@ export function DashboardPage() {
               <BarChart data={growthData}>
                 <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#E4E7EC" />
                 <XAxis axisLine={false} tickLine={false} dataKey="label" />
+                <YAxis axisLine={false} tickLine={false} width={44} tick={{ fontSize: 11 }} tickFormatter={yAxisTickFormatter} />
                 <Tooltip formatter={chartTooltipFormatter} />
                 <Bar dataKey="value" fill="#23673A" radius={[8, 8, 0, 0]} barSize={12} />
               </BarChart>
@@ -372,6 +381,7 @@ export function DashboardPage() {
               <BarChart data={productGrowthData}>
                 <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#E4E7EC" />
                 <XAxis axisLine={false} tickLine={false} dataKey="step" />
+                <YAxis axisLine={false} tickLine={false} width={44} tick={{ fontSize: 11 }} tickFormatter={yAxisTickFormatter} />
                 <Tooltip formatter={chartTooltipFormatter} />
                 <Bar dataKey="count" fill="#15803D" radius={[8, 8, 0, 0]} barSize={12} />
               </BarChart>
@@ -384,7 +394,9 @@ export function DashboardPage() {
               <BarChart data={analyticsWeekData} barGap={10} barCategoryGap="44%">
                 <CartesianGrid strokeDasharray="3 5" vertical={false} stroke="#dbe7de" />
                 <XAxis axisLine={false} tickLine={false} dataKey="day" tick={{ fill: "#6b7280", fontSize: 11 }} />
+                <YAxis axisLine={false} tickLine={false} width={44} tick={{ fontSize: 11 }} tickFormatter={yAxisTickFormatter} />
                 <Tooltip cursor={{ fill: "rgba(35, 103, 58, 0.08)" }} formatter={chartTooltipFormatter} />
+                <Legend formatter={legendFormatter} />
                 <Bar dataKey="visitors" fill="#82b695" radius={[8, 8, 0, 0]} barSize={6} />
                 <Bar dataKey="sessions" fill="#23673A" radius={[8, 8, 0, 0]} barSize={6} />
                 <Bar dataKey="clicks" fill="#c7ddcd" radius={[8, 8, 0, 0]} barSize={6} />
@@ -416,7 +428,7 @@ export function DashboardPage() {
                         <TableCell>{order.user?.name || t("dashboard.customerFallback")}</TableCell>
                         <TableCell>{orderStatusLabel(order.status)}</TableCell>
                         <TableCell sx={{ color: "primary.main" }}>
-                          {currency} {Number(order.total).toLocaleString(locale)}
+                          {formatCurrency(order.total, language, currency)}
                         </TableCell>
                       </TableRow>
                     ))

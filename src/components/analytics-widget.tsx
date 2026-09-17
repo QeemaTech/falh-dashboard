@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import { Box } from "@mui/material";
 import { AppStatCard } from "./design-system";
 
+type IconColor = "primary" | "secondary" | "info" | "warning" | "success" | "error";
+
 type Props = {
   title: string;
   value: string | number;
@@ -10,6 +12,7 @@ type Props = {
   change?: string;
   trend?: "up" | "down";
   sparkline?: number[];
+  iconColor?: IconColor;
 };
 
 function MiniSparkline({ points }: { points: number[] }) {
@@ -45,10 +48,18 @@ function MiniSparkline({ points }: { points: number[] }) {
   );
 }
 
-export function AnalyticsWidget({ title, value, hint, icon, change, trend = "up", sparkline }: Props) {
+export function AnalyticsWidget({ title, value, hint, icon, change, trend = "up", sparkline, iconColor }: Props) {
   return (
     <Box sx={{ overflow: "hidden", borderRadius: "8px" }}>
-      <AppStatCard title={title} value={value} hint={hint} icon={icon} change={change || "0.0%"} trend={trend} />
+      <AppStatCard
+        title={title}
+        value={value}
+        hint={hint}
+        icon={icon}
+        change={change || "0.0%"}
+        trend={trend}
+        iconColor={iconColor}
+      />
       {sparkline?.length ? (
         <Box sx={{ borderTop: 1, borderColor: "divider", px: 2, py: 1 }}>
           <MiniSparkline points={sparkline} />
