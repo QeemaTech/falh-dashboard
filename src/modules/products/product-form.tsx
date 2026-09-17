@@ -1,0 +1,498 @@
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+  Button,
+  Checkbox,
+  FormControlLabel,
+  IconButton,
+  MenuItem,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { AddLocationAlt, Clear, LocationOn } from "@mui/icons-material";
+import { LocationPickerDialog } from "../../components/location/location-picker-dialog";
+import { governorateOptions } from "../../constants/egypt-governorates";
+import { useI18n } from "../../hooks/use-i18n";
+import {
+  createAdminProductApi,
+  fetchAdminCategories,
+  fetchAdminCompanies,
+  fetchCategoryDynamicFields,
+  updateAdminProductApi,
+  uploadAdminProductImagesApi,
+  type AdminProduct,
+  type ProductFormPayload,
+} from "../../services/admin-api";
+import {
+  createCompanyProductApi,
+  fetchCategoryFormFields,
+  fetchProductById,
+  fetchProductCategories,
+  updateCompanyProductApi,
+  uploadCompanyProductImagesApi,
+} from "../../services/products-api";
+import { getApiErrorMessage } from "../../utils/api-error";
+import {
+  ProductImagePicker,
+  productImagesToItems,
+  resolveProductImagePaths,
+  type ProductImageItem,
+} from "./product-image-picker";
+import { ProductDynamicFieldsForm } from "./product-dynamic-fields-form";
+import {
+  buildDynamicFieldsPayload,
+  fieldValuesToMap,
+  validateDynamicFieldValues,
+  type DynamicFieldValuesMap,
+} from "./product-dynamic-fields-utils";
+
+export type ProductFormProps = {
+  scope: "admin" | "company";
+  product?: AdminProduct | null;
+  productId?: string;
+  canAdd?: boolean;
+  active?: boolean;
+  onSuccess: () => void;
+  onCancel: () => void;
+  showActions?: boolean;
+  actionsSlot?: (props: { saving: boolean; onSave: () => void; onCancel: () => void; canSave: boolean }) => ReactNode;
+};
+
+export function ProductForm({
+  scope,
+  product,
+  productId,
+  canAdd = true,
+  active = true,
+  onSuccess,
+  onCancel,
+  showActions = true,
+  actionsSlot,
+}: ProductFormProps) {
+  const { t, language, isArabic } = useI18n();
+  const resolvedId = productId || product?.id;
+  const isEdit = Boolean(resolvedId);
+  const [titleAr, setTitleAr] = useState("");
+  const [titleEn, setTitleEn] = useState("");
+  const [descriptionAr, setDescriptionAr] = useState("");
+  const [advertiserName, setAdvertiserName] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [whatsappNumber, setWhatsappNumber] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [price, setPrice] = useState(0);
+  const [city, setCity] = useState("");
+  const [latInput, setLatInput] = useState("");
+  const [lngInput, setLngInput] = useState("");
+  const [imageItems, setImageItems] = useState<ProductImageItem[]>([]);
+  const [companyId, setCompanyId] = useState("");
+  const [publishActive, setPublishActive] = useState(false);
+  const [saveAsDraft, setSaveAsDraft] = useState(false);
+  const [dynamicValues, setDynamicValues] = useState<DynamicFieldValuesMap>({});
+  const [isMapOpen, setIsMapOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const previousCategoryId = useRef("");
+  const initialized = useRef(false);
+
+  const { data: categories = [] } = useQuery({
+    queryKey: ["product-categories", scope],
+    queryFn: () => (scope === "admin" ? fetchAdminCategories() : fetchProductCategories()),
+    enabled: active,
+  });
+
+  const { data: productDetails } = useQuery({
+    queryKey: ["product-details", resolvedId],
+    queryFn: () => fetchProductById(resolvedId!),
+    enabled: active && isEdit && Boolean(resolvedId),
+  });
+
+  const effectiveProduct = productDetails || product;
+
+  const { data: categoryFields = [], isLoading: categoryFieldsLoading } = useQuery({
+    queryKey: ["category-form-fields", categoryId, scope],
+    queryFn: () =>
+      scope === "admin" ? fetchCategoryDynamicFields(categoryId, false) : fetchCategoryFormFields(categoryId),
+    enabled: active && Boolean(categoryId),
+  });
+  const { data: companiesData } = useQuery({
+    queryKey: ["admin-companies-select"],
+    queryFn: () => fetchAdminCompanies({ page: 1, limit: 100, status: "APPROVED" }),
+    enabled: active && scope === "admin" && !isEdit,
+  });
+
+  useEffect(() => {
+    if (!active) {
+      initialized.current = false;
+      return;
+    }
+    setError(null);
+    const source = effectiveProduct || product;
+    if (isEdit && !source) return;
+
+    if (source) {
+      setTitleAr(source.titleAr || source.title);
+      setTitleEn(source.titleEn || "");
+      setDescriptionAr(source.descriptionAr || source.description || "");
+      setAdvertiserName(source.advertiserName || "");
+      setContactPhone(source.contactPhone || "");
+      setWhatsappNumber(source.whatsappNumber || "");
+      setCategoryId(source.category?.id || "");
+      setPrice(source.price || 0);
+      setCity(source.city || "");
+      setLatInput(source.lat !== undefined && source.lat !== null ? String(source.lat) : "");
+      setLngInput(source.lng !== undefined && source.lng !== null ? String(source.lng) : "");
+      setImageItems(productImagesToItems(source));
+      setCompanyId(source.company?.id || "");
+      setPublishActive(source.status === "ACTIVE");
+      setSaveAsDraft(source.status === "DRAFT");
+    } else if (!initialized.current) {
+      setTitleAr("");
+      setTitleEn("");
+      setDescriptionAr("");
+      setAdvertiserName("");
+      setContactPhone("");
+      setWhatsappNumber("");
+      setCategoryId("");
+      setPrice(0);
+      setCity("");
+      setLatInput("");
+      setLngInput("");
+      setImageItems([]);
+      setCompanyId("");
+      setPublishActive(true);
+      setSaveAsDraft(false);
+      setDynamicValues({});
+    }
+    previousCategoryId.current = source?.category?.id || "";
+    initialized.current = true;
+  }, [active, product, effectiveProduct, isEdit]);
+
+  useEffect(() => {
+    if (!active || !effectiveProduct?.fieldValues?.length) return;
+    setDynamicValues(fieldValuesToMap(effectiveProduct.fieldValues));
+  }, [active, effectiveProduct?.fieldValues, effectiveProduct?.id]);
+
+  useEffect(() => {
+    if (!active || isEdit) return;
+    if (previousCategoryId.current && previousCategoryId.current !== categoryId) {
+      setDynamicValues({});
+    }
+    previousCategoryId.current = categoryId;
+  }, [categoryId, active, isEdit]);
+
+  const selectedCategory = useMemo(
+    () => categories.find((cat) => cat.id === categoryId),
+    [categories, categoryId]
+  );
+  const requiresGovernorate = selectedCategory?.requiresGovernorate === true;
+  const governorateOpts = useMemo(() => governorateOptions(language), [language]);
+  const citySelectValue = requiresGovernorate
+    ? governorateOpts.find((option) => option.value === city || option.label === city)?.value ?? ""
+    : city;
+
+  const categoryName = (cat: { nameAr?: string; nameEn?: string; id: string }) =>
+    language === "ar" ? cat.nameAr || cat.nameEn || cat.id : cat.nameEn || cat.nameAr || cat.id;
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      if (!titleAr.trim() || titleAr.trim().length < 2) throw new Error(t("products.form.errorTitle"));
+      if (!descriptionAr.trim() || descriptionAr.trim().length < 5) {
+        throw new Error(t("products.form.errorDescription"));
+      }
+      if (!categoryId) throw new Error(t("products.form.errorCategory"));
+      if (Number.isNaN(Number(price)) || Number(price) < 0) {
+        throw new Error(t("products.form.errorPrice"));
+      }
+
+      const uploadImages = scope === "admin" ? uploadAdminProductImagesApi : uploadCompanyProductImagesApi;
+      const images = await resolveProductImagePaths(imageItems, uploadImages);
+
+      validateDynamicFieldValues(
+        categoryFields,
+        dynamicValues,
+        language,
+        (label) => t("products.form.fieldRequired").replace("{{label}}", label)
+      );
+
+      const parsedLat = latInput.trim() !== "" && !Number.isNaN(Number(latInput)) ? Number(latInput) : undefined;
+      const parsedLng = lngInput.trim() !== "" && !Number.isNaN(Number(lngInput)) ? Number(lngInput) : undefined;
+
+      const payload: ProductFormPayload = {
+        titleAr: titleAr.trim(),
+        titleEn: titleEn.trim() || titleAr.trim(),
+        descriptionAr: descriptionAr.trim(),
+        advertiserName: advertiserName.trim() || undefined,
+        contactPhone: contactPhone.trim() || undefined,
+        whatsappNumber: whatsappNumber.trim() || undefined,
+        categoryId,
+        price: Number(price),
+        city: requiresGovernorate ? (city || undefined) : undefined,
+        lat: parsedLat,
+        lng: parsedLng,
+        images,
+        dynamicFields: buildDynamicFieldsPayload(categoryFields, dynamicValues),
+      };
+
+      if (scope === "admin") {
+        if (isEdit && resolvedId) {
+          return updateAdminProductApi(resolvedId, {
+            ...payload,
+            publishActive,
+            submitForReview: !publishActive,
+          });
+        }
+        return createAdminProductApi({
+          ...payload,
+          companyId: companyId || undefined,
+          publishActive,
+        });
+      }
+
+      if (!canAdd && !isEdit && !saveAsDraft) {
+        throw new Error(t("products.form.errorQuota"));
+      }
+
+      if (isEdit && resolvedId) {
+        return updateCompanyProductApi(resolvedId, {
+          ...payload,
+          isDraft: saveAsDraft,
+          submit: !saveAsDraft,
+        });
+      }
+      return createCompanyProductApi({ ...payload, isDraft: saveAsDraft });
+    },
+    onSuccess: () => {
+      onSuccess();
+    },
+    onError: (err: unknown) => setError(getApiErrorMessage(err, t("products.form.saveFailed"))),
+  });
+
+  const canSave = !saveMutation.isPending && !(!canAdd && scope === "company" && !isEdit && !saveAsDraft);
+  const onSave = () => saveMutation.mutate();
+
+  const fields = (
+    <Stack spacing={2}>
+      {error ? (
+        <Typography variant="body2" color="error">
+          {error}
+        </Typography>
+      ) : null}
+      <TextField
+        size="small"
+        fullWidth
+        label={t("products.form.titleAr")}
+        value={titleAr}
+        onChange={(e) => setTitleAr(e.target.value)}
+      />
+      <TextField
+        size="small"
+        fullWidth
+        label={t("products.form.titleEn")}
+        value={titleEn}
+        onChange={(e) => setTitleEn(e.target.value)}
+      />
+      <TextField
+        size="small"
+        fullWidth
+        multiline
+        minRows={2}
+        label={t("products.form.descriptionAr")}
+        value={descriptionAr}
+        onChange={(e) => setDescriptionAr(e.target.value)}
+      />
+      <TextField
+        size="small"
+        fullWidth
+        label={t("products.form.advertiserName")}
+        value={advertiserName}
+        onChange={(e) => setAdvertiserName(e.target.value)}
+      />
+      <TextField
+        size="small"
+        fullWidth
+        label={t("products.form.contactPhone")}
+        value={contactPhone}
+        onChange={(e) => setContactPhone(e.target.value)}
+      />
+      <TextField
+        size="small"
+        fullWidth
+        label={t("products.form.whatsappNumber")}
+        value={whatsappNumber}
+        onChange={(e) => setWhatsappNumber(e.target.value)}
+      />
+      <TextField
+        select
+        size="small"
+        fullWidth
+        label={t("products.form.category")}
+        value={categoryId}
+        onChange={(e) => setCategoryId(e.target.value)}
+      >
+        <MenuItem value="">{t("products.form.selectCategory")}</MenuItem>
+        {categories.map((cat) => (
+          <MenuItem key={cat.id} value={cat.id}>
+            {categoryName(cat)}
+          </MenuItem>
+        ))}
+      </TextField>
+      {categoryId && categoryFieldsLoading ? (
+        <Typography variant="body2" color="text.secondary">
+          {t("products.form.loadingFields")}
+        </Typography>
+      ) : null}
+      {categoryId && !categoryFieldsLoading ? (
+        <ProductDynamicFieldsForm
+          fields={categoryFields}
+          values={dynamicValues}
+          onChange={setDynamicValues}
+          language={language}
+          disabled={saveMutation.isPending}
+          onUploadFile={async (file) => {
+            const upload = scope === "admin" ? uploadAdminProductImagesApi : uploadCompanyProductImagesApi;
+            const paths = await upload([file]);
+            return paths[0] || "";
+          }}
+          t={t}
+        />
+      ) : null}
+      <TextField
+        size="small"
+        fullWidth
+        type="number"
+        label={t("products.form.price")}
+        value={price}
+        onChange={(e) => setPrice(Number(e.target.value))}
+        slotProps={{ htmlInput: { min: 0 } }}
+      />
+      {requiresGovernorate ? (
+        <TextField
+          select
+          size="small"
+          fullWidth
+          label={t("products.form.city")}
+          value={citySelectValue}
+          onChange={(e) => {
+            const selected = governorateOpts.find((option) => option.value === e.target.value);
+            setCity(selected?.label ?? e.target.value);
+          }}
+        >
+          <MenuItem value="">{t("categories.fields.select")}</MenuItem>
+          {governorateOpts.map((option) => (
+            <MenuItem key={option.value} value={option.value}>
+              {option.label}
+            </MenuItem>
+          ))}
+        </TextField>
+      ) : null}
+
+      {latInput && lngInput ? (
+        <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+          <Button
+            fullWidth
+            size="small"
+            variant="outlined"
+            color="success"
+            startIcon={<LocationOn />}
+            onClick={() => setIsMapOpen(true)}
+          >
+            {isArabic
+              ? `الموقع المحدد: (${latInput}, ${lngInput})`
+              : `Location Set: (${latInput}, ${lngInput})`}
+          </Button>
+          <IconButton
+            size="small"
+            color="error"
+            onClick={() => {
+              setLatInput("");
+              setLngInput("");
+            }}
+            title={isArabic ? "مسح الموقع" : "Clear location"}
+          >
+            <Clear />
+          </IconButton>
+        </Stack>
+      ) : (
+        <Button
+          fullWidth
+          size="small"
+          variant="outlined"
+          startIcon={<AddLocationAlt />}
+          onClick={() => setIsMapOpen(true)}
+        >
+          {isArabic ? "تحديد الموقع على الخريطة (اختياري)" : "Select Location on Map (Optional)"}
+        </Button>
+      )}
+      <ProductImagePicker
+        items={imageItems}
+        onChange={setImageItems}
+        label={t("products.form.images")}
+        hint={t("products.form.uploadImagesHint")}
+        addLabel={t("products.form.addImages")}
+        disabled={saveMutation.isPending}
+      />
+      {scope === "admin" && !isEdit ? (
+        <TextField
+          select
+          size="small"
+          fullWidth
+          label={t("products.form.ownerCompany")}
+          value={companyId}
+          onChange={(e) => setCompanyId(e.target.value)}
+        >
+          <MenuItem value="">{t("products.form.globalOwner")}</MenuItem>
+          {(companiesData?.items || []).map((company) => (
+            <MenuItem key={company.id} value={company.id}>
+              {company.name}
+            </MenuItem>
+          ))}
+        </TextField>
+      ) : null}
+      {scope === "admin" ? (
+        <FormControlLabel
+          control={<Checkbox checked={publishActive} onChange={(e) => setPublishActive(e.target.checked)} />}
+          label={t("products.form.publishActive")}
+        />
+      ) : (
+        <FormControlLabel
+          control={<Checkbox checked={saveAsDraft} onChange={(e) => setSaveAsDraft(e.target.checked)} />}
+          label={t("products.form.saveDraft")}
+        />
+      )}
+
+      {showActions && !actionsSlot ? (
+        <Stack direction="row" spacing={1} sx={{ pt: 1 }}>
+          <Button variant="contained" disabled={!canSave} onClick={onSave}>
+            {saveMutation.isPending
+              ? t("products.form.saving")
+              : isEdit
+                ? t("products.form.save")
+                : t("products.form.create")}
+          </Button>
+          <Button onClick={onCancel}>{t("products.cancel")}</Button>
+        </Stack>
+      ) : null}
+      {actionsSlot
+        ? actionsSlot({ saving: saveMutation.isPending, onSave, onCancel, canSave })
+        : null}
+
+      <LocationPickerDialog
+        open={isMapOpen}
+        onClose={() => setIsMapOpen(false)}
+        initialLat={latInput ? Number(latInput) : undefined}
+        initialLng={lngInput ? Number(lngInput) : undefined}
+        onSelect={(coords) => {
+          if (coords) {
+            setLatInput(String(coords.lat));
+            setLngInput(String(coords.lng));
+          } else {
+            setLatInput("");
+            setLngInput("");
+          }
+        }}
+      />
+    </Stack>
+  );
+
+  return fields;
+}

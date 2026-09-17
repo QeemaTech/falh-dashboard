@@ -48,7 +48,7 @@ export function UserMenu({ onOpen, dropdown: externalDropdown }: Props) {
         variant="outlined"
         color="inherit"
         endIcon={<ExpandMore fontSize="small" />}
-        sx={{ borderRadius: 3, px: 1.5, py: 0.75, textTransform: "none" }}
+        sx={{ borderRadius: "8px", px: 1.25, py: 0.5, textTransform: "none", minHeight: 40 }}
       >
         <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
           <AppAvatar name={name} size="sm" />

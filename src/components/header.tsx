@@ -16,18 +16,36 @@ export function Header() {
 
   return (
     <AppBar position="sticky" color="inherit" sx={{ width: "100%" }}>
-      <Toolbar sx={{ flexDirection: "column", alignItems: "stretch", py: 1, gap: 0.75, minHeight: 56 }}>
-        <Stack direction="row" spacing={1.5} sx={{ width: "100%", alignItems: "center" }}>
-          <IconButton edge="start" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label="menu">
-            <Menu />
-          </IconButton>
-          <Box sx={{ flex: 1, maxWidth: 560 }}>
-            <SearchBar value={search} onChange={setSearch} />
-          </Box>
+      <Toolbar
+        sx={{
+          minHeight: { xs: 56, sm: 56 },
+          px: { xs: 1.5, md: 2.5 },
+          gap: 1.5,
+          alignItems: "center",
+        }}
+      >
+        <IconButton
+          edge="start"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          aria-label="menu"
+          size="small"
+          sx={{ borderRadius: "8px" }}
+        >
+          <Menu fontSize="small" />
+        </IconButton>
+
+        <Box sx={{ flex: 1, minWidth: 0, display: { xs: "none", sm: "block" } }}>
+          <Breadcrumbs />
+        </Box>
+
+        <Box sx={{ width: { xs: "100%", sm: 220, md: 280 }, flexShrink: 0, maxWidth: { xs: "none", sm: 280 } }}>
+          <SearchBar value={search} onChange={setSearch} />
+        </Box>
+
+        <Stack direction="row" spacing={0.5} sx={{ alignItems: "center", flexShrink: 0 }}>
           <NotificationMenu dropdown={notificationMenu} onOpen={userMenu.close} />
           <UserMenu dropdown={userMenu} onOpen={notificationMenu.close} />
         </Stack>
-        <Breadcrumbs />
       </Toolbar>
     </AppBar>
   );

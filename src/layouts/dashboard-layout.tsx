@@ -24,7 +24,17 @@ export function DashboardLayout() {
         }}
       >
         <Header />
-        <Container maxWidth={false} sx={{ py: { xs: 2, md: 2.5 }, px: { xs: 2, md: 3 }, flex: 1 }}>
+        <Container
+          maxWidth={false}
+          sx={{
+            py: { xs: 2, md: 2.5 },
+            px: { xs: 2, md: 3 },
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+          }}
+        >
           <Outlet />
         </Container>
       </Box>

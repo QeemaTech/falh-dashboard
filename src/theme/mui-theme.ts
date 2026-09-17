@@ -40,12 +40,15 @@ export function createAppTheme(mode: PaletteMode, direction: "ltr" | "rtl" = "lt
       h1: { fontWeight: 700, fontSize: "2rem" },
       h2: { fontWeight: 700, fontSize: "1.5rem" },
       h3: { fontWeight: 600, fontSize: "1.125rem" },
+      h4: { fontWeight: 600, fontSize: "1.0625rem" },
+      h5: { fontWeight: 600, fontSize: "1rem" },
+      h6: { fontWeight: 600, fontSize: "0.9375rem" },
       body1: { fontSize: "0.875rem" },
       body2: { fontSize: "0.8125rem" },
       button: { textTransform: "none", fontWeight: 600 },
     },
     spacing: 8,
-    shape: { borderRadius: 16 },
+    shape: { borderRadius: 8 },
     components: {
       MuiCssBaseline: {
         styleOverrides: {
@@ -58,8 +61,10 @@ export function createAppTheme(mode: PaletteMode, direction: "ltr" | "rtl" = "lt
         defaultProps: { disableElevation: true },
         styleOverrides: {
           root: ({ theme }) => ({
-            borderRadius: 12,
-            padding: "8px 16px",
+            borderRadius: 8,
+            padding: "7px 14px",
+            minHeight: 36,
+            fontWeight: 600,
             "&.MuiButton-containedPrimary:hover": {
               backgroundColor: theme.palette.primary.dark,
             },
@@ -75,9 +80,10 @@ export function createAppTheme(mode: PaletteMode, direction: "ltr" | "rtl" = "lt
         defaultProps: { elevation: 0 },
         styleOverrides: {
           root: {
+            borderRadius: 8,
             border: "1px solid",
             borderColor: mode === "light" ? "#E8EFEA" : "#1D2A22",
-            boxShadow: "0 8px 24px -16px rgba(15, 23, 42, 0.18)",
+            boxShadow: "none",
           },
         },
       },
@@ -87,15 +93,14 @@ export function createAppTheme(mode: PaletteMode, direction: "ltr" | "rtl" = "lt
       MuiOutlinedInput: {
         styleOverrides: {
           root: ({ theme }) => ({
-            borderRadius: 12,
+            borderRadius: 8,
             backgroundColor:
-              theme.palette.mode === "dark" ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.9)",
+              theme.palette.mode === "dark" ? "rgba(255,255,255,0.04)" : theme.palette.background.paper,
             "&:hover .MuiOutlinedInput-notchedOutline": {
               borderColor: theme.palette.primary.light,
             },
             "&.Mui-focused": {
-              backgroundColor:
-                theme.palette.mode === "dark" ? "rgba(255,255,255,0.06)" : theme.palette.background.paper,
+              backgroundColor: theme.palette.background.paper,
             },
             "& input:-webkit-autofill, & input:-webkit-autofill:hover, & input:-webkit-autofill:focus": {
               WebkitBoxShadow: `0 0 0 100px ${theme.palette.mode === "dark" ? "#161F19" : "#FFFFFF"} inset`,
@@ -124,6 +129,7 @@ export function createAppTheme(mode: PaletteMode, direction: "ltr" | "rtl" = "lt
         styleOverrides: {
           root: ({ theme }) => ({
             backgroundImage: "none",
+            borderRadius: 8,
             ...(theme.palette.mode === "dark" && {
               backgroundColor: theme.palette.background.paper,
             }),
@@ -135,7 +141,7 @@ export function createAppTheme(mode: PaletteMode, direction: "ltr" | "rtl" = "lt
           paper: ({ ownerState }) =>
             ownerState.variant === "temporary"
               ? {
-                  borderRadius: 16,
+                  borderRadius: 8,
                   margin: 8,
                   height: "calc(100% - 16px)",
                 }
@@ -146,12 +152,18 @@ export function createAppTheme(mode: PaletteMode, direction: "ltr" | "rtl" = "lt
                 },
         },
       },
+      MuiDialog: {
+        styleOverrides: {
+          paper: {
+            borderRadius: 8,
+          },
+        },
+      },
       MuiAppBar: {
         defaultProps: { elevation: 0, color: "inherit" },
         styleOverrides: {
           root: {
-            backgroundColor: mode === "light" ? "rgba(255,255,255,0.92)" : "rgba(15,24,18,0.92)",
-            backdropFilter: "blur(12px)",
+            backgroundColor: mode === "light" ? "#FFFFFF" : "#161F19",
             borderBottom: "1px solid",
             borderColor: mode === "light" ? "#E8EFEA" : "#1D2A22",
           },
@@ -161,11 +173,64 @@ export function createAppTheme(mode: PaletteMode, direction: "ltr" | "rtl" = "lt
         styleOverrides: {
           root: {
             backgroundColor: mode === "light" ? "#F3F5F4" : "#0D1510",
+            "& .MuiTableCell-head": {
+              color: mode === "light" ? "#6B7280" : "#9CA3AF",
+              fontWeight: 600,
+              fontSize: "0.75rem",
+              textTransform: "uppercase",
+              letterSpacing: "0.04em",
+            },
+          },
+        },
+      },
+      MuiTableRow: {
+        styleOverrides: {
+          root: {
+            "&:hover": {
+              backgroundColor: mode === "light" ? "rgba(35, 103, 58, 0.03)" : "rgba(77, 154, 91, 0.06)",
+            },
+          },
+        },
+      },
+      MuiTableCell: {
+        styleOverrides: {
+          root: {
+            borderColor: mode === "light" ? "#E8EFEA" : "#1D2A22",
+            padding: "12px 16px",
           },
         },
       },
       MuiChip: {
-        styleOverrides: { root: { fontWeight: 600 } },
+        styleOverrides: {
+          root: {
+            fontWeight: 600,
+            borderRadius: 8,
+          },
+        },
+      },
+      MuiListItemButton: {
+        styleOverrides: {
+          root: {
+            borderRadius: 8,
+          },
+        },
+      },
+      MuiMenu: {
+        styleOverrides: {
+          paper: {
+            borderRadius: 8,
+            border: "1px solid",
+            borderColor: mode === "light" ? "#E8EFEA" : "#1D2A22",
+            boxShadow: "0 4px 16px -4px rgba(15, 23, 42, 0.12)",
+          },
+        },
+      },
+      MuiTooltip: {
+        styleOverrides: {
+          tooltip: {
+            borderRadius: 8,
+          },
+        },
       },
     },
   });

@@ -33,7 +33,7 @@ export function AppLogo({ size = 48, showLabel = false, label, tagline }: AppLog
           justifyContent: "center",
           px: mode === "dark" ? 1 : 0,
           py: mode === "dark" ? 0.5 : 0,
-          borderRadius: 2,
+          borderRadius: "8px",
           bgcolor: mode === "dark" ? "rgba(255,255,255,0.96)" : "transparent",
           flexShrink: 0,
         }}

@@ -37,8 +37,8 @@ import { useUiStore } from "../store/ui-store";
 import { useI18n } from "../hooks/use-i18n";
 import { usePermission } from "../store/permission-context";
 
-export const SIDEBAR_WIDTH_OPEN = 260;
-export const SIDEBAR_WIDTH_COLLAPSED = 72;
+export const SIDEBAR_WIDTH_OPEN = 248;
+export const SIDEBAR_WIDTH_COLLAPSED = 68;
 
 type NavItem = { to: string; labelKey: string; icon: SvgIconComponent; permission?: string };
 
@@ -69,7 +69,6 @@ const sections: Array<{ titleKey: string; items: NavItem[] }> = [
       { to: "/content-management", labelKey: "nav.contentManagement", icon: Article, permission: "settings.view" },
     ],
   },
-
   {
     titleKey: "nav.section.services",
     items: [
@@ -93,16 +92,20 @@ const sidebarScrollSx = {
   minHeight: 0,
   overflowY: "auto",
   overflowX: "hidden",
-  scrollbarWidth: "none",
-  msOverflowStyle: "none",
-  "&::-webkit-scrollbar": { display: "none" },
-} as const;
+  scrollbarWidth: "thin" as const,
+  scrollbarColor: "transparent transparent",
+  "&:hover": { scrollbarColor: "#C5D0C8 transparent" },
+  "&::-webkit-scrollbar": { width: 4 },
+  "&::-webkit-scrollbar-thumb": { backgroundColor: "transparent", borderRadius: 8 },
+  "&:hover::-webkit-scrollbar-thumb": { backgroundColor: "#C5D0C8" },
+};
 
 function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const { sidebarOpen } = useUiStore();
   const { t } = useI18n();
   const { hasPermission } = usePermission();
   const location = useLocation();
+  const theme = useTheme();
 
   const visibleSections = sections
     .map((section) => ({
@@ -111,22 +114,27 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
     }))
     .filter((section) => section.items.length > 0);
 
+  const isActive = (to: string) => {
+    if (to === "/") return location.pathname === "/";
+    return location.pathname === to || location.pathname.startsWith(`${to}/`);
+  };
+
   return (
-    <Stack spacing={0.75} sx={{ px: 0.75, py: 0.75 }}>
+    <Stack spacing={0.5} sx={{ px: 1, py: 1 }}>
       {visibleSections.map((section) => (
-        <Box key={section.titleKey}>
+        <Box key={section.titleKey} sx={{ mb: 0.5 }}>
           {sidebarOpen ? (
             <Typography
               variant="caption"
               color="text.secondary"
               sx={{
-                px: 1,
-                pt: 0.75,
-                pb: 0.25,
+                px: 1.25,
+                pt: 1,
+                pb: 0.5,
                 display: "block",
-                fontWeight: 700,
+                fontWeight: 600,
                 fontSize: "0.65rem",
-                letterSpacing: 0.8,
+                letterSpacing: 0.6,
                 textTransform: "uppercase",
               }}
             >
@@ -135,27 +143,61 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
           ) : null}
           <List dense disablePadding>
             {section.items.map((item) => {
-              const active = location.pathname === item.to;
+              const active = isActive(item.to);
               const Icon = item.icon;
               return (
                 <ListItemButton
                   key={item.to}
                   component={NavLink}
                   to={item.to}
+                  end={item.to === "/"}
                   onClick={onNavigate}
                   selected={active}
                   sx={{
                     mb: 0.25,
-                    borderRadius: 1.5,
+                    borderRadius: "8px",
                     justifyContent: sidebarOpen ? "initial" : "center",
                     px: sidebarOpen ? 1.25 : 0.75,
-                    py: 0.5,
-                    minHeight: 36,
+                    py: 0.75,
+                    minHeight: 38,
+                    position: "relative",
+                    color: active ? "primary.main" : "text.primary",
+                    bgcolor: active
+                      ? theme.palette.mode === "dark"
+                        ? "rgba(77, 154, 91, 0.14)"
+                        : "rgba(35, 103, 58, 0.08)"
+                      : "transparent",
+                    "&::before": active
+                      ? {
+                          content: '""',
+                          position: "absolute",
+                          insetInlineStart: 0,
+                          top: 8,
+                          bottom: 8,
+                          width: 3,
+                          borderRadius: "0 2px 2px 0",
+                          bgcolor: "primary.main",
+                        }
+                      : undefined,
                     "&.Mui-selected": {
-                      bgcolor: "primary.main",
-                      color: "primary.contrastText",
-                      "& .MuiListItemIcon-root": { color: "inherit" },
-                      "&:hover": { bgcolor: "primary.dark" },
+                      bgcolor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(77, 154, 91, 0.14)"
+                          : "rgba(35, 103, 58, 0.08)",
+                      color: "primary.main",
+                      "& .MuiListItemIcon-root": { color: "primary.main" },
+                      "&:hover": {
+                        bgcolor:
+                          theme.palette.mode === "dark"
+                            ? "rgba(77, 154, 91, 0.18)"
+                            : "rgba(35, 103, 58, 0.12)",
+                      },
+                    },
+                    "&:hover": {
+                      bgcolor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(255,255,255,0.04)"
+                          : "rgba(15, 23, 42, 0.04)",
                     },
                   }}
                 >
@@ -163,7 +205,7 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                     sx={{
                       minWidth: sidebarOpen ? 32 : 0,
                       justifyContent: "center",
-                      color: active ? "inherit" : "text.secondary",
+                      color: active ? "primary.main" : "text.secondary",
                     }}
                   >
                     <Icon sx={{ fontSize: 18 }} />
@@ -172,7 +214,9 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                     <ListItemText
                       primary={t(item.labelKey)}
                       slotProps={{
-                        primary: { sx: { fontSize: "0.8125rem", fontWeight: active ? 600 : 500 } },
+                        primary: {
+                          sx: { fontSize: "0.8125rem", fontWeight: active ? 600 : 500 },
+                        },
                       }}
                     />
                   ) : null}
@@ -208,10 +252,13 @@ function SidebarShell({
       <Box
         sx={{
           flexShrink: 0,
-          px: sidebarOpen ? 1.25 : 0.75,
-          py: 1.25,
+          px: sidebarOpen ? 1.5 : 0.75,
+          py: 1.5,
           borderBottom: 1,
           borderColor: "divider",
+          minHeight: 56,
+          display: "flex",
+          alignItems: "center",
         }}
       >
         <Stack
@@ -220,9 +267,10 @@ function SidebarShell({
           sx={{
             alignItems: "center",
             justifyContent: sidebarOpen ? "flex-start" : "center",
+            width: "100%",
           }}
         >
-          <AppLogo size={sidebarOpen ? 32 : 28} showLabel={sidebarOpen} />
+          <AppLogo size={sidebarOpen ? 28 : 26} showLabel={sidebarOpen} />
         </Stack>
       </Box>
 
@@ -247,7 +295,7 @@ export function Sidebar() {
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         ModalProps={{ keepMounted: true }}
-        sx={{ "& .MuiDrawer-paper": { width: SIDEBAR_WIDTH_OPEN, overflow: "hidden" } }}
+        sx={{ "& .MuiDrawer-paper": { width: SIDEBAR_WIDTH_OPEN, overflow: "hidden", borderRadius: 0 } }}
       >
         <SidebarShell mobile onNavigate={() => setSidebarOpen(false)} />
       </Drawer>
@@ -275,6 +323,7 @@ export function Sidebar() {
           zIndex: (theme) => theme.zIndex.drawer,
           borderInlineEnd: 1,
           borderColor: "divider",
+          bgcolor: "background.paper",
           transition: (theme) =>
             theme.transitions.create("width", { duration: theme.transitions.duration.shortest }),
         }}
