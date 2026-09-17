@@ -28,12 +28,14 @@ type Props = {
   onOpen?: () => void;
   dropdown?: ReturnType<typeof useDropdown>;
   viewAllPath?: string;
+  buttonSx?: object;
 };
 
 export function NotificationMenu({
   onOpen,
   dropdown: externalDropdown,
   viewAllPath = "/notifications",
+  buttonSx,
 }: Props) {
   const theme = useTheme();
   const navigate = useNavigate();
@@ -59,14 +61,19 @@ export function NotificationMenu({
 
   return (
     <Box ref={containerRef}>
-      <IconButton onClick={handleToggle} aria-label={t("common.notifications")}>
+      <IconButton
+        onClick={handleToggle}
+        aria-label={t("common.notifications")}
+        size="small"
+        sx={buttonSx}
+      >
         <Badge
           color="error"
           badgeContent={unreadCount > 0 ? unreadCount : undefined}
           max={99}
           overlap="circular"
         >
-          <Notifications />
+          <Notifications sx={{ fontSize: 20 }} />
         </Badge>
       </IconButton>
 
@@ -74,11 +81,19 @@ export function NotificationMenu({
         anchorEl={anchorEl}
         open={open}
         onClose={close}
+        disableScrollLock
         anchorOrigin={{ vertical: "bottom", horizontal: menuAnchorHorizontal }}
         transformOrigin={{ vertical: "top", horizontal: menuAnchorHorizontal }}
         slotProps={{
           paper: {
-            sx: { width: 360, maxWidth: "92vw", mt: 0.5 },
+            sx: {
+              width: 360,
+              maxWidth: "92vw",
+              mt: 1,
+              borderRadius: "8px",
+              border: "1px solid",
+              borderColor: "divider",
+            },
           },
         }}
       >

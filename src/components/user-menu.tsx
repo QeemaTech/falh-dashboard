@@ -26,7 +26,7 @@ type Props = {
 
 export function UserMenu({ onOpen, dropdown: externalDropdown }: Props) {
   const theme = useTheme();
-  const isCompact = useMediaQuery(theme.breakpoints.down("sm"));
+  const isCompact = useMediaQuery(theme.breakpoints.down("md"));
   const internalDropdown = useDropdown();
   const { open, close, toggle, containerRef, anchorEl } = externalDropdown ?? internalDropdown;
   const { mode, toggleColorMode } = useColorMode();
@@ -51,12 +51,17 @@ export function UserMenu({ onOpen, dropdown: externalDropdown }: Props) {
           onClick={handleToggle}
           size="small"
           sx={{
+            width: 38,
+            height: 38,
             borderRadius: "8px",
-            border: 1,
+            border: "1px solid",
             borderColor: "divider",
-            width: 36,
-            height: 36,
             p: 0.25,
+            "&:hover": {
+              borderColor: "primary.main",
+              bgcolor: (th) =>
+                th.palette.mode === "dark" ? "rgba(77, 154, 91, 0.12)" : "rgba(35, 103, 58, 0.06)",
+            },
           }}
         >
           <AppAvatar name={name} size="sm" />
@@ -64,18 +69,51 @@ export function UserMenu({ onOpen, dropdown: externalDropdown }: Props) {
       ) : (
         <Button
           onClick={handleToggle}
-          variant="outlined"
           color="inherit"
-          endIcon={<ExpandMore fontSize="small" />}
-          sx={{ borderRadius: "8px", px: 1.25, py: 0.5, textTransform: "none", minHeight: 40 }}
+          endIcon={<ExpandMore sx={{ fontSize: 18, color: "text.secondary" }} />}
+          sx={{
+            borderRadius: "8px",
+            px: 1,
+            py: 0.5,
+            minHeight: 38,
+            textTransform: "none",
+            border: "1px solid",
+            borderColor: "divider",
+            bgcolor: "background.paper",
+            "&:hover": {
+              borderColor: "primary.main",
+              bgcolor: (th) =>
+                th.palette.mode === "dark" ? "rgba(77, 154, 91, 0.08)" : "rgba(35, 103, 58, 0.04)",
+            },
+          }}
         >
-          <Stack direction="row" spacing={1.25} sx={{ alignItems: "center" }}>
+          <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
             <AppAvatar name={name} size="sm" />
-            <Box sx={{ textAlign: "start" }}>
-              <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
+            <Box sx={{ textAlign: "start", maxWidth: 120 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontWeight: 700,
+                  lineHeight: 1.2,
+                  fontSize: "0.8125rem",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
                 {name}
               </Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.2 }}>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{
+                  lineHeight: 1.2,
+                  display: "block",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
                 {roleLabel}
               </Typography>
             </Box>
@@ -87,9 +125,20 @@ export function UserMenu({ onOpen, dropdown: externalDropdown }: Props) {
         anchorEl={anchorEl}
         open={open}
         onClose={close}
+        disableScrollLock
         anchorOrigin={{ vertical: "bottom", horizontal: menuAnchorHorizontal }}
         transformOrigin={{ vertical: "top", horizontal: menuAnchorHorizontal }}
-        slotProps={{ paper: { sx: { borderRadius: "8px", mt: 1, minWidth: 220 } } }}
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: "8px",
+              mt: 1,
+              minWidth: 240,
+              border: "1px solid",
+              borderColor: "divider",
+            },
+          },
+        }}
       >
         <Box sx={{ px: 2, py: 1.5 }}>
           <Typography variant="body2" sx={{ fontWeight: 700 }}>
@@ -100,18 +149,21 @@ export function UserMenu({ onOpen, dropdown: externalDropdown }: Props) {
           </Typography>
         </Box>
         <Divider />
-        <MenuItem onClick={toggleColorMode}>
+        <MenuItem onClick={toggleColorMode} sx={{ gap: 1.5, py: 1.25 }}>
           {mode === "dark" ? <LightMode fontSize="small" /> : <DarkMode fontSize="small" />}
-          <Typography sx={{ ml: 1.5 }}>{mode === "dark" ? t("menu.lightMode") : t("menu.darkMode")}</Typography>
+          <Typography variant="body2">
+            {mode === "dark" ? t("menu.lightMode") : t("menu.darkMode")}
+          </Typography>
         </MenuItem>
         <Divider />
-        <Box sx={{ px: 2, py: 1 }}>
-          <Typography variant="caption" color="text.secondary">
+        <Box sx={{ px: 2, py: 1.25 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
             {t("menu.language")}
           </Typography>
           <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
             <Button
               size="small"
+              fullWidth
               variant={language === "ar" ? "contained" : "outlined"}
               onClick={() => {
                 setLanguage("ar");
@@ -123,6 +175,7 @@ export function UserMenu({ onOpen, dropdown: externalDropdown }: Props) {
             </Button>
             <Button
               size="small"
+              fullWidth
               variant={language === "en" ? "contained" : "outlined"}
               onClick={() => {
                 setLanguage("en");
@@ -141,10 +194,10 @@ export function UserMenu({ onOpen, dropdown: externalDropdown }: Props) {
             logout();
             navigate("/login", { replace: true });
           }}
-          sx={{ color: "error.main" }}
+          sx={{ color: "error.main", gap: 1.5, py: 1.25 }}
         >
           <Logout fontSize="small" />
-          <Typography sx={{ ml: 1.5 }}>{t("common.logout")}</Typography>
+          <Typography variant="body2">{t("common.logout")}</Typography>
         </MenuItem>
       </Menu>
     </Box>

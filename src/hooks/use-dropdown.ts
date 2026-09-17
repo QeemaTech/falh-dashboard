@@ -5,6 +5,15 @@ type Options = {
   closeOnPointerLeave?: boolean;
 };
 
+function isInsideMuiOverlay(target: EventTarget | null) {
+  if (!(target instanceof Element)) return false;
+  return Boolean(
+    target.closest(
+      ".MuiModal-root, .MuiPopover-root, .MuiMenu-root, .MuiPopper-root, [role='presentation']"
+    )
+  );
+}
+
 export function useDropdown(options: Options = {}) {
   const { closeOnPointerLeave = false } = options;
   const [open, setOpen] = useState(false);
@@ -20,6 +29,7 @@ export function useDropdown(options: Options = {}) {
     if (!open) return;
     const onPointerDown = (event: MouseEvent) => {
       const target = event.target as Node;
+      if (isInsideMuiOverlay(target)) return;
       if (containerEl && !containerEl.contains(target)) {
         setOpen(false);
       }

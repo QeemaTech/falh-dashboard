@@ -52,6 +52,9 @@ export function createAppTheme(mode: PaletteMode, direction: "ltr" | "rtl" = "lt
     components: {
       MuiCssBaseline: {
         styleOverrides: {
+          html: {
+            scrollbarGutter: "stable",
+          },
           body: {
             scrollbarColor: mode === "light" ? "#C5D0C8 transparent" : "#2A3A30 transparent",
           },
