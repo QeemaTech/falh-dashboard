@@ -355,6 +355,8 @@ export type AdminCompany = {
   maxProducts: number;
   displayDays?: number;
   listingExpiresAt?: string | null;
+  isPartner?: boolean;
+  partnerSortOrder?: number;
   createdAt: string;
   description?: string;
   commercialReg?: string;
@@ -449,6 +451,14 @@ export async function assignCompanyProductLimitApi(
   payload: { maxProducts: number; displayDays?: number }
 ) {
   const { data } = await http.patch(`/admin/companies/${companyId}/product-limit`, payload);
+  return data;
+}
+
+export async function setCompanyPartnerApi(
+  companyId: string,
+  payload: { isPartner?: boolean; partnerSortOrder?: number }
+) {
+  const { data } = await http.patch(`/admin/companies/${companyId}/partner`, payload);
   return data;
 }
 
@@ -799,6 +809,53 @@ export async function createAdminBannerApi(payload: BannerFormPayload) {
 
 export async function deleteAdminBannerApi(bannerId: string) {
   await http.delete(`/admin/banners/${bannerId}`);
+}
+
+export type AdminOnboardingSlide = {
+  id: string;
+  imagePath: string;
+  titleAr: string;
+  titleEn?: string;
+  subtitleAr?: string;
+  subtitleEn?: string;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+};
+
+export async function fetchAdminOnboardingSlides() {
+  const { data } = await http.get<ApiResponse<AdminOnboardingSlide[]>>("/admin/onboarding-slides");
+  return data.data;
+}
+
+export type OnboardingSlideFormPayload = {
+  titleAr: string;
+  titleEn?: string;
+  subtitleAr?: string;
+  subtitleEn?: string;
+  image: File;
+  sortOrder?: number;
+  isActive?: boolean;
+};
+
+export async function createAdminOnboardingSlideApi(payload: OnboardingSlideFormPayload) {
+  const formData = new FormData();
+  formData.append("titleAr", payload.titleAr);
+  if (payload.titleEn) formData.append("titleEn", payload.titleEn);
+  if (payload.subtitleAr) formData.append("subtitleAr", payload.subtitleAr);
+  if (payload.subtitleEn) formData.append("subtitleEn", payload.subtitleEn);
+  formData.append("image", payload.image);
+  formData.append("sortOrder", String(payload.sortOrder ?? 0));
+  formData.append("isActive", String(payload.isActive ?? true));
+
+  const { data } = await http.post<ApiResponse<AdminOnboardingSlide>>("/admin/onboarding-slides", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data.data;
+}
+
+export async function deleteAdminOnboardingSlideApi(slideId: string) {
+  await http.delete(`/admin/onboarding-slides/${slideId}`);
 }
 
 export type AdminNotification = {

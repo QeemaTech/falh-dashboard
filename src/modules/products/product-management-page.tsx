@@ -11,6 +11,7 @@ import {
   MenuItem,
   Paper,
   Stack,
+  Switch,
   TextField,
   Typography,
 } from "@mui/material";
@@ -32,6 +33,7 @@ import {
   deleteProductApi,
   fetchAdminProducts,
   reviewProductApi,
+  setProductMostRequestedApi,
   type AdminProduct,
 } from "../../services/admin-api";
 import { resolveAssetUrl } from "../../utils/asset-url";
@@ -121,6 +123,11 @@ export function ProductManagementPage() {
       setSelected([]);
       invalidate();
     },
+  });
+  const mostRequestedMutation = useMutation({
+    mutationFn: ({ id, isFeaturedMostRequested }: { id: string; isFeaturedMostRequested: boolean }) =>
+      setProductMostRequestedApi(id, { isFeaturedMostRequested }),
+    onSuccess: invalidate,
   });
 
   const exportExcel = () => {
@@ -342,6 +349,7 @@ export function ProductManagementPage() {
                 <AppTableHeaderCell>{t("products.col.category")}</AppTableHeaderCell>
                 <AppTableHeaderCell>{t("products.col.owner")}</AppTableHeaderCell>
                 <AppTableHeaderCell>{t("products.col.status")}</AppTableHeaderCell>
+                <AppTableHeaderCell>{t("products.col.mostRequested")}</AppTableHeaderCell>
                 <AppTableHeaderCell>{t("products.col.price")}</AppTableHeaderCell>
                 <AppTableHeaderCell>{t("products.col.location")}</AppTableHeaderCell>
                 <AppTableHeaderCell>{t("products.col.created")}</AppTableHeaderCell>
@@ -376,6 +384,19 @@ export function ProductManagementPage() {
                       label={statusLabel(product.status)}
                       color={statusChipColor(product.status)}
                       variant="outlined"
+                    />
+                  </AppTableCell>
+                  <AppTableCell>
+                    <Switch
+                      size="small"
+                      checked={Boolean(product.isFeaturedMostRequested)}
+                      disabled={product.status !== "ACTIVE" || mostRequestedMutation.isPending}
+                      onChange={(e) =>
+                        mostRequestedMutation.mutate({
+                          id: product.id,
+                          isFeaturedMostRequested: e.target.checked,
+                        })
+                      }
                     />
                   </AppTableCell>
                   <AppTableCell>

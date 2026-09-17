@@ -15,6 +15,7 @@ import {
   MenuItem,
   Paper,
   Stack,
+  Switch,
   TextField,
   Tooltip,
   Typography,
@@ -37,6 +38,7 @@ import {
   fetchAdminCompanies,
   fetchAdminCompanyDetails,
   resetCompanyPasswordApi,
+  setCompanyPartnerApi,
   setCompanyStatusApi,
   type AdminCompany,
 } from "../../services/admin-api";
@@ -118,6 +120,7 @@ export function CompanyManagementPage() {
   const [maxProducts, setMaxProducts] = useState("10");
   const [displayDays, setDisplayDays] = useState("30");
   const [editDisplayDays, setEditDisplayDays] = useState(30);
+  const [editPartnerSortOrder, setEditPartnerSortOrder] = useState(0);
   const [companyEmail, setCompanyEmail] = useState("");
   const [companyPassword, setCompanyPassword] = useState("");
   const [adminNote, setAdminNote] = useState("");
@@ -246,6 +249,22 @@ export function CompanyManagementPage() {
       maxProducts: number;
       displayDays: number;
     }) => assignCompanyProductLimitApi(companyId, { maxProducts: limit, displayDays: days }),
+    onSuccess: () => {
+      invalidate();
+      toast.success(t("companies.limitSuccess"));
+    },
+  });
+
+  const partnerMutation = useMutation({
+    mutationFn: ({
+      companyId,
+      isPartner,
+      partnerSortOrder,
+    }: {
+      companyId: string;
+      isPartner?: boolean;
+      partnerSortOrder?: number;
+    }) => setCompanyPartnerApi(companyId, { isPartner, partnerSortOrder }),
     onSuccess: () => {
       invalidate();
       toast.success(t("companies.limitSuccess"));
@@ -475,6 +494,7 @@ export function CompanyManagementPage() {
               <AppTableHeaderCell>{t("companies.col.revenue")}</AppTableHeaderCell>
               <AppTableHeaderCell>{t("companies.col.rating")}</AppTableHeaderCell>
               <AppTableHeaderCell>{t("companies.col.status")}</AppTableHeaderCell>
+              <AppTableHeaderCell>{t("companies.col.partner")}</AppTableHeaderCell>
               <AppTableHeaderCell>{t("companies.col.actions")}</AppTableHeaderCell>
             </tr>
           </AppTableHead>
@@ -529,6 +549,16 @@ export function CompanyManagementPage() {
                     label={statusLabel(company.status)}
                     color={statusChipColor(company.status)}
                     variant="outlined"
+                  />
+                </AppTableCell>
+                <AppTableCell>
+                  <Switch
+                    size="small"
+                    checked={Boolean(company.isPartner)}
+                    disabled={company.status !== "APPROVED" || partnerMutation.isPending}
+                    onChange={(e) =>
+                      partnerMutation.mutate({ companyId: company.id, isPartner: e.target.checked })
+                    }
                   />
                 </AppTableCell>
                 <AppTableCell>
@@ -598,6 +628,7 @@ export function CompanyManagementPage() {
                             setSelectedCompany(company);
                             setNewLimit(company.maxProducts || 10);
                             setEditDisplayDays(company.displayDays || 30);
+                            setEditPartnerSortOrder(company.partnerSortOrder || 0);
                           }}
                         >
                           {t("companies.setLimit")}
@@ -645,6 +676,7 @@ export function CompanyManagementPage() {
                             setSelectedCompany(company);
                             setNewLimit(company.maxProducts || 10);
                             setEditDisplayDays(company.displayDays || 30);
+                            setEditPartnerSortOrder(company.partnerSortOrder || 0);
                           }}
                         >
                           {t("companies.setLimit")}
@@ -899,6 +931,29 @@ export function CompanyManagementPage() {
               }
             >
               {t("companies.saveLimit")}
+            </Button>
+            <TextField
+              label={t("companies.fieldPartnerSortOrder")}
+              type="number"
+              size="small"
+              fullWidth
+              disabled={selectedCompany.status !== "APPROVED"}
+              slotProps={{ htmlInput: { min: 0 } }}
+              value={editPartnerSortOrder}
+              onChange={(e) => setEditPartnerSortOrder(Number(e.target.value))}
+            />
+            <Button
+              variant="outlined"
+              fullWidth
+              disabled={selectedCompany.status !== "APPROVED" || partnerMutation.isPending}
+              onClick={() =>
+                partnerMutation.mutate({
+                  companyId: selectedCompany.id,
+                  partnerSortOrder: editPartnerSortOrder,
+                })
+              }
+            >
+              {t("companies.savePartnerOrder")}
             </Button>
           </Stack>
         ) : null}

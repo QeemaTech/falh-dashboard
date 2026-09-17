@@ -302,11 +302,23 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
         <TextField
           size="small"
           fullWidth
-          multiline
-          minRows={2}
-          label={t("products.form.descriptionEn")}
-          value={descriptionEn}
-          onChange={(e) => setDescriptionEn(e.target.value)}
+          label={t("products.form.advertiserName")}
+          value={advertiserName}
+          onChange={(e) => setAdvertiserName(e.target.value)}
+        />
+        <TextField
+          size="small"
+          fullWidth
+          label={t("products.form.contactPhone")}
+          value={contactPhone}
+          onChange={(e) => setContactPhone(e.target.value)}
+        />
+        <TextField
+          size="small"
+          fullWidth
+          label={t("products.form.whatsappNumber")}
+          value={whatsappNumber}
+          onChange={(e) => setWhatsappNumber(e.target.value)}
         />
         <TextField
           select
