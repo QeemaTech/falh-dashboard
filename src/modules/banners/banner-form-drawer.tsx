@@ -128,7 +128,7 @@ export function BannerFormDrawer({ open, onClose, onSuccess }: Props) {
           <input hidden type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
         </Button>
         {previewUrl ? (
-          <Box component="img" src={previewUrl} alt="" sx={{ height: 128, width: "100%", borderRadius: 2, objectFit: "cover" }} />
+          <Box component="img" src={previewUrl} alt="" sx={{ height: 128, width: "100%", borderRadius: "8px", objectFit: "cover" }} />
         ) : null}
 
         <BannerCompanyPicker

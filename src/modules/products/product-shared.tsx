@@ -68,7 +68,7 @@ export function ProductImageThumb({ product, size = 48 }: ProductImageThumbProps
       sx={{
         height: size,
         width: size,
-        borderRadius: 1,
+        borderRadius: "8px",
         objectFit: "cover",
         flexShrink: 0,
         border: 1,

@@ -94,7 +94,7 @@ export function LoginPage() {
           width: "100%",
           maxWidth: 440,
           p: { xs: 3, sm: 4 },
-          borderRadius: 3,
+          borderRadius: "8px",
           border: 1,
           borderColor: "divider",
           boxShadow: (theme) =>
@@ -156,7 +156,7 @@ export function LoginPage() {
             />
 
             {serverError ? (
-              <Alert severity="error" variant="outlined" sx={{ borderRadius: 2 }}>
+              <Alert severity="error" variant="outlined" sx={{ borderRadius: "8px" }}>
                 {serverError}
               </Alert>
             ) : null}

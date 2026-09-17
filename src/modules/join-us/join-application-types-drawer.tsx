@@ -200,7 +200,7 @@ export function JoinApplicationTypesDrawer({ open, onClose }: Props) {
                 direction="row"
                 sx={{
                   p: 1.5,
-                  borderRadius: 2,
+                  borderRadius: "8px",
                   border: "1px solid",
                   borderColor: "divider",
                   opacity: type.isActive ? 1 : 0.6,

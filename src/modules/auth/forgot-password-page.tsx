@@ -20,7 +20,7 @@ export function ForgotPasswordPage() {
           width: "100%",
           maxWidth: 440,
           p: { xs: 3, sm: 4 },
-          borderRadius: 3,
+          borderRadius: "8px",
           border: 1,
           borderColor: "divider",
         }}

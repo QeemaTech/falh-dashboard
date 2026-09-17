@@ -124,7 +124,7 @@ function ChartCard({
         </Box>
         {badge ? <Chip label={badge} size="small" color="primary" variant="outlined" /> : null}
       </Stack>
-      <Box sx={{ height: 256, borderRadius: 2, bgcolor: "action.hover", p: 1 }}>{children}</Box>
+      <Box sx={{ height: 256, borderRadius: "8px", bgcolor: "action.hover", p: 1 }}>{children}</Box>
     </Paper>
   );
 }

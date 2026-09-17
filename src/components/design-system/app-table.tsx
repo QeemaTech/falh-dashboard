@@ -20,7 +20,11 @@ type AppTableProps = PropsWithChildren<{
 
 export function AppTable({ title, actions, className, children }: AppTableProps) {
   return (
-    <Paper className={className} sx={{ overflow: "hidden" }}>
+    <Paper
+      className={className}
+      variant="outlined"
+      sx={{ overflow: "hidden", borderRadius: "8px", borderColor: "divider" }}
+    >
       {title || actions ? (
         <Stack
           direction="row"
