@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { AccountBalance, MonetizationOn, Search, Store } from "@mui/icons-material";
 import {
-  Button,
   Chip,
   CircularProgress,
   Grid,
@@ -14,9 +13,9 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import {
   AppStatCard,
-  AppDrawer,
   AppTable,
   AppTableCell,
   AppTableHead,
@@ -24,16 +23,13 @@ import {
 } from "../../components/design-system";
 import { EmptyState, FilterBar, PageHeader } from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
-import {
-  fetchCompanyFinanceDetails,
-  fetchFinanceOverview,
-  updateCompanyCommissionApi,
-  type CompanyFinanceSummary,
-} from "../../services/admin-api";
-import { toast } from "../../components/ui/sonner";
+import { fetchFinanceOverview, type CompanyFinanceSummary } from "../../services/admin-api";
 
 function formatMoney(amount: number, locale: string, currency: string) {
-  return `${currency} ${Number(amount || 0).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `${currency} ${Number(amount || 0).toLocaleString(locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
 function statusChipColor(status: string): "success" | "warning" | "error" | "default" {
@@ -45,15 +41,13 @@ function statusChipColor(status: string): "success" | "warning" | "error" | "def
 
 export function FinancePage() {
   const { t, language } = useI18n();
+  const navigate = useNavigate();
   const locale = language === "ar" ? "ar-EG" : "en-US";
   const currency = t("market.currency");
-  const queryClient = useQueryClient();
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState("");
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
-  const [commissionRate, setCommissionRate] = useState("10");
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 350);
@@ -69,54 +63,11 @@ export function FinancePage() {
       }),
   });
 
-  const { data: details, isLoading: detailsLoading } = useQuery({
-    queryKey: ["finance-company", selectedCompanyId],
-    queryFn: () => fetchCompanyFinanceDetails(selectedCompanyId!),
-    enabled: Boolean(selectedCompanyId),
-  });
-
-  useEffect(() => {
-    if (details?.summary?.commissionRate !== undefined) {
-      setCommissionRate(String(details.summary.commissionRate));
-    }
-  }, [details?.summary?.commissionRate, selectedCompanyId]);
-
-  const commissionMutation = useMutation({
-    mutationFn: ({ companyId, rate }: { companyId: string; rate: number }) =>
-      updateCompanyCommissionApi(companyId, rate),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["finance-overview"] });
-      queryClient.invalidateQueries({ queryKey: ["finance-company", selectedCompanyId] });
-      toast.success(t("finance.commissionSaved"));
-    },
-    onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : t("finance.commissionSaveFailed"));
-    },
-  });
-
   const rows = (data?.items || []) as CompanyFinanceSummary[];
   const totals = data?.totals;
 
   const statusLabel = (value: string) =>
     t(`companies.status.${value}` as "companies.status.PENDING") || value;
-
-  const orderStatusLabel = (value: string) =>
-    t(`orders.status.${value}` as "orders.status.PENDING") || value;
-
-  const selectedRow = useMemo(
-    () => rows.find((row) => row.companyId === selectedCompanyId) || null,
-    [rows, selectedCompanyId]
-  );
-
-  function saveCommission() {
-    if (!selectedCompanyId) return;
-    const rate = Number(commissionRate);
-    if (!Number.isFinite(rate) || rate < 0 || rate > 100) {
-      toast.error(t("finance.commissionInvalid"));
-      return;
-    }
-    commissionMutation.mutate({ companyId: selectedCompanyId, rate });
-  }
 
   if (isLoading && !data) {
     return (
@@ -158,11 +109,7 @@ export function FinancePage() {
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <AppStatCard
-            title={t("finance.statOrders")}
-            value={totals?.ordersCount || 0}
-            trend="neutral"
-          />
+          <AppStatCard title={t("finance.statOrders")} value={totals?.ordersCount || 0} trend="neutral" />
         </Grid>
       </Grid>
 
@@ -220,7 +167,7 @@ export function FinancePage() {
                 key={row.companyId}
                 hover
                 sx={{ cursor: "pointer" }}
-                onClick={() => setSelectedCompanyId(row.companyId)}
+                onClick={() => navigate(`/finance/${row.companyId}`)}
               >
                 <AppTableCell>
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
@@ -248,90 +195,6 @@ export function FinancePage() {
           </TableBody>
         </AppTable>
       )}
-
-      <AppDrawer
-        open={Boolean(selectedCompanyId)}
-        onClose={() => setSelectedCompanyId(null)}
-        title={selectedRow?.companyName || t("finance.detailsTitle")}
-        width={520}
-      >
-        {detailsLoading ? (
-          <Stack sx={{ py: 4, alignItems: "center" }}>
-            <CircularProgress size={28} />
-          </Stack>
-        ) : details ? (
-          <Stack spacing={2.5}>
-            <Stack spacing={1}>
-              <Typography variant="body2">
-                {t("finance.col.gross")}: {formatMoney(details.summary.grossSales, locale, currency)}
-              </Typography>
-              <Typography variant="body2">
-                {t("finance.col.commission")}: {formatMoney(details.summary.commissionAmount, locale, currency)}
-              </Typography>
-              <Typography variant="body2">
-                {t("finance.col.net")}: {formatMoney(details.summary.netToCompany, locale, currency)}
-              </Typography>
-              <Typography variant="body2">
-                {t("finance.col.orders")}: {details.summary.ordersCount}
-              </Typography>
-            </Stack>
-
-            <TextField
-              label={t("finance.commissionRate")}
-              type="number"
-              size="small"
-              fullWidth
-              helperText={t("finance.commissionHint")}
-              slotProps={{ htmlInput: { min: 0, max: 100, step: 0.5 } }}
-              value={commissionRate}
-              onChange={(e) => setCommissionRate(e.target.value)}
-            />
-            <Button
-              variant="contained"
-              onClick={saveCommission}
-              disabled={commissionMutation.isPending}
-            >
-              {t("finance.saveCommission")}
-            </Button>
-
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, pt: 1 }}>
-              {t("finance.ordersBreakdown")}
-            </Typography>
-
-            {!details.orders.length ? (
-              <Typography variant="body2" color="text.secondary">
-                {t("finance.noOrders")}
-              </Typography>
-            ) : (
-              details.orders.map((order) => (
-                <Stack
-                  key={order.orderId}
-                  spacing={0.75}
-                  sx={{ p: 1.5, border: 1, borderColor: "divider", borderRadius: 1 }}
-                >
-                  <Stack direction="row" sx={{ justifyContent: "space-between", gap: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      #{order.orderId.slice(0, 8)}
-                    </Typography>
-                    <Chip size="small" label={orderStatusLabel(order.status)} variant="outlined" />
-                  </Stack>
-                  <Typography variant="caption" color="text.secondary">
-                    {new Date(order.createdAt).toLocaleString(locale)} · {order.customerName}
-                  </Typography>
-                  {order.items.map((item) => (
-                    <Typography key={item.id} variant="body2" color="text.secondary">
-                      {item.title} × {item.quantity} {item.unit} — {formatMoney(item.lineTotal, locale, currency)}
-                    </Typography>
-                  ))}
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {t("finance.col.net")}: {formatMoney(order.netToCompany, locale, currency)}
-                  </Typography>
-                </Stack>
-              ))
-            )}
-          </Stack>
-        ) : null}
-      </AppDrawer>
     </Stack>
   );
 }

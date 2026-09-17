@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { Business, ContentCopy, Key, Search, Tune } from "@mui/icons-material";
 import {
-  Alert,
   Box,
   Button,
   Chip,
@@ -11,7 +10,6 @@ import {
   Grid,
   IconButton,
   InputAdornment,
-  Link,
   MenuItem,
   Paper,
   Stack,
@@ -20,9 +18,9 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import {
   AppStatCard,
-  AppDrawer,
   AppModal,
   AppTable,
   AppTableCell,
@@ -33,16 +31,12 @@ import {
 import { EmptyState, FilterBar, PageHeader } from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
 import {
-  approveCompanyWithCredentialsApi,
-  assignCompanyProductLimitApi,
   fetchAdminCompanies,
-  fetchAdminCompanyDetails,
   resetCompanyPasswordApi,
   setCompanyPartnerApi,
   setCompanyStatusApi,
   type AdminCompany,
 } from "../../services/admin-api";
-import { resolveAssetUrl } from "../../utils/asset-url";
 import { generatePassword } from "../../utils/generate-password";
 import { prefillCompanyLoginEmail } from "../../utils/company-approval-email";
 import { toast } from "../../components/ui/sonner";
@@ -85,47 +79,15 @@ const companyActionSecondaryBtnSx = {
   whiteSpace: "nowrap",
 } as const;
 
-function DetailLine({ label, value }: { label: string; value?: string | null }) {
-  if (!value) return null;
-  return (
-    <Typography variant="body2">
-      <Box component="span" sx={{ fontWeight: 600 }}>
-        {label}:
-      </Box>{" "}
-      {value}
-    </Typography>
-  );
-}
-
-function AssetLink({ path, label }: { path?: string; label: string }) {
-  if (!path) return <span>-</span>;
-  return (
-    <Link href={resolveAssetUrl(path)} target="_blank" rel="noreferrer">
-      {label}
-    </Link>
-  );
-}
-
 export function CompanyManagementPage() {
   const { t, language } = useI18n();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const locale = language === "ar" ? "ar-EG" : "en-US";
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState("");
-  const [selectedCompany, setSelectedCompany] = useState<AdminCompany | null>(null);
-  const [reviewCompanyId, setReviewCompanyId] = useState<string | null>(null);
-  const [newLimit, setNewLimit] = useState<number>(10);
-  const [maxProducts, setMaxProducts] = useState("10");
-  const [displayDays, setDisplayDays] = useState("30");
-  const [editDisplayDays, setEditDisplayDays] = useState(30);
-  const [editPartnerSortOrder, setEditPartnerSortOrder] = useState(0);
-  const [companyEmail, setCompanyEmail] = useState("");
-  const [companyPassword, setCompanyPassword] = useState("");
-  const [adminNote, setAdminNote] = useState("");
-  const [formError, setFormError] = useState("");
-  const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null);
   const [resetPasswordCompany, setResetPasswordCompany] = useState<AdminCompany | null>(null);
   const [resetPasswordInput, setResetPasswordInput] = useState("");
   const [resetPasswordResult, setResetPasswordResult] = useState<{
@@ -152,12 +114,6 @@ export function CompanyManagementPage() {
     placeholderData: (previousData) => previousData,
   });
 
-  const { data: reviewDetail, isLoading: reviewLoading } = useQuery({
-    queryKey: ["admin-company-details", reviewCompanyId],
-    queryFn: () => fetchAdminCompanyDetails(reviewCompanyId!),
-    enabled: Boolean(reviewCompanyId),
-  });
-
   const companies = data?.items || [];
   const totalRevenue = useMemo(
     () => companies.reduce((sum, company) => sum + (company.revenue || 0), 0),
@@ -169,57 +125,6 @@ export function CompanyManagementPage() {
     queryClient.invalidateQueries({ queryKey: ["join-us-applications"] });
     queryClient.invalidateQueries({ queryKey: ["users"] });
   };
-
-  const approveMutation = useMutation({
-    mutationFn: (payload: {
-      companyId: string;
-      email: string;
-      password: string;
-      maxProducts: number;
-      displayDays: number;
-      adminNote?: string;
-    }) =>
-      approveCompanyWithCredentialsApi(payload.companyId, {
-        email: payload.email,
-        password: payload.password,
-        maxProducts: payload.maxProducts,
-        displayDays: payload.displayDays,
-        adminNote: payload.adminNote,
-      }),
-    onSuccess: (result) => {
-      invalidate();
-      const creds = result?.credentials;
-      if (creds) {
-        setCredentials({ email: creds.email, password: creds.password });
-      } else {
-        closeReview();
-      }
-      toast.success(t("companies.approveSuccess"));
-      setFormError("");
-    },
-    onError: (err: unknown) => {
-      const message =
-        axios.isAxiosError(err) &&
-        err.response?.data &&
-        typeof err.response.data === "object" &&
-        "message" in err.response.data
-          ? String((err.response.data as { message: string }).message)
-          : err instanceof Error
-            ? err.message
-            : t("companies.reviewFailed");
-      setFormError(message);
-    },
-  });
-
-  const rejectMutation = useMutation({
-    mutationFn: ({ companyId, adminNote: note }: { companyId: string; adminNote?: string }) =>
-      setCompanyStatusApi(companyId, "reject", note),
-    onSuccess: () => {
-      invalidate();
-      closeReview();
-      toast.success(t("companies.rejectSuccess"));
-    },
-  });
 
   const statusMutation = useMutation({
     mutationFn: ({
@@ -239,19 +144,12 @@ export function CompanyManagementPage() {
     },
   });
 
-  const limitMutation = useMutation({
-    mutationFn: ({
-      companyId,
-      maxProducts: limit,
-      displayDays: days,
-    }: {
-      companyId: string;
-      maxProducts: number;
-      displayDays: number;
-    }) => assignCompanyProductLimitApi(companyId, { maxProducts: limit, displayDays: days }),
+  const rejectMutation = useMutation({
+    mutationFn: ({ companyId, adminNote: note }: { companyId: string; adminNote?: string }) =>
+      setCompanyStatusApi(companyId, "reject", note),
     onSuccess: () => {
       invalidate();
-      toast.success(t("companies.limitSuccess"));
+      toast.success(t("companies.rejectSuccess"));
     },
   });
 
@@ -298,33 +196,6 @@ export function CompanyManagementPage() {
   const statusLabel = (value: CompanyStatus) =>
     t(`companies.status.${value}` as "companies.status.PENDING");
 
-  useEffect(() => {
-    if (!reviewDetail || reviewDetail.status !== "PENDING" || credentials) return;
-    const suggested = prefillCompanyLoginEmail(
-      reviewDetail.joinApplication?.email,
-      reviewDetail.email_public,
-      reviewDetail.user?.email
-    );
-    if (suggested) setCompanyEmail(suggested);
-  }, [reviewDetail, credentials]);
-
-  function openReview(company: AdminCompany) {
-    setReviewCompanyId(company.id);
-    setMaxProducts(String(company.maxProducts || 10));
-    setDisplayDays(String(company.displayDays || 30));
-    setCompanyEmail(prefillCompanyLoginEmail(company.email_public, company.user?.email));
-    setCompanyPassword(generatePassword());
-    setAdminNote("");
-    setFormError("");
-    setCredentials(null);
-  }
-
-  function closeReview() {
-    setReviewCompanyId(null);
-    setCredentials(null);
-    setFormError("");
-  }
-
   function openResetPassword(company: AdminCompany) {
     setResetPasswordCompany(company);
     setResetPasswordInput(generatePassword());
@@ -351,37 +222,6 @@ export function CompanyManagementPage() {
     if (!resetPasswordResult?.password) return;
     await navigator.clipboard.writeText(resetPasswordResult.password);
     toast.success(t("companies.passwordCopied"));
-  }
-
-  function handleApprove() {
-    if (!reviewCompanyId) return;
-    const quota = Number(maxProducts);
-    const days = Number(displayDays);
-    const email = companyEmail.trim().toLowerCase();
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setFormError(t("companies.invalidEmail"));
-      return;
-    }
-    if (!companyPassword || companyPassword.length < 6) {
-      setFormError(t("companies.passwordMin"));
-      return;
-    }
-    if (!Number.isInteger(quota) || quota < 1) {
-      setFormError(t("companies.quotaMin"));
-      return;
-    }
-    if (!Number.isInteger(days) || days < 1) {
-      setFormError(t("companies.displayDaysMin"));
-      return;
-    }
-    approveMutation.mutate({
-      companyId: reviewCompanyId,
-      email,
-      password: companyPassword,
-      maxProducts: quota,
-      displayDays: days,
-      adminNote: adminNote.trim() || undefined,
-    });
   }
 
   if (isLoading && !data) {
@@ -569,7 +409,7 @@ export function CompanyManagementPage() {
                           size="small"
                           variant="contained"
                           sx={companyActionPrimaryBtnSx}
-                          onClick={() => openReview(company)}
+                          onClick={() => navigate(`/companies/${company.id}`)}
                         >
                           {t("companies.review")}
                         </Button>
@@ -624,12 +464,7 @@ export function CompanyManagementPage() {
                           size="small"
                           variant="outlined"
                           sx={companyActionSecondaryBtnSx}
-                          onClick={() => {
-                            setSelectedCompany(company);
-                            setNewLimit(company.maxProducts || 10);
-                            setEditDisplayDays(company.displayDays || 30);
-                            setEditPartnerSortOrder(company.partnerSortOrder || 0);
-                          }}
+                          onClick={() => navigate(`/companies/${company.id}`)}
                         >
                           {t("companies.setLimit")}
                         </Button>
@@ -672,12 +507,7 @@ export function CompanyManagementPage() {
                           size="small"
                           variant="outlined"
                           sx={companyActionSecondaryBtnSx}
-                          onClick={() => {
-                            setSelectedCompany(company);
-                            setNewLimit(company.maxProducts || 10);
-                            setEditDisplayDays(company.displayDays || 30);
-                            setEditPartnerSortOrder(company.partnerSortOrder || 0);
-                          }}
+                          onClick={() => navigate(`/companies/${company.id}`)}
                         >
                           {t("companies.setLimit")}
                         </Button>
@@ -691,273 +521,6 @@ export function CompanyManagementPage() {
         </AppTable>
       )}
 
-      <AppDrawer
-        open={Boolean(reviewCompanyId)}
-        onClose={closeReview}
-        title={t("companies.reviewTitle")}
-        width={480}
-      >
-        {reviewLoading ? (
-          <Stack sx={{ py: 4, alignItems: "center" }}>
-            <CircularProgress size={28} />
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
-              {t("common.loading")}
-            </Typography>
-          </Stack>
-        ) : null}
-
-        {reviewDetail && !reviewLoading ? (
-          <Stack spacing={2}>
-            <DetailLine label={t("companies.fieldName")} value={reviewDetail.name} />
-            <DetailLine
-              label={t("companies.fieldApplicant")}
-              value={reviewDetail.applicantName || reviewDetail.joinApplication?.fullName}
-            />
-            <DetailLine label={t("companies.col.phone")} value={reviewDetail.phone} />
-            <DetailLine
-              label={t("companies.fieldEmail")}
-              value={reviewDetail.email_public || reviewDetail.joinApplication?.email}
-            />
-            <DetailLine label={t("consultants.col.city")} value={reviewDetail.city} />
-            <DetailLine
-              label={t("companies.fieldDescription")}
-              value={reviewDetail.description || reviewDetail.joinApplication?.description}
-            />
-            <Typography variant="body2">
-              <Box component="span" sx={{ fontWeight: 600 }}>
-                {t("companies.fieldBusinessLicense")}:
-              </Box>{" "}
-              <AssetLink
-                path={reviewDetail.businessLicense || reviewDetail.joinApplication?.businessLicense}
-                label={t("companies.viewFile")}
-              />
-            </Typography>
-            <Typography variant="body2">
-              <Box component="span" sx={{ fontWeight: 600 }}>
-                {t("companies.fieldCommercialReg")}:
-              </Box>{" "}
-              <AssetLink
-                path={reviewDetail.commercialReg || reviewDetail.joinApplication?.commercialReg}
-                label={t("companies.viewFile")}
-              />
-            </Typography>
-
-            {!credentials ? (
-              <>
-                <TextField
-                  label={t("companies.productQuota")}
-                  type="number"
-                  size="small"
-                  fullWidth
-                  slotProps={{ htmlInput: { min: 1 } }}
-                  value={maxProducts}
-                  onChange={(e) => setMaxProducts(e.target.value)}
-                />
-                <TextField
-                  label={t("companies.displayDays")}
-                  type="number"
-                  size="small"
-                  fullWidth
-                  helperText={t("companies.displayDaysHint")}
-                  slotProps={{ htmlInput: { min: 1 } }}
-                  value={displayDays}
-                  onChange={(e) => setDisplayDays(e.target.value)}
-                />
-                <TextField
-                  label={t("companies.loginEmail")}
-                  type="email"
-                  size="small"
-                  fullWidth
-                  value={companyEmail}
-                  onChange={(e) => setCompanyEmail(e.target.value)}
-                />
-                <Stack direction="row" spacing={1}>
-                  <TextField
-                    label={t("companies.loginPassword")}
-                    type="text"
-                    size="small"
-                    fullWidth
-                    value={companyPassword}
-                    onChange={(e) => setCompanyPassword(e.target.value)}
-                  />
-                  <Button type="button" variant="outlined" onClick={() => setCompanyPassword(generatePassword())}>
-                    {t("companies.generatePassword")}
-                  </Button>
-                </Stack>
-                <TextField
-                  label={t("companies.adminNote")}
-                  size="small"
-                  fullWidth
-                  value={adminNote}
-                  onChange={(e) => setAdminNote(e.target.value)}
-                />
-              </>
-            ) : null}
-
-            {credentials ? (
-              <Paper variant="outlined" sx={{ p: 2, borderColor: "primary.light" }}>
-                <Typography variant="subtitle2" color="primary.main" gutterBottom>
-                  {t("companies.accountCreated")}
-                </Typography>
-                <Typography variant="body2">
-                  {t("companies.fieldEmail")}: {credentials.email}
-                </Typography>
-                <Typography variant="body2">
-                  {t("companies.loginPassword")}: {credentials.password}
-                </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
-                  {t("companies.credentialsHint")}
-                </Typography>
-                <Button sx={{ mt: 1 }} onClick={closeReview}>
-                  {t("companies.close")}
-                </Button>
-              </Paper>
-            ) : null}
-
-            {formError ? <Alert severity="error">{formError}</Alert> : null}
-
-            {!credentials && reviewDetail.status === "PENDING" ? (
-              <Stack direction="row" spacing={1}>
-                <Button variant="contained" disabled={approveMutation.isPending} onClick={handleApprove}>
-                  {t("companies.approve")}
-                </Button>
-                <Button
-                  variant="outlined"
-                  color="error"
-                  disabled={rejectMutation.isPending}
-                  onClick={() =>
-                    rejectMutation.mutate({
-                      companyId: reviewDetail.id,
-                      adminNote: adminNote.trim() || undefined,
-                    })
-                  }
-                >
-                  {t("companies.reject")}
-                </Button>
-              </Stack>
-            ) : null}
-          </Stack>
-        ) : null}
-      </AppDrawer>
-
-      <AppDrawer
-        open={Boolean(selectedCompany)}
-        onClose={() => setSelectedCompany(null)}
-        title={t("companies.detailsTitle")}
-      >
-        {selectedCompany ? (
-          <Stack spacing={2}>
-            <Typography variant="body2">
-              <Box component="span" sx={{ fontWeight: 600 }}>
-                {t("companies.fieldName")}:
-              </Box>{" "}
-              {selectedCompany.name}
-            </Typography>
-            <Typography variant="body2">
-              <Box component="span" sx={{ fontWeight: 600 }}>
-                {t("companies.fieldProductsCount")}:
-              </Box>{" "}
-              {selectedCompany.productsCount}
-            </Typography>
-            <Typography variant="body2">
-              <Box component="span" sx={{ fontWeight: 600 }}>
-                {t("companies.fieldProductLimit")}:
-              </Box>{" "}
-              {selectedCompany.maxProducts}
-            </Typography>
-            <Typography variant="body2">
-              <Box component="span" sx={{ fontWeight: 600 }}>
-                {t("companies.fieldDisplayDays")}:
-              </Box>{" "}
-              {selectedCompany.displayDays ?? 30}
-            </Typography>
-            <Typography variant="body2">
-              <Box component="span" sx={{ fontWeight: 600 }}>
-                {t("companies.fieldListingExpires")}:
-              </Box>{" "}
-              {selectedCompany.listingExpiresAt
-                ? new Date(selectedCompany.listingExpiresAt).toLocaleString(locale)
-                : "-"}
-            </Typography>
-            <Typography variant="body2">
-              <Box component="span" sx={{ fontWeight: 600 }}>
-                {t("companies.fieldRevenue")}:
-              </Box>{" "}
-              {t("market.currency")} {Number(selectedCompany.revenue || 0).toLocaleString(locale)}
-            </Typography>
-            <Typography variant="body2">
-              <Box component="span" sx={{ fontWeight: 600 }}>
-                {t("companies.fieldStatus")}:
-              </Box>{" "}
-              {statusLabel(selectedCompany.status)}
-            </Typography>
-            <Typography variant="body2">
-              <Box component="span" sx={{ fontWeight: 600 }}>
-                {t("companies.fieldRating")}:
-              </Box>{" "}
-              {Number(selectedCompany.rating || 0).toFixed(1)}
-            </Typography>
-            <TextField
-              label={t("companies.assignLimit")}
-              type="number"
-              size="small"
-              fullWidth
-              slotProps={{ htmlInput: { min: 1 } }}
-              value={newLimit}
-              onChange={(e) => setNewLimit(Number(e.target.value))}
-            />
-            <TextField
-              label={t("companies.displayDays")}
-              type="number"
-              size="small"
-              fullWidth
-              helperText={t("companies.displayDaysHint")}
-              slotProps={{ htmlInput: { min: 1 } }}
-              value={editDisplayDays}
-              onChange={(e) => setEditDisplayDays(Number(e.target.value))}
-            />
-            <Button
-              variant="contained"
-              fullWidth
-              onClick={() =>
-                limitMutation.mutate(
-                  {
-                    companyId: selectedCompany.id,
-                    maxProducts: newLimit,
-                    displayDays: editDisplayDays,
-                  },
-                  { onSuccess: () => setSelectedCompany(null) }
-                )
-              }
-            >
-              {t("companies.saveLimit")}
-            </Button>
-            <TextField
-              label={t("companies.fieldPartnerSortOrder")}
-              type="number"
-              size="small"
-              fullWidth
-              disabled={selectedCompany.status !== "APPROVED"}
-              slotProps={{ htmlInput: { min: 0 } }}
-              value={editPartnerSortOrder}
-              onChange={(e) => setEditPartnerSortOrder(Number(e.target.value))}
-            />
-            <Button
-              variant="outlined"
-              fullWidth
-              disabled={selectedCompany.status !== "APPROVED" || partnerMutation.isPending}
-              onClick={() =>
-                partnerMutation.mutate({
-                  companyId: selectedCompany.id,
-                  partnerSortOrder: editPartnerSortOrder,
-                })
-              }
-            >
-              {t("companies.savePartnerOrder")}
-            </Button>
-          </Stack>
-        ) : null}
-      </AppDrawer>
 
       <AppModal
         open={Boolean(resetPasswordCompany)}

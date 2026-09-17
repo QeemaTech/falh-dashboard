@@ -47,7 +47,7 @@ function MiniSparkline({ points }: { points: number[] }) {
 
 export function AnalyticsWidget({ title, value, hint, icon, change, trend = "up", sparkline }: Props) {
   return (
-    <Box sx={{ overflow: "hidden", borderRadius: 2 }}>
+    <Box sx={{ overflow: "hidden", borderRadius: "8px" }}>
       <AppStatCard title={title} value={value} hint={hint} icon={icon} change={change || "0.0%"} trend={trend} />
       {sparkline?.length ? (
         <Box sx={{ borderTop: 1, borderColor: "divider", px: 2, py: 1 }}>

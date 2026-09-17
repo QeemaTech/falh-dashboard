@@ -1,19 +1,29 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Add, Campaign, Delete } from "@mui/icons-material";
-import { Box, Button, CircularProgress, IconButton, Stack } from "@mui/material";
-import { AppBadge, AppTable, AppTableCell, AppTableHead, AppTableHeaderCell, AppTableRow } from "../../components/design-system";
+import { Box, Button, CircularProgress, IconButton, Stack, Typography } from "@mui/material";
+import { useNavigate } from "react-router-dom";
+import {
+  AppBadge,
+  AppModal,
+  AppTable,
+  AppTableCell,
+  AppTableHead,
+  AppTableHeaderCell,
+  AppTableRow,
+} from "../../components/design-system";
 import { EmptyState, PageHeader } from "../../components/layout";
 import { deleteAdminBannerApi, fetchAdminBanners, type AdminBanner } from "../../services/admin-api";
 import { resolveAssetUrl } from "../../utils/asset-url";
 import { getApiErrorMessage } from "../../utils/api-error";
-import { BannerFormDrawer } from "./banner-form-drawer";
 import { toast } from "../../components/ui/sonner";
 import { useI18n } from "../../hooks/use-i18n";
 
 export function BannersPage() {
   const { t, language } = useI18n();
+  const navigate = useNavigate();
   const [now] = useState(() => Date.now());
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const bannerTitle = (banner: AdminBanner) =>
     language === "ar"
@@ -36,7 +46,6 @@ export function BannersPage() {
     return "success";
   };
   const queryClient = useQueryClient();
-  const [formOpen, setFormOpen] = useState(false);
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["admin-banners"],
@@ -47,13 +56,13 @@ export function BannersPage() {
     mutationFn: deleteAdminBannerApi,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-banners"] });
+      setConfirmDeleteId(null);
       toast.success(t("banners.deleted"));
     },
     onError: (err: unknown) => toast.error(getApiErrorMessage(err, t("banners.deleteFailed"))),
   });
 
   const banners = useMemo(() => (data || []) as AdminBanner[], [data]);
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin-banners"] });
 
   return (
     <Stack spacing={3}>
@@ -62,7 +71,7 @@ export function BannersPage() {
         subtitle={t("banners.subtitle")}
         icon={<Campaign fontSize="small" />}
         action={
-          <Button variant="contained" startIcon={<Add />} onClick={() => setFormOpen(true)}>
+          <Button variant="contained" startIcon={<Add />} onClick={() => navigate("/banners/new")}>
             {t("banners.addButton")}
           </Button>
         }
@@ -83,7 +92,7 @@ export function BannersPage() {
           icon={<Campaign sx={{ fontSize: 48 }} />}
           title={t("banners.empty")}
           action={
-            <Button variant="contained" startIcon={<Add />} onClick={() => setFormOpen(true)}>
+            <Button variant="contained" startIcon={<Add />} onClick={() => navigate("/banners/new")}>
               {t("banners.addButton")}
             </Button>
           }
@@ -112,10 +121,10 @@ export function BannersPage() {
                       component="img"
                       src={resolveAssetUrl(banner.imagePath)}
                       alt={bannerTitle(banner)}
-                      sx={{ height: 56, width: 96, borderRadius: 1, objectFit: "cover" }}
+                      sx={{ height: 56, width: 96, borderRadius: "8px", objectFit: "cover" }}
                     />
                   ) : (
-                    <Box sx={{ height: 56, width: 96, borderRadius: 1, bgcolor: "action.hover" }} />
+                    <Box sx={{ height: 56, width: 96, borderRadius: "8px", bgcolor: "action.hover" }} />
                   )}
                 </AppTableCell>
                 <AppTableCell>{bannerTitle(banner)}</AppTableCell>
@@ -136,11 +145,7 @@ export function BannersPage() {
                     color="error"
                     size="small"
                     disabled={deleteMutation.isPending}
-                    onClick={() => {
-                      if (window.confirm(t("banners.confirmDelete"))) {
-                        deleteMutation.mutate(banner.id);
-                      }
-                    }}
+                    onClick={() => setConfirmDeleteId(banner.id)}
                   >
                     <Delete fontSize="small" />
                   </IconButton>
@@ -151,7 +156,29 @@ export function BannersPage() {
         </AppTable>
       ) : null}
 
-      <BannerFormDrawer open={formOpen} onClose={() => setFormOpen(false)} onSuccess={invalidate} />
+      <AppModal
+        open={Boolean(confirmDeleteId)}
+        onClose={() => setConfirmDeleteId(null)}
+        title={t("banners.confirmDelete")}
+        footer={
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="contained"
+              color="error"
+              disabled={deleteMutation.isPending}
+              onClick={() => confirmDeleteId && deleteMutation.mutate(confirmDeleteId)}
+              sx={{ borderRadius: "8px" }}
+            >
+              {t("common.delete", "Delete")}
+            </Button>
+            <Button onClick={() => setConfirmDeleteId(null)} sx={{ borderRadius: "8px" }}>
+              {t("banners.cancel")}
+            </Button>
+          </Stack>
+        }
+      >
+        <Typography variant="body2">{t("banners.confirmDelete")}</Typography>
+      </AppModal>
     </Stack>
   );
 }

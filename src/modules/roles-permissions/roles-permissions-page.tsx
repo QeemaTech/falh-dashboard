@@ -206,7 +206,7 @@ export function RolesPermissionsPage() {
                   key={role.id}
                   selected={selectedRoleId === role.id}
                   onClick={() => loadRole(role.id)}
-                  sx={{ borderRadius: 2, mb: 0.5 }}
+                  sx={{ borderRadius: "8px", mb: 0.5 }}
                 >
                   <ListItemText
                     primary={

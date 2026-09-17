@@ -77,7 +77,7 @@ function SettingsSection({ title, icon, children }: SettingsSectionProps) {
         height: "100%",
         border: 1,
         borderColor: "divider",
-        borderRadius: 2,
+        borderRadius: "8px",
       }}
     >
       <Stack direction="row" spacing={1} sx={{ mb: 2, alignItems: "center" }}>
@@ -85,11 +85,12 @@ function SettingsSection({ title, icon, children }: SettingsSectionProps) {
           sx={{
             width: 36,
             height: 36,
-            borderRadius: 1.5,
+            borderRadius: "8px",
             display: "grid",
             placeItems: "center",
-            bgcolor: "primary.main",
-            color: "primary.contrastText",
+            bgcolor: (theme) =>
+              theme.palette.mode === "dark" ? "rgba(77, 154, 91, 0.12)" : "rgba(35, 103, 58, 0.08)",
+            color: "primary.main",
           }}
         >
           {icon}
@@ -116,7 +117,7 @@ function AssetUploadCard({ label, previewUrl, onPick, chooseFileLabel }: AssetUp
       variant="outlined"
       sx={{
         p: 1.5,
-        borderRadius: 2,
+        borderRadius: "8px",
         height: "100%",
         display: "flex",
         flexDirection: "column",
@@ -129,7 +130,7 @@ function AssetUploadCard({ label, previewUrl, onPick, chooseFileLabel }: AssetUp
           display: "grid",
           placeItems: "center",
           bgcolor: "action.hover",
-          borderRadius: 1.5,
+          borderRadius: "8px",
           overflow: "hidden",
           mb: 1,
           border: "1px dashed",

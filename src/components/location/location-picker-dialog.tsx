@@ -283,7 +283,7 @@ export function LocationPickerDialog({
               height: 380,
               minHeight: 380,
               width: "100%",
-              borderRadius: 2,
+              borderRadius: "8px",
               overflow: "hidden",
               border: "1px solid",
               borderColor: "divider",
@@ -302,7 +302,7 @@ export function LocationPickerDialog({
           />
 
           {selectedCoords ? (
-            <Box sx={{ p: 1.5, borderRadius: 1.5, bgcolor: "action.hover" }}>
+            <Box sx={{ p: 1.5, borderRadius: "8px", bgcolor: "action.hover" }}>
               <Typography variant="body2" sx={{ fontWeight: 600, color: "primary.main" }}>
                 {isArabic ? "الموقع المحدد:" : "Selected Coordinates:"} {selectedCoords.lat},{" "}
                 {selectedCoords.lng}

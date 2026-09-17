@@ -46,7 +46,7 @@ export function ProductImageThumb({ product, size = 48 }: ProductImageThumbProps
         sx={{
           height: size,
           width: size,
-          borderRadius: 1,
+          borderRadius: "8px",
           bgcolor: "action.hover",
           display: "grid",
           placeItems: "center",
@@ -78,12 +78,17 @@ export function ProductImageThumb({ product, size = 48 }: ProductImageThumbProps
   );
 }
 
-function productActionsGridColumns(language: "ar" | "en", includeEditDelete: boolean) {
+function productActionsGridColumns(
+  language: "ar" | "en",
+  includeEditDelete: boolean,
+  moderatable: boolean
+) {
   const moderateCol = language === "ar" ? "68px" : "64px";
+  const moderateCols = moderatable ? ` ${moderateCol} ${moderateCol}` : "";
   if (includeEditDelete) {
-    return `32px ${moderateCol} ${moderateCol} 32px 32px`;
+    return `32px${moderateCols} 32px 32px`;
   }
-  return `32px ${moderateCol} ${moderateCol}`;
+  return `32px${moderateCols}`;
 }
 
 const actionBtnSx = {
@@ -126,7 +131,7 @@ export function ProductRowActions({
     <Box
       sx={{
         display: "grid",
-        gridTemplateColumns: productActionsGridColumns(language, includeEditDelete),
+        gridTemplateColumns: productActionsGridColumns(language, includeEditDelete, moderatable),
         columnGap: 0.75,
         alignItems: "center",
         width: "max-content",
@@ -137,26 +142,30 @@ export function ProductRowActions({
           <Visibility fontSize="small" />
         </IconButton>
       </Tooltip>
-      <Button
-        size="small"
-        variant="outlined"
-        color="success"
-        disabled={!moderatable || approvePending}
-        sx={actionBtnSx}
-        onClick={onApprove}
-      >
-        {t("products.approve")}
-      </Button>
-      <Button
-        size="small"
-        variant="outlined"
-        color="error"
-        disabled={!moderatable || rejectPending}
-        sx={actionBtnSx}
-        onClick={onReject}
-      >
-        {t("products.reject")}
-      </Button>
+      {moderatable ? (
+        <>
+          <Button
+            size="small"
+            variant="outlined"
+            color="success"
+            disabled={approvePending}
+            sx={actionBtnSx}
+            onClick={onApprove}
+          >
+            {t("products.approve")}
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            color="error"
+            disabled={rejectPending}
+            sx={actionBtnSx}
+            onClick={onReject}
+          >
+            {t("products.reject")}
+          </Button>
+        </>
+      ) : null}
       {onEdit ? (
         <Tooltip title={t("products.edit")}>
           <IconButton size="small" onClick={onEdit}>

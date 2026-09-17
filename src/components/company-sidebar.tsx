@@ -94,16 +94,18 @@ function CompanySidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                   selected={active}
                   sx={{
                     mb: 0.25,
-                    borderRadius: 1.5,
+                    borderRadius: "8px",
                     justifyContent: sidebarOpen ? "initial" : "center",
                     px: sidebarOpen ? 1.25 : 0.75,
-                    py: 0.5,
-                    minHeight: 36,
+                    py: 0.75,
+                    minHeight: 38,
+                    color: active ? "primary.main" : "text.primary",
+                    bgcolor: active ? "rgba(35, 103, 58, 0.08)" : "transparent",
                     "&.Mui-selected": {
-                      bgcolor: "primary.main",
-                      color: "primary.contrastText",
-                      "& .MuiListItemIcon-root": { color: "inherit" },
-                      "&:hover": { bgcolor: "primary.dark" },
+                      bgcolor: "rgba(35, 103, 58, 0.08)",
+                      color: "primary.main",
+                      "& .MuiListItemIcon-root": { color: "primary.main" },
+                      "&:hover": { bgcolor: "rgba(35, 103, 58, 0.12)" },
                     },
                   }}
                 >
@@ -111,7 +113,7 @@ function CompanySidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                     sx={{
                       minWidth: sidebarOpen ? 32 : 0,
                       justifyContent: "center",
-                      color: active ? "inherit" : "text.secondary",
+                      color: active ? "primary.main" : "text.secondary",
                     }}
                   >
                     <Icon sx={{ fontSize: 18 }} />

@@ -1,8 +1,17 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Add, Delete, ViewCarousel } from "@mui/icons-material";
-import { Box, Button, CircularProgress, IconButton, Stack } from "@mui/material";
-import { AppBadge, AppTable, AppTableCell, AppTableHead, AppTableHeaderCell, AppTableRow } from "../../components/design-system";
+import { Box, Button, CircularProgress, IconButton, Stack, Typography } from "@mui/material";
+import { useNavigate } from "react-router-dom";
+import {
+  AppBadge,
+  AppModal,
+  AppTable,
+  AppTableCell,
+  AppTableHead,
+  AppTableHeaderCell,
+  AppTableRow,
+} from "../../components/design-system";
 import { EmptyState, PageHeader } from "../../components/layout";
 import {
   deleteAdminOnboardingSlideApi,
@@ -11,14 +20,14 @@ import {
 } from "../../services/admin-api";
 import { resolveAssetUrl } from "../../utils/asset-url";
 import { getApiErrorMessage } from "../../utils/api-error";
-import { OnboardingFormDrawer } from "./onboarding-form-drawer";
 import { toast } from "../../components/ui/sonner";
 import { useI18n } from "../../hooks/use-i18n";
 
 export function OnboardingPage() {
   const { t, language } = useI18n();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [formOpen, setFormOpen] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const slideTitle = (slide: AdminOnboardingSlide) =>
     language === "ar" ? slide.titleAr : slide.titleEn || slide.titleAr;
@@ -32,13 +41,13 @@ export function OnboardingPage() {
     mutationFn: deleteAdminOnboardingSlideApi,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-onboarding-slides"] });
+      setConfirmDeleteId(null);
       toast.success(t("onboarding.deleted"));
     },
     onError: (err: unknown) => toast.error(getApiErrorMessage(err, t("onboarding.deleteFailed"))),
   });
 
   const slides = useMemo(() => (data || []) as AdminOnboardingSlide[], [data]);
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin-onboarding-slides"] });
 
   return (
     <Stack spacing={3}>
@@ -47,7 +56,7 @@ export function OnboardingPage() {
         subtitle={t("onboarding.subtitle")}
         icon={<ViewCarousel fontSize="small" />}
         action={
-          <Button variant="contained" startIcon={<Add />} onClick={() => setFormOpen(true)}>
+          <Button variant="contained" startIcon={<Add />} onClick={() => navigate("/onboarding/new")}>
             {t("onboarding.addButton")}
           </Button>
         }
@@ -68,7 +77,7 @@ export function OnboardingPage() {
           icon={<ViewCarousel sx={{ fontSize: 48 }} />}
           title={t("onboarding.empty")}
           action={
-            <Button variant="contained" startIcon={<Add />} onClick={() => setFormOpen(true)}>
+            <Button variant="contained" startIcon={<Add />} onClick={() => navigate("/onboarding/new")}>
               {t("onboarding.addButton")}
             </Button>
           }
@@ -95,10 +104,10 @@ export function OnboardingPage() {
                       component="img"
                       src={resolveAssetUrl(slide.imagePath)}
                       alt={slideTitle(slide)}
-                      sx={{ height: 56, width: 96, borderRadius: 1, objectFit: "cover" }}
+                      sx={{ height: 56, width: 96, borderRadius: "8px", objectFit: "cover" }}
                     />
                   ) : (
-                    <Box sx={{ height: 56, width: 96, borderRadius: 1, bgcolor: "action.hover" }} />
+                    <Box sx={{ height: 56, width: 96, borderRadius: "8px", bgcolor: "action.hover" }} />
                   )}
                 </AppTableCell>
                 <AppTableCell>{slideTitle(slide)}</AppTableCell>
@@ -113,11 +122,7 @@ export function OnboardingPage() {
                     color="error"
                     size="small"
                     disabled={deleteMutation.isPending}
-                    onClick={() => {
-                      if (window.confirm(t("onboarding.confirmDelete"))) {
-                        deleteMutation.mutate(slide.id);
-                      }
-                    }}
+                    onClick={() => setConfirmDeleteId(slide.id)}
                   >
                     <Delete fontSize="small" />
                   </IconButton>
@@ -128,7 +133,29 @@ export function OnboardingPage() {
         </AppTable>
       ) : null}
 
-      <OnboardingFormDrawer open={formOpen} onClose={() => setFormOpen(false)} onSuccess={invalidate} />
+      <AppModal
+        open={Boolean(confirmDeleteId)}
+        onClose={() => setConfirmDeleteId(null)}
+        title={t("onboarding.confirmDelete")}
+        footer={
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="contained"
+              color="error"
+              disabled={deleteMutation.isPending}
+              onClick={() => confirmDeleteId && deleteMutation.mutate(confirmDeleteId)}
+              sx={{ borderRadius: "8px" }}
+            >
+              {t("common.delete", "Delete")}
+            </Button>
+            <Button onClick={() => setConfirmDeleteId(null)} sx={{ borderRadius: "8px" }}>
+              {t("onboarding.cancel")}
+            </Button>
+          </Stack>
+        }
+      >
+        <Typography variant="body2">{t("onboarding.confirmDelete")}</Typography>
+      </AppModal>
     </Stack>
   );
 }

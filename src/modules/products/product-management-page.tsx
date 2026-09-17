@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Add, Download, Search, Tune } from "@mui/icons-material";
 import {
-  Box,
   Button,
   Checkbox,
   Chip,
@@ -15,16 +14,17 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import { utils as XLSXUtils, writeFile as XLSXWriteFile } from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import {
+  AppModal,
   AppTable,
   AppTableCell,
   AppTableHead,
   AppTableHeaderCell,
   AppTableRow,
-  AppDrawer,
 } from "../../components/design-system";
 import { EmptyState, FilterBar, PageHeader } from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
@@ -36,14 +36,11 @@ import {
   setProductMostRequestedApi,
   type AdminProduct,
 } from "../../services/admin-api";
-import { resolveAssetUrl } from "../../utils/asset-url";
-import { ProductFormDrawer } from "./product-form-drawer";
 import {
   categoryLabel,
   invalidateProductQueries,
   ProductImageThumb,
   ProductRowActions,
-  sortedProductImages,
   statusChipColor,
 } from "./product-shared";
 
@@ -56,15 +53,13 @@ function formatSelectedLabel(template: string, count: number) {
 export function ProductManagementPage() {
   const { t, language } = useI18n();
   const locale = language === "ar" ? "ar-EG" : "en-US";
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<string[]>([]);
-  const [drawerProduct, setDrawerProduct] = useState<AdminProduct | null>(null);
-  const [formOpen, setFormOpen] = useState(false);
-  const [editProduct, setEditProduct] = useState<AdminProduct | null>(null);
   const [rejectNote, setRejectNote] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const limit = 20;
@@ -206,14 +201,7 @@ export function ProductManagementPage() {
         title={t("products.title")}
         subtitle={t("products.subtitle")}
         action={
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={() => {
-              setEditProduct(null);
-              setFormOpen(true);
-            }}
-          >
+          <Button variant="contained" startIcon={<Add />} onClick={() => navigate("/products/new")}>
             {t("products.add")}
           </Button>
         }
@@ -409,7 +397,7 @@ export function ProductManagementPage() {
                       product={product}
                       language={language}
                       t={t}
-                      onView={() => setDrawerProduct(product)}
+                      onView={() => navigate(`/products/${product.id}`)}
                       onApprove={() => approveMutation.mutate(product.id)}
                       onReject={() =>
                         rejectMutation.mutate({
@@ -417,10 +405,7 @@ export function ProductManagementPage() {
                           adminNote: rejectNote.trim() || t("products.defaultRejectNote"),
                         })
                       }
-                      onEdit={() => {
-                        setEditProduct(product);
-                        setFormOpen(true);
-                      }}
+                      onEdit={() => navigate(`/products/${product.id}/edit`)}
                       onDelete={() => setConfirmDeleteId(product.id)}
                       approvePending={approveMutation.isPending}
                       rejectPending={rejectMutation.isPending}
@@ -458,111 +443,7 @@ export function ProductManagementPage() {
         </>
       ) : null}
 
-      <AppDrawer
-        open={Boolean(drawerProduct)}
-        onClose={() => setDrawerProduct(null)}
-        title={t("products.detailsTitle")}
-        footer={
-          drawerProduct ? (
-            <Stack direction="row" spacing={1}>
-              <Button
-                variant="contained"
-                color="success"
-                disabled={drawerProduct.status !== "PENDING" || approveMutation.isPending}
-                onClick={() => {
-                  approveMutation.mutate(drawerProduct.id);
-                  setDrawerProduct(null);
-                }}
-              >
-                {t("products.approve")}
-              </Button>
-              <Button
-                variant="outlined"
-                color="error"
-                disabled={drawerProduct.status !== "PENDING" || rejectMutation.isPending}
-                onClick={() => {
-                  rejectMutation.mutate({
-                    id: drawerProduct.id,
-                    adminNote: rejectNote.trim() || t("products.defaultRejectNote"),
-                  });
-                  setDrawerProduct(null);
-                }}
-              >
-                {t("products.reject")}
-              </Button>
-              <Button onClick={() => setDrawerProduct(null)}>{t("products.close")}</Button>
-            </Stack>
-          ) : null
-        }
-      >
-        {drawerProduct ? (
-          <Stack spacing={2}>
-            {sortedProductImages(drawerProduct).length ? (
-              <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
-                {sortedProductImages(drawerProduct).map((img) => (
-                  <Box
-                    key={img.id}
-                    component="img"
-                    src={resolveAssetUrl(img.path)}
-                    alt=""
-                    sx={{ height: 80, width: 80, borderRadius: 1, objectFit: "cover" }}
-                  />
-                ))}
-              </Stack>
-            ) : null}
-            <Typography variant="body2">
-              <Box component="span" sx={{ fontWeight: 600 }}>
-                {t("products.field.title")}:
-              </Box>{" "}
-              {drawerProduct.title}
-            </Typography>
-            <Typography variant="body2">
-              <Box component="span" sx={{ fontWeight: 600 }}>
-                {t("products.field.category")}:
-              </Box>{" "}
-              {categoryLabel(drawerProduct, language)}
-            </Typography>
-            <Typography variant="body2">
-              <Box component="span" sx={{ fontWeight: 600 }}>
-                {t("products.field.owner")}:
-              </Box>{" "}
-              {drawerProduct.company?.name || drawerProduct.user?.name || t("products.globalOwner")}
-            </Typography>
-            <Typography variant="body2">
-              <Box component="span" sx={{ fontWeight: 600 }}>
-                {t("products.field.status")}:
-              </Box>{" "}
-              {statusLabel(drawerProduct.status)}
-            </Typography>
-            <Typography variant="body2">
-              <Box component="span" sx={{ fontWeight: 600 }}>
-                {t("products.field.price")}:
-              </Box>{" "}
-              {drawerProduct.price ? `${t("market.currency")} ${drawerProduct.price}` : "-"}
-            </Typography>
-            <Typography variant="body2">
-              <Box component="span" sx={{ fontWeight: 600 }}>
-                {t("products.field.location")}:
-              </Box>{" "}
-              {drawerProduct.city || "-"}
-            </Typography>
-            <Typography variant="body2">
-              <Box component="span" sx={{ fontWeight: 600 }}>
-                {t("products.field.created")}:
-              </Box>{" "}
-              {new Date(drawerProduct.createdAt).toLocaleString(locale)}
-            </Typography>
-            <Typography variant="body2">
-              <Box component="span" sx={{ fontWeight: 600 }}>
-                {t("products.field.description")}:
-              </Box>{" "}
-              {drawerProduct.description || "-"}
-            </Typography>
-          </Stack>
-        ) : null}
-      </AppDrawer>
-
-      <AppDrawer
+      <AppModal
         open={Boolean(confirmDeleteId)}
         onClose={() => setConfirmDeleteId(null)}
         title={t("products.confirmDelete")}
@@ -572,26 +453,18 @@ export function ProductManagementPage() {
               variant="contained"
               color="error"
               onClick={() => confirmDeleteId && deleteMutation.mutate(confirmDeleteId)}
+              sx={{ borderRadius: "8px" }}
             >
               {t("products.delete")}
             </Button>
-            <Button onClick={() => setConfirmDeleteId(null)}>{t("products.cancel")}</Button>
+            <Button onClick={() => setConfirmDeleteId(null)} sx={{ borderRadius: "8px" }}>
+              {t("products.cancel")}
+            </Button>
           </Stack>
         }
       >
         <Typography variant="body2">{t("products.confirmDeleteMsg")}</Typography>
-      </AppDrawer>
-
-      <ProductFormDrawer
-        open={formOpen}
-        onClose={() => {
-          setFormOpen(false);
-          setEditProduct(null);
-        }}
-        onSuccess={invalidate}
-        scope="admin"
-        product={editProduct}
-      />
+      </AppModal>
     </Stack>
   );
 }

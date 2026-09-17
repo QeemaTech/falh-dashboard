@@ -7,20 +7,19 @@ import {
   Checkbox,
   Chip,
   CircularProgress,
-  Divider,
   InputAdornment,
   Paper,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import {
   AppTable,
   AppTableCell,
   AppTableHead,
   AppTableHeaderCell,
   AppTableRow,
-  AppDrawer,
 } from "../../components/design-system";
 import { EmptyState, FilterBar, PageHeader } from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
@@ -30,14 +29,12 @@ import {
   reviewProductApi,
   type AdminProduct,
 } from "../../services/admin-api";
-import { resolveAssetUrl } from "../../utils/asset-url";
 import {
   categoryLabel,
   groupProductsByCompany,
   invalidateProductQueries,
   ProductImageThumb,
   ProductRowActions,
-  sortedProductImages,
 } from "./product-shared";
 
 function formatSelectedLabel(template: string, count: number) {
@@ -47,11 +44,11 @@ function formatSelectedLabel(template: string, count: number) {
 export function PendingProductsPage() {
   const { t, language } = useI18n();
   const locale = language === "ar" ? "ar-EG" : "en-US";
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
-  const [drawerProduct, setDrawerProduct] = useState<AdminProduct | null>(null);
   const [rejectNote, setRejectNote] = useState("");
 
   useEffect(() => {
@@ -283,7 +280,7 @@ export function PendingProductsPage() {
                           product={product}
                           language={language}
                           t={t}
-                          onView={() => setDrawerProduct(product)}
+                          onView={() => navigate(`/pending-products/${product.id}`)}
                           onApprove={() => approveMutation.mutate(product.id)}
                           onReject={() =>
                             rejectMutation.mutate({
@@ -344,104 +341,6 @@ export function PendingProductsPage() {
         </Paper>
       ) : null}
 
-      <AppDrawer
-        open={Boolean(drawerProduct)}
-        onClose={() => setDrawerProduct(null)}
-        title={t("products.detailsTitle")}
-        footer={
-          drawerProduct ? (
-            <Stack direction="row" spacing={1}>
-              <Button
-                variant="contained"
-                color="success"
-                disabled={approveMutation.isPending}
-                onClick={() => {
-                  approveMutation.mutate(drawerProduct.id);
-                  setDrawerProduct(null);
-                }}
-              >
-                {t("products.approve")}
-              </Button>
-              <Button
-                variant="outlined"
-                color="error"
-                disabled={rejectMutation.isPending}
-                onClick={() => {
-                  rejectMutation.mutate({
-                    id: drawerProduct.id,
-                    adminNote: rejectNote.trim() || t("products.defaultRejectNote"),
-                  });
-                  setDrawerProduct(null);
-                }}
-              >
-                {t("products.reject")}
-              </Button>
-              <Button onClick={() => setDrawerProduct(null)}>{t("products.close")}</Button>
-            </Stack>
-          ) : null
-        }
-      >
-        {drawerProduct ? (
-          <Stack spacing={2}>
-            {sortedProductImages(drawerProduct).length ? (
-              <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
-                {sortedProductImages(drawerProduct).map((img) => (
-                  <Box
-                    key={img.id}
-                    component="img"
-                    src={resolveAssetUrl(img.path)}
-                    alt=""
-                    sx={{ height: 88, width: 88, borderRadius: 1, objectFit: "cover", border: 1, borderColor: "divider" }}
-                  />
-                ))}
-              </Stack>
-            ) : null}
-            <Typography variant="body2">
-              <Box component="span" sx={{ fontWeight: 600 }}>
-                {t("products.field.title")}:
-              </Box>{" "}
-              {drawerProduct.title}
-            </Typography>
-            <Typography variant="body2">
-              <Box component="span" sx={{ fontWeight: 600 }}>
-                {t("products.field.company")}:
-              </Box>{" "}
-              {drawerProduct.company?.name || t("products.globalOwner")}
-            </Typography>
-            <Typography variant="body2">
-              <Box component="span" sx={{ fontWeight: 600 }}>
-                {t("products.field.category")}:
-              </Box>{" "}
-              {categoryLabel(drawerProduct, language)}
-            </Typography>
-            <Typography variant="body2">
-              <Box component="span" sx={{ fontWeight: 600 }}>
-                {t("products.field.price")}:
-              </Box>{" "}
-              {drawerProduct.price ? `${t("market.currency")} ${drawerProduct.price}` : "-"}
-            </Typography>
-            <Typography variant="body2">
-              <Box component="span" sx={{ fontWeight: 600 }}>
-                {t("products.field.location")}:
-              </Box>{" "}
-              {drawerProduct.city || "-"}
-            </Typography>
-            <Typography variant="body2">
-              <Box component="span" sx={{ fontWeight: 600 }}>
-                {t("products.field.created")}:
-              </Box>{" "}
-              {new Date(drawerProduct.createdAt).toLocaleString(locale)}
-            </Typography>
-            <Divider />
-            <Typography variant="body2">
-              <Box component="span" sx={{ fontWeight: 600 }}>
-                {t("products.field.description")}:
-              </Box>{" "}
-              {drawerProduct.description || "-"}
-            </Typography>
-          </Stack>
-        ) : null}
-      </AppDrawer>
     </Stack>
   );
 }

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import {
   Add,
   Delete,
@@ -16,10 +17,6 @@ import {
   Card,
   CardContent,
   Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   FormControlLabel,
   Grid,
   IconButton,
@@ -37,10 +34,9 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { AppModal } from "../../components/design-system";
 import { useI18n } from "../../hooks/use-i18n";
 import {
-  createAdminFaqApi,
-  createAdminTermApi,
   deleteAdminFaqApi,
   deleteAdminTermApi,
   fetchAdminFaqs,
@@ -49,9 +45,7 @@ import {
   updateAdminFaqApi,
   updateAdminPrivacyPolicyApi,
   updateAdminTermApi,
-  type FaqItem,
   type PrivacyPolicy,
-  type TermsItem,
 } from "../../services/admin-api";
 import { getApiErrorMessage } from "../../utils/api-error";
 
@@ -59,30 +53,11 @@ type TabValue = "terms" | "faq" | "privacy";
 
 export function ContentManagementPage() {
   const { t, isArabic } = useI18n();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabValue>("terms");
-
-  // --- Terms & Conditions State ---
-  const [termDialogOpen, setTermDialogOpen] = useState(false);
-  const [editingTerm, setEditingTerm] = useState<TermsItem | null>(null);
-  const [termTitleAr, setTermTitleAr] = useState("");
-  const [termTitleEn, setTermTitleEn] = useState("");
-  const [termContentAr, setTermContentAr] = useState("");
-  const [termContentEn, setTermContentEn] = useState("");
-  const [termSortOrder, setTermSortOrder] = useState(0);
-  const [termIsActive, setTermIsActive] = useState(true);
-  const [termError, setTermError] = useState<string | null>(null);
-
-  // --- FAQ State ---
-  const [faqDialogOpen, setFaqDialogOpen] = useState(false);
-  const [editingFaq, setEditingFaq] = useState<FaqItem | null>(null);
-  const [faqQuestionAr, setFaqQuestionAr] = useState("");
-  const [faqQuestionEn, setFaqQuestionEn] = useState("");
-  const [faqAnswerAr, setFaqAnswerAr] = useState("");
-  const [faqAnswerEn, setFaqAnswerEn] = useState("");
-  const [faqSortOrder, setFaqSortOrder] = useState(0);
-  const [faqIsActive, setFaqIsActive] = useState(true);
-  const [faqError, setFaqError] = useState<string | null>(null);
+  const [confirmDeleteTermId, setConfirmDeleteTermId] = useState<string | null>(null);
+  const [confirmDeleteFaqId, setConfirmDeleteFaqId] = useState<string | null>(null);
 
   // --- Privacy Policy State ---
   const [privacyForm, setPrivacyForm] = useState<Partial<PrivacyPolicy>>({});
@@ -109,37 +84,12 @@ export function ContentManagementPage() {
     },
   });
 
-  // Terms Mutations
-  const saveTermMutation = useMutation({
-    mutationFn: async () => {
-      setTermError(null);
-      if (!termTitleAr.trim()) throw new Error(isArabic ? "العنوان بالعربية مطلوب" : "Arabic title is required");
-      if (!termContentAr.trim()) throw new Error(isArabic ? "المحتوى بالعربية مطلوب" : "Arabic content is required");
-
-      const payload = {
-        titleAr: termTitleAr.trim(),
-        titleEn: termTitleEn.trim() || undefined,
-        contentAr: termContentAr.trim(),
-        contentEn: termContentEn.trim() || undefined,
-        sortOrder: Number(termSortOrder),
-        isActive: termIsActive,
-      };
-
-      if (editingTerm) {
-        return updateAdminTermApi(editingTerm.id, payload);
-      }
-      return createAdminTermApi(payload);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-terms"] });
-      setTermDialogOpen(false);
-    },
-    onError: (err: unknown) => setTermError(getApiErrorMessage(err, "Failed to save term")),
-  });
-
   const deleteTermMutation = useMutation({
     mutationFn: (termId: string) => deleteAdminTermApi(termId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-terms"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-terms"] });
+      setConfirmDeleteTermId(null);
+    },
   });
 
   const toggleTermActiveMutation = useMutation({
@@ -148,37 +98,12 @@ export function ContentManagementPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-terms"] }),
   });
 
-  // FAQ Mutations
-  const saveFaqMutation = useMutation({
-    mutationFn: async () => {
-      setFaqError(null);
-      if (!faqQuestionAr.trim()) throw new Error(isArabic ? "السؤال بالعربية مطلوب" : "Arabic question is required");
-      if (!faqAnswerAr.trim()) throw new Error(isArabic ? "الإجابة بالعربية مطلوبة" : "Arabic answer is required");
-
-      const payload = {
-        questionAr: faqQuestionAr.trim(),
-        questionEn: faqQuestionEn.trim() || undefined,
-        answerAr: faqAnswerAr.trim(),
-        answerEn: faqAnswerEn.trim() || undefined,
-        sortOrder: Number(faqSortOrder),
-        isActive: faqIsActive,
-      };
-
-      if (editingFaq) {
-        return updateAdminFaqApi(editingFaq.id, payload);
-      }
-      return createAdminFaqApi(payload);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-faqs"] });
-      setFaqDialogOpen(false);
-    },
-    onError: (err: unknown) => setFaqError(getApiErrorMessage(err, "Failed to save FAQ")),
-  });
-
   const deleteFaqMutation = useMutation({
     mutationFn: (faqId: string) => deleteAdminFaqApi(faqId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-faqs"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-faqs"] });
+      setConfirmDeleteFaqId(null);
+    },
   });
 
   const toggleFaqActiveMutation = useMutation({
@@ -206,51 +131,6 @@ export function ContentManagementPage() {
     },
     onError: (err: unknown) => setPrivacyError(getApiErrorMessage(err, "Failed to save privacy policy")),
   });
-
-  // Open Handlers
-  const handleOpenTermDialog = (term?: TermsItem) => {
-    setTermError(null);
-    if (term) {
-      setEditingTerm(term);
-      setTermTitleAr(term.titleAr);
-      setTermTitleEn(term.titleEn || "");
-      setTermContentAr(term.contentAr);
-      setTermContentEn(term.contentEn || "");
-      setTermSortOrder(term.sortOrder);
-      setTermIsActive(term.isActive);
-    } else {
-      setEditingTerm(null);
-      setTermTitleAr("");
-      setTermTitleEn("");
-      setTermContentAr("");
-      setTermContentEn("");
-      setTermSortOrder(terms.length * 10 + 10);
-      setTermIsActive(true);
-    }
-    setTermDialogOpen(true);
-  };
-
-  const handleOpenFaqDialog = (faq?: FaqItem) => {
-    setFaqError(null);
-    if (faq) {
-      setEditingFaq(faq);
-      setFaqQuestionAr(faq.questionAr);
-      setFaqQuestionEn(faq.questionEn || "");
-      setFaqAnswerAr(faq.answerAr);
-      setFaqAnswerEn(faq.answerEn || "");
-      setFaqSortOrder(faq.sortOrder);
-      setFaqIsActive(faq.isActive);
-    } else {
-      setEditingFaq(null);
-      setFaqQuestionAr("");
-      setFaqQuestionEn("");
-      setFaqAnswerAr("");
-      setFaqAnswerEn("");
-      setFaqSortOrder(faqs.length * 10 + 10);
-      setFaqIsActive(true);
-    }
-    setFaqDialogOpen(true);
-  };
 
   return (
     <Stack spacing={3}>
@@ -366,7 +246,7 @@ export function ContentManagementPage() {
               <Button
                 variant="contained"
                 startIcon={<Add />}
-                onClick={() => handleOpenTermDialog()}
+                onClick={() => navigate("/content-management/terms/new")}
               >
                 {isArabic ? "إضافة بند جديد" : "Add New Term Clause"}
               </Button>
@@ -451,24 +331,14 @@ export function ContentManagementPage() {
                           <IconButton
                             size="small"
                             color="primary"
-                            onClick={() => handleOpenTermDialog(item)}
+                            onClick={() => navigate(`/content-management/terms/${item.id}/edit`)}
                           >
                             <Edit fontSize="small" />
                           </IconButton>
                           <IconButton
                             size="small"
                             color="error"
-                            onClick={() => {
-                              if (
-                                window.confirm(
-                                  isArabic
-                                    ? "هل أنت تأكد من مسح هذا البند؟"
-                                    : "Are you sure you want to delete this term clause?"
-                                )
-                              ) {
-                                deleteTermMutation.mutate(item.id);
-                              }
-                            }}
+                            onClick={() => setConfirmDeleteTermId(item.id)}
                           >
                             <Delete fontSize="small" />
                           </IconButton>
@@ -492,7 +362,7 @@ export function ContentManagementPage() {
               <Button
                 variant="contained"
                 startIcon={<Add />}
-                onClick={() => handleOpenFaqDialog()}
+                onClick={() => navigate("/content-management/faq/new")}
               >
                 {isArabic ? "إضافة سؤال جديد" : "Add New FAQ Item"}
               </Button>
@@ -577,24 +447,14 @@ export function ContentManagementPage() {
                           <IconButton
                             size="small"
                             color="primary"
-                            onClick={() => handleOpenFaqDialog(item)}
+                            onClick={() => navigate(`/content-management/faq/${item.id}/edit`)}
                           >
                             <Edit fontSize="small" />
                           </IconButton>
                           <IconButton
                             size="small"
                             color="error"
-                            onClick={() => {
-                              if (
-                                window.confirm(
-                                  isArabic
-                                    ? "هل أنت تأكد من مسح هذا السؤال؟"
-                                    : "Are you sure you want to delete this FAQ item?"
-                                )
-                              ) {
-                                deleteFaqMutation.mutate(item.id);
-                              }
-                            }}
+                            onClick={() => setConfirmDeleteFaqId(item.id)}
                           >
                             <Delete fontSize="small" />
                           </IconButton>
@@ -690,167 +550,57 @@ export function ContentManagementPage() {
         )}
       </Paper>
 
-      {/* Term Item Create/Edit Dialog */}
-      <Dialog open={termDialogOpen} onClose={() => setTermDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          {editingTerm
-            ? isArabic
-              ? "تعديل بند شروط وأحكام"
-              : "Edit Term Clause"
-            : isArabic
-              ? "إضافة بند شروط وأحكام جديد"
-              : "Add New Term Clause"}
-        </DialogTitle>
-        <DialogContent dividers>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            {termError && <Alert severity="error">{termError}</Alert>}
-            <TextField
-              fullWidth
-              size="small"
-              label={isArabic ? "عنوان البند (عربي) *" : "Title (Arabic) *"}
-              value={termTitleAr}
-              onChange={(e) => setTermTitleAr(e.target.value)}
-            />
-            <TextField
-              fullWidth
-              size="small"
-              label={isArabic ? "عنوان البند (إنجليزي)" : "Title (English)"}
-              value={termTitleEn}
-              onChange={(e) => setTermTitleEn(e.target.value)}
-            />
-            <TextField
-              fullWidth
-              multiline
-              minRows={4}
-              label={isArabic ? "نص البند (عربي) *" : "Content (Arabic) *"}
-              value={termContentAr}
-              onChange={(e) => setTermContentAr(e.target.value)}
-            />
-            <TextField
-              fullWidth
-              multiline
-              minRows={4}
-              label={isArabic ? "نص البند (إنجليزي)" : "Content (English)"}
-              value={termContentEn}
-              onChange={(e) => setTermContentEn(e.target.value)}
-            />
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 6 }}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  type="number"
-                  label={isArabic ? "ترتيب العرض" : "Sort Order"}
-                  value={termSortOrder}
-                  onChange={(e) => setTermSortOrder(Number(e.target.value))}
-                />
-              </Grid>
-              <Grid size={{ xs: 6 }}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={termIsActive}
-                      onChange={(e) => setTermIsActive(e.target.checked)}
-                    />
-                  }
-                  label={isArabic ? "تفعيل البند" : "Active"}
-                />
-              </Grid>
-            </Grid>
+      <AppModal
+        open={Boolean(confirmDeleteTermId)}
+        onClose={() => setConfirmDeleteTermId(null)}
+        title={isArabic ? "تأكيد الحذف" : "Confirm delete"}
+        footer={
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="contained"
+              color="error"
+              disabled={deleteTermMutation.isPending}
+              onClick={() => confirmDeleteTermId && deleteTermMutation.mutate(confirmDeleteTermId)}
+              sx={{ borderRadius: "8px" }}
+            >
+              {t("common.delete", "Delete")}
+            </Button>
+            <Button onClick={() => setConfirmDeleteTermId(null)} sx={{ borderRadius: "8px" }}>
+              {t("common.cancel", "Cancel")}
+            </Button>
           </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setTermDialogOpen(false)}>{t("common.cancel")}</Button>
-          <Button
-            variant="contained"
-            disabled={saveTermMutation.isPending}
-            onClick={() => saveTermMutation.mutate()}
-          >
-            {saveTermMutation.isPending ? t("common.saving") : t("common.save")}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        }
+      >
+        <Typography variant="body2">
+          {isArabic ? "هل أنت متأكد من مسح هذا البند؟" : "Are you sure you want to delete this term clause?"}
+        </Typography>
+      </AppModal>
 
-      {/* FAQ Item Create/Edit Dialog */}
-      <Dialog open={faqDialogOpen} onClose={() => setFaqDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          {editingFaq
-            ? isArabic
-              ? "تعديل سؤال شائع"
-              : "Edit FAQ Item"
-            : isArabic
-              ? "إضافة سؤال شائع جديد"
-              : "Add New FAQ Item"}
-        </DialogTitle>
-        <DialogContent dividers>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            {faqError && <Alert severity="error">{faqError}</Alert>}
-            <TextField
-              fullWidth
-              size="small"
-              label={isArabic ? "السؤال (عربي) *" : "Question (Arabic) *"}
-              value={faqQuestionAr}
-              onChange={(e) => setFaqQuestionAr(e.target.value)}
-            />
-            <TextField
-              fullWidth
-              size="small"
-              label={isArabic ? "السؤال (إنجليزي)" : "Question (English)"}
-              value={faqQuestionEn}
-              onChange={(e) => setFaqQuestionEn(e.target.value)}
-            />
-            <TextField
-              fullWidth
-              multiline
-              minRows={3}
-              label={isArabic ? "الإجابة (عربي) *" : "Answer (Arabic) *"}
-              value={faqAnswerAr}
-              onChange={(e) => setFaqAnswerAr(e.target.value)}
-            />
-            <TextField
-              fullWidth
-              multiline
-              minRows={3}
-              label={isArabic ? "الإجابة (إنجليزي)" : "Answer (English)"}
-              value={faqAnswerEn}
-              onChange={(e) => setFaqAnswerEn(e.target.value)}
-            />
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 6 }}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  type="number"
-                  label={isArabic ? "ترتيب العرض" : "Sort Order"}
-                  value={faqSortOrder}
-                  onChange={(e) => setFaqSortOrder(Number(e.target.value))}
-                />
-              </Grid>
-              <Grid size={{ xs: 6 }}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={faqIsActive}
-                      onChange={(e) => setFaqIsActive(e.target.checked)}
-                    />
-                  }
-                  label={isArabic ? "تفعيل السؤال" : "Active"}
-                />
-              </Grid>
-            </Grid>
+      <AppModal
+        open={Boolean(confirmDeleteFaqId)}
+        onClose={() => setConfirmDeleteFaqId(null)}
+        title={isArabic ? "تأكيد الحذف" : "Confirm delete"}
+        footer={
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="contained"
+              color="error"
+              disabled={deleteFaqMutation.isPending}
+              onClick={() => confirmDeleteFaqId && deleteFaqMutation.mutate(confirmDeleteFaqId)}
+              sx={{ borderRadius: "8px" }}
+            >
+              {t("common.delete", "Delete")}
+            </Button>
+            <Button onClick={() => setConfirmDeleteFaqId(null)} sx={{ borderRadius: "8px" }}>
+              {t("common.cancel", "Cancel")}
+            </Button>
           </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setFaqDialogOpen(false)}>{t("common.cancel")}</Button>
-          <Button
-            variant="contained"
-            disabled={saveFaqMutation.isPending}
-            onClick={() => saveFaqMutation.mutate()}
-          >
-            {saveFaqMutation.isPending ? t("common.saving") : t("common.save")}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        }
+      >
+        <Typography variant="body2">
+          {isArabic ? "هل أنت متأكد من مسح هذا السؤال؟" : "Are you sure you want to delete this FAQ item?"}
+        </Typography>
+      </AppModal>
     </Stack>
   );
 }
