@@ -22,7 +22,7 @@ import {
   AppTableRow,
   TableBody,
 } from "../../components/design-system";
-import { EmptyState, FilterBar, PageHeader } from "../../components/layout";
+import { EmptyState, FilterBar, PageHeader, TablePaginationBar, resolveTotalPages } from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
 import {
   bulkReviewProductsApi,
@@ -50,18 +50,24 @@ export function PendingProductsPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const [rejectNote, setRejectNote] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 350);
     return () => window.clearTimeout(timer);
   }, [search]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, pageSize]);
+
   const { data, isLoading, isError, error, isFetching } = useQuery({
-    queryKey: ["admin-pending-products", debouncedSearch],
+    queryKey: ["admin-pending-products", debouncedSearch, page, pageSize],
     queryFn: () =>
       fetchAdminProducts({
-        page: 1,
-        limit: 200,
+        page,
+        limit: pageSize,
         search: debouncedSearch || undefined,
         status: "PENDING",
         sortBy: "createdAt",
@@ -71,6 +77,7 @@ export function PendingProductsPage() {
   });
 
   const products = data?.items || [];
+  const totalPages = resolveTotalPages(data?.meta);
   const companyGroups = useMemo(
     () => groupProductsByCompany(products, t("products.globalOwner")),
     [products, t]
@@ -315,6 +322,18 @@ export function PendingProductsPage() {
           );
         })
       )}
+
+      {!isLoading && !isError && (products.length > 0 || totalPages > 1) ? (
+        <TablePaginationBar
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          pageSize={pageSize}
+          onPageSizeChange={setPageSize}
+          isFetching={isFetching}
+          totalItems={data?.meta?.total}
+        />
+      ) : null}
 
       {selected.length > 0 ? (
         <Paper sx={{ p: 2, position: "sticky", bottom: 16, zIndex: 2 }}>

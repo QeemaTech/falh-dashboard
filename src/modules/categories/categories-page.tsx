@@ -22,7 +22,7 @@ import {
   AppTableRow,
   TableBody,
 } from "../../components/design-system";
-import { EmptyState, PageHeader, TableRowActions } from "../../components/layout";
+import { EmptyState, PageHeader, TablePaginationBar, TableRowActions, resolveTotalPages } from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
 import { toast } from "../../components/ui/sonner";
 import {
@@ -65,13 +65,18 @@ export function CategoriesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["admin-categories"],
-    queryFn: () => fetchAdminCategories({ page: 1, limit: 100, sortBy: "sortOrder", sortOrder: "asc" }),
+  const { data, isLoading, isError, error, isFetching } = useQuery({
+    queryKey: ["admin-categories", page, pageSize],
+    queryFn: () =>
+      fetchAdminCategories({ page, limit: pageSize, sortBy: "sortOrder", sortOrder: "asc" }),
+    placeholderData: (previousData) => previousData,
   });
 
-  const categories = data || [];
+  const categories = data?.items || [];
+  const totalPages = resolveTotalPages(data?.meta);
   const selectedCategory = categories.find((c) => c.id === selectedCategoryId);
   const isEditing = Boolean(editingId);
 
@@ -278,6 +283,21 @@ export function CategoriesPage() {
             )}
           </TableBody>
         </AppTable>
+      ) : null}
+
+      {!isLoading && !isError && (categories.length > 0 || totalPages > 1) ? (
+        <TablePaginationBar
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          pageSize={pageSize}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+          isFetching={isFetching}
+          totalItems={data?.meta?.total}
+        />
       ) : null}
 
       <CategoryFieldsBuilder

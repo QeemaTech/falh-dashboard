@@ -1,8 +1,15 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Chip, Paper, Stack, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { DataTable, EmptyState, PageHeader, TableRowActions } from "../../components/layout";
+import {
+  DataTable,
+  EmptyState,
+  PageHeader,
+  TablePaginationBar,
+  TableRowActions,
+  resolveTotalPages,
+} from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
 import {
   fetchAdminServiceProviders,
@@ -38,6 +45,12 @@ export function ConsultantsPage() {
   const { t, language } = useI18n();
   const navigate = useNavigate();
   const [tab, setTab] = useState<ConsultantTab>(TAB_ALL);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+
+  useEffect(() => {
+    setPage(1);
+  }, [tab, pageSize]);
 
   const { data: joinTypes = [] } = useQuery({
     queryKey: ["join-application-types"],
@@ -72,73 +85,59 @@ export function ConsultantsPage() {
     ];
   }, [joinTypes, language, t]);
 
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["admin-consultants", tab],
+  const { data, isLoading, isError, error, isFetching } = useQuery({
+    queryKey: ["admin-consultants", tab, page, pageSize],
     queryFn: () =>
       fetchAdminServiceProviders({
-        page: 1,
-        limit: 100,
+        page,
+        limit: pageSize,
         sortBy: "createdAt",
         sortOrder: "desc",
         applicationType: tab === TAB_ALL ? undefined : tab,
       }),
+    placeholderData: (previousData) => previousData,
   });
 
   const statusLabel = (status: string) => t(`consultants.status.${status}`, status);
 
-  const matchesTab = (provider: AdminServiceProvider) => {
-    if (tab === TAB_ALL) return true;
-    const typeKey = resolveTypeKey(provider);
-    if (typeKey === tab) return true;
-    const joinType = typesByCode.get(tab);
-    if (!provider.applicationType && joinType?.serviceProviderType) {
-      return provider.type === joinType.serviceProviderType;
-    }
-    return false;
-  };
-
   const rows = useMemo<ConsultantRow[]>(() => {
-    const items = ((data?.items || []) as AdminServiceProvider[]).filter(matchesTab);
-    return items.map((provider) => ({
+    return (data?.items || []).map((provider) => ({
       id: provider.id,
       name: providerName(provider),
       typeKey: resolveTypeKey(provider),
       city: provider.city || "-",
       status: provider.status,
-      rating: Number(provider.rating || 0).toFixed(1),
+      rating: provider.rating != null ? String(provider.rating) : "-",
     }));
-  }, [data?.items, tab, typesByCode]);
+  }, [data?.items]);
+
+  const totalPages = resolveTotalPages(data?.meta);
 
   if (isError) {
-    return (
-      <EmptyState title={t("consultants.loadFailed")} description={(error as Error).message} />
-    );
+    return <EmptyState title={t("consultants.loadFailed")} description={(error as Error).message} />;
   }
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={2.5}>
       <PageHeader title={t("consultants.title")} subtitle={t("consultants.subtitle")} />
 
-      <Paper sx={{ p: 1.5 }}>
-        <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", gap: 0.75 }}>
+      <Paper variant="outlined" sx={{ p: 1, borderRadius: "8px", borderColor: "divider" }}>
+        <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }}>
           {tabItems.map((item) => (
             <Chip
               key={item.code}
               label={item.label}
-              clickable
               color={tab === item.code ? "primary" : "default"}
               variant={tab === item.code ? "filled" : "outlined"}
               onClick={() => setTab(item.code)}
-              size="small"
+              sx={{ borderRadius: "8px" }}
             />
           ))}
         </Stack>
       </Paper>
 
       <DataTable<ConsultantRow>
-        title={t("consultants.listTitle")}
         loading={isLoading}
-        loadingMessage={t("common.loading")}
         emptyMessage={t("consultants.empty")}
         getRowKey={(row) => row.id}
         columns={[
@@ -178,6 +177,18 @@ export function ConsultantsPage() {
         ]}
         data={rows}
       />
+
+      {rows.length > 0 || totalPages > 1 ? (
+        <TablePaginationBar
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          pageSize={pageSize}
+          onPageSizeChange={setPageSize}
+          isFetching={isFetching}
+          totalItems={data?.meta?.total}
+        />
+      ) : null}
     </Stack>
   );
 }

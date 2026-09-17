@@ -27,7 +27,7 @@ import {
   AppTableRow,
   TableBody,
 } from "../../components/design-system";
-import { EmptyState, FilterBar, PageHeader } from "../../components/layout";
+import { EmptyState, FilterBar, PageHeader, TablePaginationBar, resolveTotalPages } from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
 import {
   bulkReviewProductsApi,
@@ -61,25 +61,29 @@ export function ProductManagementPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [selected, setSelected] = useState<string[]>([]);
   const [rejectNote, setRejectNote] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const limit = 20;
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 350);
     return () => window.clearTimeout(timer);
   }, [search]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, status, pageSize]);
+
   const statusLabel = (value: ProductStatus) =>
     t(`products.status.${value}` as "products.status.PENDING");
 
   const { data, isLoading, isError, error, isFetching } = useQuery({
-    queryKey: ["admin-products-catalog", debouncedSearch, status, page],
+    queryKey: ["admin-products-catalog", debouncedSearch, status, page, pageSize],
     queryFn: () =>
       fetchAdminProducts({
         page,
-        limit,
+        limit: pageSize,
         search: debouncedSearch || undefined,
         status: status || undefined,
         sortBy: "createdAt",
@@ -89,7 +93,7 @@ export function ProductManagementPage() {
   });
 
   const products = data?.items || [];
-  const totalPages = data?.meta?.totalPages || 1;
+  const totalPages = resolveTotalPages(data?.meta);
   const selectedProducts = useMemo(
     () => products.filter((product) => selected.includes(product.id)),
     [products, selected]
@@ -434,30 +438,15 @@ export function ProductManagementPage() {
             </TableBody>
           </AppTable>
 
-          <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
-            <Typography variant="body2" color="text.secondary">
-              {t("products.page")} {page} {t("products.of")} {totalPages}{" "}
-              {isFetching ? `(${t("products.refreshing")})` : ""}
-            </Typography>
-            <Stack direction="row" spacing={1}>
-              <Button
-                variant="outlined"
-                size="small"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                {t("products.previous")}
-              </Button>
-              <Button
-                variant="outlined"
-                size="small"
-                disabled={page >= totalPages}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                {t("products.next")}
-              </Button>
-            </Stack>
-          </Stack>
+          <TablePaginationBar
+            page={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            pageSize={pageSize}
+            onPageSizeChange={setPageSize}
+            isFetching={isFetching}
+            totalItems={data?.meta?.total}
+          />
         </>
       ) : null}
 

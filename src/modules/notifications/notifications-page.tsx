@@ -1,7 +1,13 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { DoneAll } from "@mui/icons-material";
 import { Button, Chip, Stack } from "@mui/material";
-import { DataTable, EmptyState, PageHeader } from "../../components/layout";
+import {
+  DataTable,
+  EmptyState,
+  PageHeader,
+  TablePaginationBar,
+  resolveTotalPages,
+} from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
 import {
   formatNotificationDate,
@@ -23,8 +29,20 @@ type NotificationRow = {
 
 export function NotificationsPage() {
   const { t, language } = useI18n();
-  const { items, isLoading, isError, error, markAsRead, markAllAsRead, unreadCount, isMarkingRead } =
-    useNotifications(100);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const {
+    items,
+    isLoading,
+    isError,
+    error,
+    isFetching,
+    meta,
+    markAsRead,
+    markAllAsRead,
+    unreadCount,
+    isMarkingRead,
+  } = useNotifications(pageSize, page);
 
   const rows = useMemo<NotificationRow[]>(() => {
     return items.map((notification) => {
@@ -40,6 +58,8 @@ export function NotificationsPage() {
       };
     });
   }, [items, language, t]);
+
+  const totalPages = resolveTotalPages(meta as { totalPages?: number; total?: number; limit?: number });
 
   if (isError) {
     return (
@@ -100,6 +120,21 @@ export function NotificationsPage() {
         ]}
         data={rows}
       />
+
+      {rows.length > 0 || totalPages > 1 ? (
+        <TablePaginationBar
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          pageSize={pageSize}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+          isFetching={isFetching}
+          totalItems={(meta as { total?: number } | undefined)?.total}
+        />
+      ) : null}
     </Stack>
   );
 }

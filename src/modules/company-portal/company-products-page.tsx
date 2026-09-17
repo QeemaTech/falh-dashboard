@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Add, Delete, Edit, Visibility } from "@mui/icons-material";
 import {
@@ -12,7 +12,13 @@ import {
   Typography,
 } from "@mui/material";
 import { AppDrawer } from "../../components/design-system";
-import { DataTable, EmptyState, PageHeader } from "../../components/layout";
+import {
+  DataTable,
+  EmptyState,
+  PageHeader,
+  TablePaginationBar,
+  resolveTotalPages,
+} from "../../components/layout";
 import { ProductFormDrawer } from "../products/product-form-drawer";
 import { useI18n } from "../../hooks/use-i18n";
 import {
@@ -39,11 +45,18 @@ export function CompanyProductsPage() {
   const [editProduct, setEditProduct] = useState<AdminProduct | null>(null);
   const [viewProduct, setViewProduct] = useState<AdminProduct | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+
+  useEffect(() => {
+    setPage(1);
+  }, [pageSize]);
 
   const { data: quota } = useQuery({ queryKey: ["company-quota"], queryFn: fetchCompanyQuota });
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["company-products"],
-    queryFn: () => fetchMyProducts({ page: 1, limit: 100 }),
+  const { data, isLoading, isError, error, isFetching } = useQuery({
+    queryKey: ["company-products", page, pageSize],
+    queryFn: () => fetchMyProducts({ page, limit: pageSize }),
+    placeholderData: (previousData) => previousData,
   });
 
   const deleteMutation = useMutation({
@@ -57,6 +70,7 @@ export function CompanyProductsPage() {
   });
 
   const products = (data?.items || []) as ProductRow[];
+  const totalPages = resolveTotalPages(data?.meta as { totalPages?: number; total?: number; limit?: number });
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["company-products"] });
     queryClient.invalidateQueries({ queryKey: ["company-quota"] });
@@ -157,6 +171,18 @@ export function CompanyProductsPage() {
         ]}
         data={products}
       />
+
+      {products.length > 0 || totalPages > 1 ? (
+        <TablePaginationBar
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          pageSize={pageSize}
+          onPageSizeChange={setPageSize}
+          isFetching={isFetching}
+          totalItems={(data?.meta as { total?: number } | undefined)?.total}
+        />
+      ) : null}
 
       <ProductFormDrawer
         open={formOpen}

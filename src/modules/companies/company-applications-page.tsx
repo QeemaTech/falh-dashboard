@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { Search } from "@mui/icons-material";
@@ -14,7 +14,14 @@ import {
   Typography,
 } from "@mui/material";
 import { AppDrawer } from "../../components/design-system";
-import { DataTable, EmptyState, FilterBar, PageHeader } from "../../components/layout";
+import {
+  DataTable,
+  EmptyState,
+  FilterBar,
+  PageHeader,
+  TablePaginationBar,
+  resolveTotalPages,
+} from "../../components/layout";
 import {
   fetchCompanyApplications,
   reviewCompanyApplicationApi,
@@ -48,6 +55,8 @@ export function CompanyApplicationsPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("PENDING");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [selected, setSelected] = useState<CompanyApplication | null>(null);
   const [maxProducts, setMaxProducts] = useState("10");
   const [displayDays, setDisplayDays] = useState("30");
@@ -56,10 +65,24 @@ export function CompanyApplicationsPage() {
   const [companyPassword, setCompanyPassword] = useState("");
   const [formError, setFormError] = useState("");
 
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["company-applications", search, status],
-    queryFn: () => fetchCompanyApplications({ page: 1, limit: 50, search: search || undefined, status: status || undefined }),
+  useEffect(() => {
+    setPage(1);
+  }, [search, status, pageSize]);
+
+  const { data, isLoading, isError, error, isFetching } = useQuery({
+    queryKey: ["company-applications", search, status, page, pageSize],
+    queryFn: () =>
+      fetchCompanyApplications({
+        page,
+        limit: pageSize,
+        search: search || undefined,
+        status: status || undefined,
+      }),
+    placeholderData: (previousData) => previousData,
   });
+
+  const applications = (data?.items || []) as CompanyApplicationRow[];
+  const totalPages = resolveTotalPages(data?.meta);
 
   const reviewMutation = useMutation({
     mutationFn: (payload: {
@@ -95,8 +118,6 @@ export function CompanyApplicationsPage() {
       setFormError(message);
     },
   });
-
-  const applications = (data?.items || []) as CompanyApplicationRow[];
 
   function handleSelectApplication(app: CompanyApplication) {
     const form = openReviewForm(app);
@@ -223,6 +244,18 @@ export function CompanyApplicationsPage() {
         ]}
         data={applications}
       />
+
+      {applications.length > 0 || totalPages > 1 ? (
+        <TablePaginationBar
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          pageSize={pageSize}
+          onPageSizeChange={setPageSize}
+          isFetching={isFetching}
+          totalItems={data?.meta?.total}
+        />
+      ) : null}
 
       <AppDrawer open={Boolean(selected)} onClose={() => setSelected(null)} title="Review Application">
         {selected ? (
