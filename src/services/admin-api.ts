@@ -6,8 +6,10 @@ import type { LatestMarketData, LivestockCategory, MarketItem, MarketPagination,
 
 type ApiResponse<T> = { success: boolean; data: T; message?: string; meta?: { total?: number; page?: number; limit?: number } };
 
-export async function fetchDashboardStats() {
-  const { data } = await http.get<ApiResponse<DashboardStats>>("/admin/dashboard/stats");
+export async function fetchDashboardStats(period: "today" | "week" | "month" = "month") {
+  const { data } = await http.get<ApiResponse<DashboardStats>>("/admin/dashboard/stats", {
+    params: { period },
+  });
   return data.data;
 }
 

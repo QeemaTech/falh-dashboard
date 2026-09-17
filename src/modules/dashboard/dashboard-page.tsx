@@ -1,12 +1,24 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { Link as RouterLink } from "react-router-dom";
 import {
   Box,
   Button,
   Chip,
   Grid,
+  IconButton,
   Paper,
   Skeleton,
   Stack,
@@ -21,73 +33,52 @@ import {
   Typography,
 } from "@mui/material";
 import {
+  ArrowForward,
   Business,
   Inventory2,
   LocalShipping,
   MonetizationOn,
   PendingActions,
-  Storefront,
-  TrendingUp,
   People,
+  Refresh,
+  Storefront,
   Warehouse,
 } from "@mui/icons-material";
-import { AnalyticsWidget } from "../../components/analytics-widget";
-import { EmptyState } from "../../components/layout";
+import { EmptyState, PageHeader } from "../../components/layout";
+import { AppStatCard } from "../../components/design-system";
 import { useI18n } from "../../hooks/use-i18n";
-import {
-  fetchDashboardStats,
-  fetchRecentOrders,
-  fetchRecentProducts,
-  fetchServiceProvidersCount,
-  fetchUsers,
-} from "../../services/admin-api";
+import { fetchDashboardStats } from "../../services/admin-api";
+import type { DashboardPeriod } from "../../types/dashboard";
 import { formatCurrency } from "../../utils/format";
 
-type DashboardPeriod = "today" | "week" | "month";
-
-function getPeriodStart(period: DashboardPeriod) {
-  const now = new Date();
-  if (period === "today") {
-    const start = new Date(now);
-    start.setHours(0, 0, 0, 0);
-    return start;
-  }
-  if (period === "week") {
-    const start = new Date(now);
-    start.setDate(start.getDate() - 7);
-    return start;
-  }
-  const start = new Date(now);
-  start.setDate(start.getDate() - 30);
-  return start;
+function formatChange(value?: number) {
+  const n = Number(value || 0);
+  const sign = n > 0 ? "+" : "";
+  return `${sign}${n.toFixed(1)}%`;
 }
 
-function filterByPeriod<T extends { createdAt?: string }>(items: T[] | undefined, period: DashboardPeriod) {
-  const start = getPeriodStart(period);
-  return (items || []).filter((item) => item.createdAt && new Date(item.createdAt) >= start);
-}
-
-function periodScale(period: DashboardPeriod) {
-  if (period === "today") return 0.35;
-  if (period === "week") return 0.65;
-  return 1;
+function changeTrend(value?: number): "up" | "down" | "neutral" {
+  const n = Number(value || 0);
+  if (n > 0) return "up";
+  if (n < 0) return "down";
+  return "neutral";
 }
 
 function DashboardSkeleton() {
   return (
-    <Stack spacing={3}>
-      <Skeleton variant="rounded" height={120} />
+    <Stack spacing={2.5}>
+      <Skeleton variant="rounded" height={72} sx={{ borderRadius: "8px" }} />
       <Grid container spacing={2}>
         {Array.from({ length: 8 }).map((_, index) => (
           <Grid key={`sk-stat-${index}`} size={{ xs: 12, sm: 6, xl: 3 }}>
-            <Skeleton variant="rounded" height={128} />
+            <Skeleton variant="rounded" height={112} sx={{ borderRadius: "8px" }} />
           </Grid>
         ))}
       </Grid>
       <Grid container spacing={2}>
-        {Array.from({ length: 4 }).map((_, index) => (
-          <Grid key={`sk-chart-${index}`} size={{ xs: 12, xl: 6 }}>
-            <Skeleton variant="rounded" height={320} />
+        {Array.from({ length: 2 }).map((_, index) => (
+          <Grid key={`sk-chart-${index}`} size={{ xs: 12, lg: 6 }}>
+            <Skeleton variant="rounded" height={320} sx={{ borderRadius: "8px" }} />
           </Grid>
         ))}
       </Grid>
@@ -95,24 +86,82 @@ function DashboardSkeleton() {
   );
 }
 
-function ChartCard({ title, badge, subtitle, children }: { title: string; badge?: string; subtitle?: string; children: ReactNode }) {
+function ChartCard({
+  title,
+  subtitle,
+  action,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
   return (
-    <Paper sx={{ p: 2, height: "100%" }}>
-      <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
-        <Box>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+    <Paper
+      variant="outlined"
+      sx={{ p: { xs: 2, md: 2.5 }, height: "100%", borderRadius: "8px", borderColor: "divider" }}
+    >
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{ justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}
+      >
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
             {title}
           </Typography>
           {subtitle ? (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
               {subtitle}
             </Typography>
           ) : null}
         </Box>
-        {badge ? <Chip label={badge} size="small" color="primary" variant="outlined" /> : null}
+        {action}
       </Stack>
-      <Box sx={{ height: 256, borderRadius: "8px", bgcolor: "action.hover", p: 1 }}>{children}</Box>
+      <Box sx={{ height: 280 }}>{children}</Box>
     </Paper>
+  );
+}
+
+function StatLinkCard({
+  to,
+  title,
+  value,
+  hint,
+  change,
+  trend,
+  icon,
+}: {
+  to: string;
+  title: string;
+  value: string | number;
+  hint?: string;
+  change?: string;
+  trend?: "up" | "down" | "neutral";
+  icon: ReactNode;
+}) {
+  return (
+    <Box
+      component={RouterLink}
+      to={to}
+      sx={{
+        display: "block",
+        textDecoration: "none",
+        color: "inherit",
+        height: "100%",
+        borderRadius: "8px",
+        transition: "transform 0.15s ease, box-shadow 0.15s ease",
+        "&:hover": {
+          transform: "translateY(-2px)",
+          "& .MuiCard-root": {
+            borderColor: "primary.main",
+          },
+        },
+      }}
+    >
+      <AppStatCard title={title} value={value} hint={hint} change={change} trend={trend} icon={icon} />
+    </Box>
   );
 }
 
@@ -123,34 +172,81 @@ export function DashboardPage() {
   const [period, setPeriod] = useState<DashboardPeriod>("month");
 
   const periodLabel =
-    period === "today" ? t("dashboard.period.today") : period === "week" ? t("dashboard.period.week") : t("dashboard.period.month");
+    period === "today"
+      ? t("dashboard.period.today")
+      : period === "week"
+        ? t("dashboard.period.week")
+        : t("dashboard.period.month");
 
-  const { data: stats, isLoading: statsLoading, isError: statsError } = useQuery({
-    queryKey: ["dashboard-stats"],
-    queryFn: fetchDashboardStats,
-  });
-  const { data: usersData, isLoading: usersLoading, isError: usersError } = useQuery({
-    queryKey: ["dashboard-recent-users"],
-    queryFn: () =>
-      fetchUsers({ page: 1, limit: 5, sortBy: "createdAt", sortOrder: "desc" }).then((result) => result.users),
-  });
-  const { data: recentOrders, isLoading: ordersLoading, isError: ordersError } = useQuery({
-    queryKey: ["dashboard-recent-orders"],
-    queryFn: fetchRecentOrders,
-  });
-  const { data: recentProducts, isLoading: productsLoading, isError: productsError } = useQuery({
-    queryKey: ["dashboard-recent-products"],
-    queryFn: fetchRecentProducts,
-  });
-  const { data: serviceProvidersCount, isLoading: providersLoading, isError: providersError } = useQuery({
-    queryKey: ["dashboard-service-providers-total"],
-    queryFn: fetchServiceProvidersCount,
+  const { data: stats, isLoading, isError, isFetching, refetch } = useQuery({
+    queryKey: ["dashboard-stats", period],
+    queryFn: () => fetchDashboardStats(period),
+    placeholderData: (previous) => previous,
   });
 
-  const periodOrders = useMemo(() => filterByPeriod(recentOrders, period), [recentOrders, period]);
-  const periodUsers = useMemo(() => filterByPeriod(usersData, period), [usersData, period]);
-  const periodProducts = useMemo(() => filterByPeriod(recentProducts, period), [recentProducts, period]);
-  const scale = periodScale(period);
+  const series = useMemo(() => {
+    return (stats?.series || []).map((point) => ({
+      ...point,
+      label: new Date(point.date).toLocaleDateString(locale, {
+        month: "short",
+        day: "numeric",
+      }),
+    }));
+  }, [stats?.series, locale]);
+
+  const growthData = useMemo(
+    () => [
+      { label: t("dashboard.growth.users"), value: stats?.periodTotals?.users ?? 0 },
+      { label: t("dashboard.growth.products"), value: stats?.periodTotals?.products ?? 0 },
+      { label: t("dashboard.growth.companies"), value: stats?.periodTotals?.companies ?? 0 },
+      { label: t("dashboard.growth.orders"), value: stats?.periodTotals?.orders ?? 0 },
+    ],
+    [t, stats?.periodTotals]
+  );
+
+  const productFlowData = useMemo(
+    () => [
+      { step: t("dashboard.productFlow.draft"), count: stats?.productStatus?.draft ?? 0 },
+      { step: t("dashboard.productFlow.pending"), count: stats?.productStatus?.pending ?? 0 },
+      { step: t("dashboard.productFlow.approved"), count: stats?.productStatus?.active ?? 0 },
+      { step: t("dashboard.productFlow.rejected"), count: stats?.productStatus?.rejected ?? 0 },
+    ],
+    [t, stats?.productStatus]
+  );
+
+  const activityData = useMemo(
+    () =>
+      series.map((point) => ({
+        label: point.label,
+        users: point.users,
+        orders: point.orders,
+        products: point.products,
+      })),
+    [series]
+  );
+
+  const chartValueLabels: Record<string, string> = {
+    sales: t("dashboard.chart.sales"),
+    orders: t("dashboard.chart.orders"),
+    users: t("dashboard.growth.users"),
+    products: t("dashboard.growth.products"),
+    value: t("dashboard.col.amount"),
+    count: t("dashboard.stats.totalProducts"),
+  };
+
+  const chartTooltipFormatter = (
+    value: number | string | readonly (number | string)[] | undefined,
+    name?: string | number
+  ) => {
+    const raw = Array.isArray(value) ? value[0] : value;
+    const numeric = typeof raw === "number" ? raw : Number(raw);
+    const display = Number.isFinite(numeric) ? numeric.toLocaleString(locale) : String(raw ?? "");
+    const nameKey = String(name ?? "");
+    return [display, chartValueLabels[nameKey] || nameKey];
+  };
+
+  const legendFormatter = (value: string) => chartValueLabels[value] || value;
+  const yAxisTickFormatter = (value: number) => value.toLocaleString(locale);
 
   const orderStatusLabel = (status: string) => {
     const key = `orders.status.${status}`;
@@ -176,230 +272,250 @@ export function DashboardPage() {
     return label === key ? status : label;
   };
 
-  const salesData = useMemo(
-    () => [
-      { name: t("dashboard.week.w1"), sales: Math.round((stats?.revenue || 0) * 0.14 * scale), orders: Math.round((stats?.totalOrders || 0) * 0.18 * scale) },
-      { name: t("dashboard.week.w2"), sales: Math.round((stats?.revenue || 0) * 0.19 * scale), orders: Math.round((stats?.totalOrders || 0) * 0.22 * scale) },
-      { name: t("dashboard.week.w3"), sales: Math.round((stats?.revenue || 0) * 0.24 * scale), orders: Math.round((stats?.totalOrders || 0) * 0.27 * scale) },
-      { name: t("dashboard.week.w4"), sales: Math.round((stats?.revenue || 0) * 0.43 * scale), orders: Math.round((stats?.totalOrders || 0) * 0.33 * scale) },
-    ],
-    [t, stats?.revenue, stats?.totalOrders, scale]
-  );
-
-  const growthData = useMemo(
-    () => [
-      { label: t("dashboard.growth.users"), value: period === "month" ? stats?.totalUsers || 0 : periodUsers.length },
-      { label: t("dashboard.growth.products"), value: period === "month" ? stats?.totalProducts || 0 : periodProducts.length },
-      { label: t("dashboard.growth.companies"), value: Math.round((stats?.totalCompanies || 0) * scale) },
-      { label: t("dashboard.growth.providers"), value: Math.round((serviceProvidersCount || 0) * scale) },
-    ],
-    [t, period, stats, periodUsers.length, periodProducts.length, serviceProvidersCount, scale]
-  );
-
-  const productGrowthData = useMemo(
-    () => [
-      { step: t("dashboard.productFlow.submitted"), count: period === "month" ? stats?.totalProducts || 0 : periodProducts.length },
-      { step: t("dashboard.productFlow.pending"), count: Math.round((stats?.pendingProducts || 0) * scale) },
-      {
-        step: t("dashboard.productFlow.approved"),
-        count: Math.max(
-          (period === "month" ? stats?.totalProducts || 0 : periodProducts.length) - Math.round((stats?.pendingProducts || 0) * scale),
-          0
-        ),
-      },
-    ],
-    [t, period, stats, periodProducts.length, scale]
-  );
-
-  const analyticsWeekData = useMemo(
-    () => [
-      { day: t("dashboard.days.sun"), visitors: Math.round((stats?.totalUsers || 0) * 0.03 * scale), sessions: Math.round((stats?.totalOrders || 0) * 0.06 * scale), clicks: Math.round((stats?.totalProducts || 0) * 0.04 * scale) },
-      { day: t("dashboard.days.mon"), visitors: Math.round((stats?.totalUsers || 0) * 0.05 * scale), sessions: Math.round((stats?.totalOrders || 0) * 0.08 * scale), clicks: Math.round((stats?.totalProducts || 0) * 0.06 * scale) },
-      { day: t("dashboard.days.tue"), visitors: Math.round((stats?.totalUsers || 0) * 0.08 * scale), sessions: Math.round((stats?.totalOrders || 0) * 0.1 * scale), clicks: Math.round((stats?.totalProducts || 0) * 0.09 * scale) },
-      { day: t("dashboard.days.wed"), visitors: Math.round((stats?.totalUsers || 0) * 0.07 * scale), sessions: Math.round((stats?.totalOrders || 0) * 0.09 * scale), clicks: Math.round((stats?.totalProducts || 0) * 0.08 * scale) },
-      { day: t("dashboard.days.thu"), visitors: Math.round((stats?.totalUsers || 0) * 0.06 * scale), sessions: Math.round((stats?.totalOrders || 0) * 0.08 * scale), clicks: Math.round((stats?.totalProducts || 0) * 0.07 * scale) },
-      { day: t("dashboard.days.fri"), visitors: Math.round((stats?.totalUsers || 0) * 0.045 * scale), sessions: Math.round((stats?.totalOrders || 0) * 0.07 * scale), clicks: Math.round((stats?.totalProducts || 0) * 0.05 * scale) },
-      { day: t("dashboard.days.sat"), visitors: Math.round((stats?.totalUsers || 0) * 0.04 * scale), sessions: Math.round((stats?.totalOrders || 0) * 0.065 * scale), clicks: Math.round((stats?.totalProducts || 0) * 0.045 * scale) },
-    ],
-    [t, stats, scale]
-  );
-
   const quickActions = useMemo(
     () => [
+      { to: "/pending-products", label: t("dashboard.action.manageProducts") },
+      { to: "/companies", label: t("dashboard.action.reviewCompanies") },
       { to: "/categories", label: t("dashboard.action.addCategory") },
       { to: "/banners", label: t("dashboard.action.addBanner") },
-      { to: "/companies", label: t("dashboard.action.reviewCompanies") },
-      { to: "/products", label: t("dashboard.action.manageProducts") },
     ],
     [t]
   );
 
-  const chartValueLabels: Record<string, string> = {
-    sales: t("dashboard.chart.sales"),
-    orders: t("dashboard.chart.orders"),
-    visitors: t("dashboard.chart.visitors"),
-    sessions: t("dashboard.chart.sessions"),
-    clicks: t("dashboard.chart.clicks"),
-    value: t("dashboard.col.amount"),
-    count: t("dashboard.stats.totalProducts"),
-  };
-
-  const chartTooltipFormatter = (
-    value: number | string | readonly (number | string)[] | undefined,
-    name?: string | number
-  ) => {
-    const raw = Array.isArray(value) ? value[0] : value;
-    const numeric = typeof raw === "number" ? raw : Number(raw);
-    const display = Number.isFinite(numeric) ? numeric.toLocaleString(locale) : String(raw ?? "");
-    const nameKey = String(name ?? "");
-    return [display, chartValueLabels[nameKey] || nameKey];
-  };
-
-  const legendFormatter = (value: string) => chartValueLabels[value] || value;
-
-  const yAxisTickFormatter = (value: number) => value.toLocaleString(locale);
-
-  const isLoading = statsLoading || usersLoading || ordersLoading || productsLoading || providersLoading;
-  if (isLoading) return <DashboardSkeleton />;
-  if (statsError || usersError || ordersError || productsError || providersError) {
+  if (isLoading && !stats) return <DashboardSkeleton />;
+  if (isError || !stats) {
     return <EmptyState title={t("dashboard.loadFailed")} description={t("dashboard.loadFailedHint")} />;
   }
-  if (!stats) {
-    return (
-      <EmptyState
-        icon={<TrendingUp sx={{ fontSize: 48 }} />}
-        title={t("dashboard.emptyTitle")}
-        description={t("dashboard.emptyDescription")}
-      />
-    );
-  }
+
+  const periodTotals = stats.periodTotals || {
+    users: 0,
+    companies: 0,
+    products: 0,
+    orders: 0,
+    revenue: 0,
+  };
+  const changes = stats.changes || { users: 0, companies: 0, products: 0, orders: 0, revenue: 0 };
+  const recentOrders = stats.recent?.orders || [];
+  const recentUsers = stats.recent?.users || [];
+  const recentProducts = stats.recent?.products || [];
 
   return (
-    <Stack spacing={3} key={language}>
-      <Paper
-        sx={{
-          p: 3,
-          background: (theme) =>
-            `linear-gradient(120deg, ${theme.palette.primary.main}18, transparent 40%)`,
-        }}
+    <Stack spacing={2.5} key={language}>
+      <Stack
+        direction={{ xs: "column", md: "row" }}
+        spacing={2}
+        sx={{ justifyContent: "space-between", alignItems: { md: "center" } }}
       >
-        <Stack spacing={2}>
-          <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ justifyContent: "space-between", alignItems: { md: "center" } }}>
-            <Box>
-              <Typography variant="overline" color="primary" sx={{ fontWeight: 700, letterSpacing: 1.5 }}>
-                {t("dashboard.hero.badge")}
-              </Typography>
-              <Typography variant="h5" sx={{ mt: 1, fontWeight: 700 }}>
-                {t("dashboard.hero.title")}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1, maxWidth: 560 }}>
-                {t("dashboard.hero.subtitle")}
-              </Typography>
-            </Box>
-            <ToggleButtonGroup
-              exclusive
-              size="small"
-              value={period}
-              onChange={(_, value: DashboardPeriod | null) => value && setPeriod(value)}
-            >
-              <ToggleButton value="today">{t("dashboard.period.today")}</ToggleButton>
-              <ToggleButton value="week">{t("dashboard.period.week")}</ToggleButton>
-              <ToggleButton value="month">{t("dashboard.period.month")}</ToggleButton>
-            </ToggleButtonGroup>
-          </Stack>
-          <Typography variant="caption" color="text.secondary">
-            {t("dashboard.showingDataFor")} {periodLabel}
-          </Typography>
+        <PageHeader title={t("dashboard.hero.title")} subtitle={t("dashboard.hero.subtitle")} />
+        <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap" }}>
+          <ToggleButtonGroup
+            exclusive
+            size="small"
+            value={period}
+            onChange={(_, value: DashboardPeriod | null) => value && setPeriod(value)}
+            sx={{
+              bgcolor: "background.paper",
+              border: 1,
+              borderColor: "divider",
+              borderRadius: "8px",
+              "& .MuiToggleButton-root": {
+                border: 0,
+                borderRadius: "8px !important",
+                px: 1.5,
+                textTransform: "none",
+                fontWeight: 600,
+              },
+              "& .Mui-selected": {
+                bgcolor: "primary.main !important",
+                color: "primary.contrastText !important",
+              },
+            }}
+          >
+            <ToggleButton value="today">{t("dashboard.period.today")}</ToggleButton>
+            <ToggleButton value="week">{t("dashboard.period.week")}</ToggleButton>
+            <ToggleButton value="month">{t("dashboard.period.month")}</ToggleButton>
+          </ToggleButtonGroup>
+          <IconButton
+            onClick={() => refetch()}
+            disabled={isFetching}
+            sx={{
+              borderRadius: "8px",
+              border: 1,
+              borderColor: "divider",
+              width: 38,
+              height: 38,
+            }}
+            aria-label="refresh"
+          >
+            <Refresh fontSize="small" />
+          </IconButton>
         </Stack>
-      </Paper>
+      </Stack>
+
+      <Typography variant="caption" color="text.secondary">
+        {t("dashboard.showingDataFor")} {periodLabel}
+        {isFetching ? ` · ${t("common.loading")}` : ""}
+      </Typography>
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
-          <AnalyticsWidget title={t("dashboard.stats.totalUsers")} value={period === "month" ? stats.totalUsers : periodUsers.length} icon={<People fontSize="small" />} change="+12.4%" hint={periodLabel} sparkline={[22, 30, 18, 40, 65, 55].map((v) => Math.round(v * scale))} iconColor="primary" />
+          <StatLinkCard
+            to="/users"
+            title={t("dashboard.stats.totalUsers")}
+            value={periodTotals.users.toLocaleString(locale)}
+            change={formatChange(changes.users)}
+            trend={changeTrend(changes.users)}
+            hint={`${t("dashboard.stats.totalUsers")}: ${stats.totalUsers.toLocaleString(locale)}`}
+            icon={<People fontSize="small" />}
+          />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
-          <AnalyticsWidget title={t("dashboard.stats.totalCompanies")} value={Math.round(stats.totalCompanies * scale)} icon={<Business fontSize="small" />} change="+8.7%" hint={periodLabel} sparkline={[28, 45, 34, 50, 68, 72].map((v) => Math.round(v * scale))} iconColor="info" />
+          <StatLinkCard
+            to="/companies"
+            title={t("dashboard.stats.totalCompanies")}
+            value={periodTotals.companies.toLocaleString(locale)}
+            change={formatChange(changes.companies)}
+            trend={changeTrend(changes.companies)}
+            hint={`${t("dashboard.stats.totalCompanies")}: ${stats.totalCompanies.toLocaleString(locale)}`}
+            icon={<Business fontSize="small" />}
+          />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
-          <AnalyticsWidget title={t("dashboard.stats.totalProducts")} value={period === "month" ? stats.totalProducts : periodProducts.length} icon={<Inventory2 fontSize="small" />} change="+15.2%" hint={periodLabel} sparkline={[15, 30, 42, 46, 58, 66].map((v) => Math.round(v * scale))} iconColor="warning" />
+          <StatLinkCard
+            to="/products"
+            title={t("dashboard.stats.totalProducts")}
+            value={periodTotals.products.toLocaleString(locale)}
+            change={formatChange(changes.products)}
+            trend={changeTrend(changes.products)}
+            hint={`${t("dashboard.stats.totalProducts")}: ${stats.totalProducts.toLocaleString(locale)}`}
+            icon={<Inventory2 fontSize="small" />}
+          />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
-          <AnalyticsWidget title={t("dashboard.stats.totalOrders")} value={period === "month" ? stats.totalOrders : periodOrders.length} icon={<LocalShipping fontSize="small" />} change="+6.1%" hint={periodLabel} sparkline={[20, 25, 32, 29, 52, 60].map((v) => Math.round(v * scale))} iconColor="secondary" />
+          <StatLinkCard
+            to="/orders"
+            title={t("dashboard.stats.totalOrders")}
+            value={periodTotals.orders.toLocaleString(locale)}
+            change={formatChange(changes.orders)}
+            trend={changeTrend(changes.orders)}
+            hint={`${t("dashboard.stats.totalOrders")}: ${stats.totalOrders.toLocaleString(locale)}`}
+            icon={<LocalShipping fontSize="small" />}
+          />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
-          <AnalyticsWidget title={t("dashboard.stats.totalRevenue")} value={formatCurrency(Math.round(Number(stats.revenue) * scale), language, currency)} icon={<MonetizationOn fontSize="small" />} change="+19.8%" hint={periodLabel} sparkline={[12, 21, 30, 41, 52, 74].map((v) => Math.round(v * scale))} iconColor="success" />
+          <StatLinkCard
+            to="/finance"
+            title={t("dashboard.stats.totalRevenue")}
+            value={formatCurrency(periodTotals.revenue, language, currency)}
+            change={formatChange(changes.revenue)}
+            trend={changeTrend(changes.revenue)}
+            hint={`${t("dashboard.stats.totalRevenue")}: ${formatCurrency(stats.revenue, language, currency)}`}
+            icon={<MonetizationOn fontSize="small" />}
+          />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
-          <AnalyticsWidget title={t("dashboard.stats.serviceProviders")} value={Math.round((serviceProvidersCount || 0) * scale)} icon={<Warehouse fontSize="small" />} change="+4.1%" hint={periodLabel} sparkline={[18, 23, 31, 38, 44, 48].map((v) => Math.round(v * scale))} iconColor="info" />
+          <StatLinkCard
+            to="/consultants"
+            title={t("dashboard.stats.serviceProviders")}
+            value={(stats.serviceProviders || 0).toLocaleString(locale)}
+            hint={t("dashboard.hint.applicationQueue")}
+            icon={<Warehouse fontSize="small" />}
+          />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
-          <AnalyticsWidget title={t("dashboard.stats.pendingProducts")} value={Math.round(stats.pendingProducts * scale)} icon={<PendingActions fontSize="small" />} change="-2.3%" trend="down" hint={t("dashboard.hint.moderation")} sparkline={[62, 55, 52, 40, 37, 28].map((v) => Math.round(v * scale))} iconColor="error" />
+          <StatLinkCard
+            to="/pending-products"
+            title={t("dashboard.stats.pendingProducts")}
+            value={stats.pendingProducts.toLocaleString(locale)}
+            hint={t("dashboard.hint.moderation")}
+            icon={<PendingActions fontSize="small" />}
+          />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
-          <AnalyticsWidget title={t("dashboard.stats.pendingCompanies")} value={Math.round(stats.pendingCompanies * scale)} icon={<Storefront fontSize="small" />} change="-1.7%" trend="down" hint={t("dashboard.hint.applicationQueue")} sparkline={[45, 42, 38, 30, 26, 23].map((v) => Math.round(v * scale))} iconColor="error" />
+          <StatLinkCard
+            to="/companies"
+            title={t("dashboard.stats.pendingCompanies")}
+            value={stats.pendingCompanies.toLocaleString(locale)}
+            hint={t("dashboard.hint.applicationQueue")}
+            icon={<Storefront fontSize="small" />}
+          />
         </Grid>
       </Grid>
 
       <Grid container spacing={2}>
-        <Grid size={{ xs: 12, xl: 6 }}>
-          <ChartCard title={t("dashboard.charts.revenue")} badge={t("dashboard.charts.revenueBadge")}>
+        <Grid size={{ xs: 12, lg: 7 }}>
+          <ChartCard
+            title={t("dashboard.charts.revenue")}
+            subtitle={periodLabel}
+            action={
+              <Button
+                component={RouterLink}
+                to="/finance"
+                size="small"
+                endIcon={<ArrowForward fontSize="small" />}
+                sx={{ borderRadius: "8px" }}
+              >
+                {t("nav.finance")}
+              </Button>
+            }
+          >
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={salesData}>
+              <AreaChart data={series}>
                 <defs>
-                  <linearGradient id="salesPrimary" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#23673A" stopOpacity={0.35} />
+                  <linearGradient id="dashSales" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#23673A" stopOpacity={0.28} />
                     <stop offset="95%" stopColor="#23673A" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#E4E7EC" />
-                <XAxis axisLine={false} tickLine={false} dataKey="name" />
-                <YAxis axisLine={false} tickLine={false} width={44} tick={{ fontSize: 11 }} tickFormatter={yAxisTickFormatter} />
+                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11 }} minTickGap={28} />
+                <YAxis axisLine={false} tickLine={false} width={48} tick={{ fontSize: 11 }} tickFormatter={yAxisTickFormatter} />
                 <Tooltip formatter={chartTooltipFormatter} />
                 <Legend formatter={legendFormatter} />
-                <Area type="monotone" dataKey="sales" stroke="#23673A" strokeWidth={2.5} fill="url(#salesPrimary)" />
+                <Area type="monotone" dataKey="sales" stroke="#23673A" strokeWidth={2.5} fill="url(#dashSales)" />
                 <Area type="monotone" dataKey="orders" stroke="#69A87B" strokeWidth={2} fill="transparent" />
               </AreaChart>
             </ResponsiveContainer>
           </ChartCard>
         </Grid>
-        <Grid size={{ xs: 12, xl: 6 }}>
-          <ChartCard title={t("dashboard.charts.projectStatus")} badge={t("dashboard.charts.projectStatusBadge")}>
+        <Grid size={{ xs: 12, lg: 5 }}>
+          <ChartCard title={t("dashboard.charts.projectStatus")} subtitle={periodLabel}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={growthData}>
                 <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#E4E7EC" />
-                <XAxis axisLine={false} tickLine={false} dataKey="label" />
+                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11 }} />
                 <YAxis axisLine={false} tickLine={false} width={44} tick={{ fontSize: 11 }} tickFormatter={yAxisTickFormatter} />
                 <Tooltip formatter={chartTooltipFormatter} />
-                <Bar dataKey="value" fill="#23673A" radius={[8, 8, 0, 0]} barSize={12} />
+                <Bar dataKey="value" fill="#23673A" radius={[8, 8, 0, 0]} barSize={28} />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
         </Grid>
-        <Grid size={{ xs: 12, xl: 6 }}>
-          <ChartCard title={t("dashboard.charts.products")} badge={t("dashboard.charts.productsBadge")}>
+        <Grid size={{ xs: 12, lg: 6 }}>
+          <ChartCard title={t("dashboard.charts.products")} subtitle={t("dashboard.charts.productsBadge")}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={productGrowthData}>
+              <BarChart data={productFlowData}>
                 <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#E4E7EC" />
-                <XAxis axisLine={false} tickLine={false} dataKey="step" />
+                <XAxis dataKey="step" axisLine={false} tickLine={false} tick={{ fontSize: 11 }} />
                 <YAxis axisLine={false} tickLine={false} width={44} tick={{ fontSize: 11 }} tickFormatter={yAxisTickFormatter} />
                 <Tooltip formatter={chartTooltipFormatter} />
-                <Bar dataKey="count" fill="#15803D" radius={[8, 8, 0, 0]} barSize={12} />
+                <Bar dataKey="count" fill="#15803D" radius={[8, 8, 0, 0]} barSize={28} />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
         </Grid>
-        <Grid size={{ xs: 12, xl: 6 }}>
-          <ChartCard title={t("dashboard.charts.analytics")} subtitle={t("dashboard.charts.analyticsSubtitle")}>
+        <Grid size={{ xs: 12, lg: 6 }}>
+          <ChartCard title={t("dashboard.charts.analytics")} subtitle={periodLabel}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={analyticsWeekData} barGap={10} barCategoryGap="44%">
+              <BarChart data={activityData} barGap={6}>
                 <CartesianGrid strokeDasharray="3 5" vertical={false} stroke="#dbe7de" />
-                <XAxis axisLine={false} tickLine={false} dataKey="day" tick={{ fill: "#6b7280", fontSize: 11 }} />
+                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11 }} minTickGap={24} />
                 <YAxis axisLine={false} tickLine={false} width={44} tick={{ fontSize: 11 }} tickFormatter={yAxisTickFormatter} />
-                <Tooltip cursor={{ fill: "rgba(35, 103, 58, 0.08)" }} formatter={chartTooltipFormatter} />
+                <Tooltip cursor={{ fill: "rgba(35, 103, 58, 0.06)" }} formatter={chartTooltipFormatter} />
                 <Legend formatter={legendFormatter} />
-                <Bar dataKey="visitors" fill="#82b695" radius={[8, 8, 0, 0]} barSize={6} />
-                <Bar dataKey="sessions" fill="#23673A" radius={[8, 8, 0, 0]} barSize={6} />
-                <Bar dataKey="clicks" fill="#c7ddcd" radius={[8, 8, 0, 0]} barSize={6} />
+                <Bar dataKey="users" fill="#82b695" radius={[8, 8, 0, 0]} barSize={8} />
+                <Bar dataKey="orders" fill="#23673A" radius={[8, 8, 0, 0]} barSize={8} />
+                <Bar dataKey="products" fill="#c7ddcd" radius={[8, 8, 0, 0]} barSize={8} />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -407,27 +523,41 @@ export function DashboardPage() {
       </Grid>
 
       <Grid container spacing={2}>
-        <Grid size={{ xs: 12, xl: 4 }}>
-          <Paper sx={{ p: 2, height: "100%" }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>
-              {t("dashboard.latestOrders")}
-            </Typography>
+        <Grid size={{ xs: 12, lg: 4 }}>
+          <Paper variant="outlined" sx={{ p: 2, height: "100%", borderRadius: "8px" }}>
+            <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                {t("dashboard.latestOrders")}
+              </Typography>
+              <Button component={RouterLink} to="/orders" size="small" sx={{ borderRadius: "8px" }}>
+                {t("common.view", "View")}
+              </Button>
+            </Stack>
             <TableContainer>
               <Table size="small">
                 <TableHead>
                   <TableRow>
                     <TableCell>{t("dashboard.col.customer")}</TableCell>
                     <TableCell>{t("dashboard.col.status")}</TableCell>
-                    <TableCell>{t("dashboard.col.amount")}</TableCell>
+                    <TableCell align="right">{t("dashboard.col.amount")}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {periodOrders.length ? (
-                    periodOrders.map((order) => (
-                      <TableRow key={order.id}>
+                  {recentOrders.length ? (
+                    recentOrders.map((order) => (
+                      <TableRow
+                        key={order.id}
+                        hover
+                        sx={{ cursor: "pointer" }}
+                        component={RouterLink}
+                        to={`/orders/${order.id}`}
+                        style={{ textDecoration: "none" }}
+                      >
                         <TableCell>{order.user?.name || t("dashboard.customerFallback")}</TableCell>
-                        <TableCell>{orderStatusLabel(order.status)}</TableCell>
-                        <TableCell sx={{ color: "primary.main" }}>
+                        <TableCell>
+                          <Chip size="small" label={orderStatusLabel(order.status)} variant="outlined" />
+                        </TableCell>
+                        <TableCell align="right" sx={{ color: "primary.main", fontWeight: 600 }}>
                           {formatCurrency(order.total, language, currency)}
                         </TableCell>
                       </TableRow>
@@ -444,15 +574,33 @@ export function DashboardPage() {
             </TableContainer>
           </Paper>
         </Grid>
-        <Grid size={{ xs: 12, xl: 4 }}>
-          <Paper sx={{ p: 2, height: "100%" }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>
-              {t("dashboard.latestRegistrations")}
-            </Typography>
+
+        <Grid size={{ xs: 12, lg: 4 }}>
+          <Paper variant="outlined" sx={{ p: 2, height: "100%", borderRadius: "8px" }}>
+            <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                {t("dashboard.latestRegistrations")}
+              </Typography>
+              <Button component={RouterLink} to="/users" size="small" sx={{ borderRadius: "8px" }}>
+                {t("common.view", "View")}
+              </Button>
+            </Stack>
             <Stack spacing={1}>
-              {periodUsers.length ? (
-                periodUsers.map((user) => (
-                  <Paper key={user.id} variant="outlined" sx={{ p: 1.5 }}>
+              {recentUsers.length ? (
+                recentUsers.map((user) => (
+                  <Paper
+                    key={user.id}
+                    component={RouterLink}
+                    to={`/users/${user.id}`}
+                    variant="outlined"
+                    sx={{
+                      p: 1.5,
+                      borderRadius: "8px",
+                      textDecoration: "none",
+                      color: "inherit",
+                      "&:hover": { borderColor: "primary.main" },
+                    }}
+                  >
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       {user.name}
                     </Typography>
@@ -469,20 +617,39 @@ export function DashboardPage() {
             </Stack>
           </Paper>
         </Grid>
-        <Grid size={{ xs: 12, xl: 4 }}>
-          <Paper sx={{ p: 2, height: "100%" }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>
-              {t("dashboard.latestProducts")}
-            </Typography>
+
+        <Grid size={{ xs: 12, lg: 4 }}>
+          <Paper variant="outlined" sx={{ p: 2, height: "100%", borderRadius: "8px" }}>
+            <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                {t("dashboard.latestProducts")}
+              </Typography>
+              <Button component={RouterLink} to="/products" size="small" sx={{ borderRadius: "8px" }}>
+                {t("common.view", "View")}
+              </Button>
+            </Stack>
             <Stack spacing={1}>
-              {periodProducts.length ? (
-                periodProducts.map((product) => (
-                  <Paper key={product.id} variant="outlined" sx={{ p: 1.5 }}>
+              {recentProducts.length ? (
+                recentProducts.map((product) => (
+                  <Paper
+                    key={product.id}
+                    component={RouterLink}
+                    to={`/products/${product.id}`}
+                    variant="outlined"
+                    sx={{
+                      p: 1.5,
+                      borderRadius: "8px",
+                      textDecoration: "none",
+                      color: "inherit",
+                      "&:hover": { borderColor: "primary.main" },
+                    }}
+                  >
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       {product.title}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
                       {productStatusLabel(product.status)}
+                      {product.company?.name ? ` · ${product.company.name}` : ""}
                     </Typography>
                   </Paper>
                 ))
@@ -496,14 +663,21 @@ export function DashboardPage() {
         </Grid>
       </Grid>
 
-      <Paper sx={{ p: 2 }}>
+      <Paper variant="outlined" sx={{ p: 2, borderRadius: "8px" }}>
         <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>
           {t("dashboard.quickActions")}
         </Typography>
-        <Grid container spacing={2}>
+        <Grid container spacing={1.5}>
           {quickActions.map((action) => (
             <Grid key={action.to} size={{ xs: 12, sm: 6, lg: 3 }}>
-              <Button component={RouterLink} to={action.to} variant="contained" fullWidth>
+              <Button
+                component={RouterLink}
+                to={action.to}
+                variant="outlined"
+                fullWidth
+                sx={{ borderRadius: "8px", justifyContent: "space-between", py: 1.25 }}
+                endIcon={<ArrowForward fontSize="small" />}
+              >
                 {action.label}
               </Button>
             </Grid>
