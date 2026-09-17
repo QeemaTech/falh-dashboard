@@ -612,7 +612,7 @@ export async function fetchAdminCategories(params?: {
     params: { page: 1, limit: 20, sortBy: "sortOrder", sortOrder: "asc", ...(params || {}) },
   });
   return {
-    items: data.data,
+    items: Array.isArray(data.data) ? data.data : [],
     meta: data.meta as { page?: number; limit?: number; total?: number; totalPages?: number },
   };
 }

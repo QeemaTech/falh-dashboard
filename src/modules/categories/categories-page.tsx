@@ -69,13 +69,14 @@ export function CategoriesPage() {
   const [pageSize, setPageSize] = useState(20);
 
   const { data, isLoading, isError, error, isFetching } = useQuery({
-    queryKey: ["admin-categories", page, pageSize],
+    queryKey: ["admin-categories-list", page, pageSize],
     queryFn: () =>
       fetchAdminCategories({ page, limit: pageSize, sortBy: "sortOrder", sortOrder: "asc" }),
-    placeholderData: (previousData) => previousData,
+    placeholderData: (previousData) =>
+      previousData && Array.isArray(previousData.items) ? previousData : undefined,
   });
 
-  const categories = data?.items || [];
+  const categories = Array.isArray(data?.items) ? data.items : [];
   const totalPages = resolveTotalPages(data?.meta);
   const selectedCategory = categories.find((c) => c.id === selectedCategoryId);
   const isEditing = Boolean(editingId);
@@ -98,6 +99,7 @@ export function CategoriesPage() {
     },
     onSuccess: (saved) => {
       queryClient.invalidateQueries({ queryKey: ["admin-categories"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-categories-list"] });
       queryClient.invalidateQueries({ queryKey: ["admin-categories-all"] });
       queryClient.invalidateQueries({ queryKey: ["product-categories"] });
       const wasEdit = Boolean(editingId);
@@ -112,6 +114,7 @@ export function CategoriesPage() {
     mutationFn: (categoryId: string) => deleteAdminCategoryApi(categoryId),
     onSuccess: (_data, categoryId) => {
       queryClient.invalidateQueries({ queryKey: ["admin-categories"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-categories-list"] });
       queryClient.invalidateQueries({ queryKey: ["admin-categories-all"] });
       queryClient.invalidateQueries({ queryKey: ["product-categories"] });
       if (selectedCategoryId === categoryId) setSelectedCategoryId("");
