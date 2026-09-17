@@ -78,6 +78,10 @@ export function MarketListPanel({
   const dateLocale = isArabic ? "ar-EG" : "en-US";
   const numberLocale = isArabic ? "ar-EG" : "en-US";
   const totalItems = pagination?.totalItems ?? items.length;
+  const pageSizeOptions = [10, 20, 50] as const;
+  const safePageSize = pageSizeOptions.includes(pageSize as (typeof pageSizeOptions)[number])
+    ? pageSize
+    : 10;
 
   return (
     <Stack spacing={3}>
@@ -145,11 +149,11 @@ export function MarketListPanel({
           select
           size="small"
           label={t("market.pageSize")}
-          value={pageSize}
+          value={safePageSize}
           onChange={(event) => onPageSizeChange(Number(event.target.value))}
           sx={{ minWidth: 120 }}
         >
-          {[10, 20, 50].map((size) => (
+          {pageSizeOptions.map((size) => (
             <MenuItem key={size} value={size}>
               {size}
             </MenuItem>

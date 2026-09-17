@@ -213,7 +213,7 @@ export function MarketPage() {
           search=""
           category=""
           trend=""
-          pageSize={legacyItems.length || 10}
+          pageSize={10}
           categories={[]}
           onSearchChange={() => {}}
           onCategoryChange={() => {}}
