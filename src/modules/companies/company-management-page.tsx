@@ -534,6 +534,17 @@ export function CompanyManagementPage() {
         </AppTable>
       )}
 
+      {!isLoading && !isError && companies.length > 0 ? (
+        <TablePaginationBar
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          pageSize={pageSize}
+          onPageSizeChange={setPageSize}
+          isFetching={isFetching}
+          totalItems={data?.meta?.total}
+        />
+      ) : null}
 
       <AppModal
         open={Boolean(resetPasswordCompany)}

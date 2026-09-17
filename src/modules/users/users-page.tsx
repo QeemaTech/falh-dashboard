@@ -1,8 +1,16 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Chip, MenuItem, Stack, TextField, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { DataTable, EmptyState, FilterBar, PageHeader, TableRowActions } from "../../components/layout";
+import {
+  DataTable,
+  EmptyState,
+  FilterBar,
+  PageHeader,
+  TablePaginationBar,
+  TableRowActions,
+  resolveTotalPages,
+} from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
 import { fetchUsers } from "../../services/admin-api";
 import type { User } from "../../types/dashboard";
@@ -23,25 +31,39 @@ export function UsersPage() {
   const [status, setStatus] = useState("");
   const [role, setRole] = useState("");
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["users", status, role, search],
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 350);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, status, role, pageSize]);
+
+  const { data, isLoading, isError, error, isFetching } = useQuery({
+    queryKey: ["users", status, role, debouncedSearch, page, pageSize],
     queryFn: () =>
       fetchUsers({
-        page: 1,
-        limit: 50,
-        search: search || undefined,
+        page,
+        limit: pageSize,
+        search: debouncedSearch || undefined,
         status: status || undefined,
         role: role || undefined,
         sortBy: "createdAt",
         sortOrder: "desc",
       }),
+    placeholderData: (previousData) => previousData,
   });
 
   const statusLabel = (value: User["status"]) => t(`users.status.${value}`);
   const roleLabel = (value: User["role"]) => t(`users.role.${value}`);
 
   const rows = useMemo<UserRow[]>(() => (data?.users ?? []) as UserRow[], [data?.users]);
+  const totalPages = resolveTotalPages(data?.meta as { totalPages?: number; total?: number; limit?: number });
 
   if (isError) {
     return <EmptyState title={t("users.loadFailed")} description={(error as Error).message} />;
@@ -130,6 +152,18 @@ export function UsersPage() {
         ]}
         data={rows}
       />
+
+      {rows.length > 0 || totalPages > 1 ? (
+        <TablePaginationBar
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          pageSize={pageSize}
+          onPageSizeChange={setPageSize}
+          isFetching={isFetching}
+          totalItems={(data?.meta as { total?: number } | undefined)?.total}
+        />
+      ) : null}
     </Stack>
   );
 }

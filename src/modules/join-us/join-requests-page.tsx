@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search, Settings } from "@mui/icons-material";
 import {
@@ -12,7 +12,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { DataTable, EmptyState, FilterBar, PageHeader, TableRowActions } from "../../components/layout";
+import { DataTable, EmptyState, FilterBar, PageHeader, TablePaginationBar, TableRowActions, resolveTotalPages } from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
 import {
   fetchJoinUsApplications,
@@ -41,6 +41,12 @@ export function JoinRequestsPage() {
   const [status, setStatus] = useState("PENDING");
   const [tab, setTab] = useState<JoinUsTab>(TAB_ALL);
   const [typesDrawerOpen, setTypesDrawerOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, status, tab, pageSize]);
 
   const { data: joinTypes = [] } = useQuery({
     queryKey: ["join-application-types"],
@@ -73,19 +79,21 @@ export function JoinRequestsPage() {
   const statusLabel = (value: string) =>
     t(`joinUs.status.${value}` as "joinUs.status.PENDING") || value;
 
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["join-us-applications", search, status, tab],
+  const { data, isLoading, isError, error, isFetching } = useQuery({
+    queryKey: ["join-us-applications", search, status, tab, page, pageSize],
     queryFn: () =>
       fetchJoinUsApplications({
-        page: 1,
-        limit: 50,
+        page,
+        limit: pageSize,
         search: search || undefined,
         status: status || undefined,
         tab,
       }),
+    placeholderData: (previousData) => previousData,
   });
 
   const applications = (data?.items || []) as JoinRequestRow[];
+  const totalPages = resolveTotalPages(data?.meta);
 
   if (isError) {
     return <EmptyState title={t("joinUs.loadFailed")} description={(error as Error).message} />;
@@ -197,6 +205,18 @@ export function JoinRequestsPage() {
         ]}
         data={applications}
       />
+
+      {applications.length > 0 || totalPages > 1 ? (
+        <TablePaginationBar
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          pageSize={pageSize}
+          onPageSizeChange={setPageSize}
+          isFetching={isFetching}
+          totalItems={data?.meta?.total}
+        />
+      ) : null}
 
       <JoinApplicationTypesDrawer open={typesDrawerOpen} onClose={() => setTypesDrawerOpen(false)} />
     </Stack>

@@ -1,8 +1,16 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MenuItem, Stack, TextField, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { DataTable, EmptyState, FilterBar, PageHeader, TableRowActions } from "../../components/layout";
+import {
+  DataTable,
+  EmptyState,
+  FilterBar,
+  PageHeader,
+  TablePaginationBar,
+  TableRowActions,
+  resolveTotalPages,
+} from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
 import { fetchAdminOrders, type AdminOrder, type AdminOrderStatus } from "../../services/admin-api";
 
@@ -27,20 +35,27 @@ export function OrdersPage() {
   const locale = language === "ar" ? "ar-EG" : "en-US";
   const currency = t("market.currency");
   const [status, setStatus] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+
+  useEffect(() => {
+    setPage(1);
+  }, [status, pageSize]);
 
   const statusLabel = (value: AdminOrderStatus) =>
     t(`orders.status.${value}` as "orders.status.PENDING");
 
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["admin-orders", status],
+  const { data, isLoading, isError, error, isFetching } = useQuery({
+    queryKey: ["admin-orders", status, page, pageSize],
     queryFn: () =>
       fetchAdminOrders({
-        page: 1,
-        limit: 50,
+        page,
+        limit: pageSize,
         status: status || undefined,
         sortBy: "createdAt",
         sortOrder: "desc",
       }),
+    placeholderData: (previousData) => previousData,
   });
 
   const rows = useMemo<OrderRow[]>(() => {
@@ -54,6 +69,8 @@ export function OrdersPage() {
       actions: "",
     }));
   }, [currency, data?.items, locale, t, language]);
+
+  const totalPages = resolveTotalPages(data?.meta);
 
   if (isError) {
     return <EmptyState title={t("orders.loadFailed")} description={(error as Error).message} />;
@@ -111,6 +128,17 @@ export function OrdersPage() {
         data={rows}
         getRowKey={(row) => row.id}
       />
+      {rows.length > 0 || totalPages > 1 ? (
+        <TablePaginationBar
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          pageSize={pageSize}
+          onPageSizeChange={setPageSize}
+          isFetching={isFetching}
+          totalItems={data?.meta?.total}
+        />
+      ) : null}
     </Stack>
   );
 }
