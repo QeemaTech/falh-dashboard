@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
-import { Box, Chip, CircularProgress, Link, Stack, Typography } from "@mui/material";
+import { Chip, CircularProgress, Link, Stack } from "@mui/material";
 import { DetailField, DetailGrid, DetailPageShell, EmptyState } from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
 import {
@@ -74,6 +74,7 @@ export function ConsultantDetailPage() {
   return (
     <DetailPageShell
       title={providerName(detail)}
+      subtitle={typeLabel(resolveTypeKey(detail), detail.otherTypeLabel)}
       backTo="/consultants"
       status={
         <Chip
@@ -87,7 +88,7 @@ export function ConsultantDetailPage() {
         {
           title: t("consultants.detailsTitle"),
           content: (
-            <Stack spacing={2.5}>
+            <Stack spacing={2}>
               <DetailGrid>
                 <DetailField
                   label={t("consultants.col.type")}
@@ -122,18 +123,22 @@ export function ConsultantDetailPage() {
                   />
                 ) : null}
               </DetailGrid>
-              <DetailField label={t("consultants.bio")} value={detail.bio || "—"} />
+              <DetailGrid columns={{ xs: 1, sm: 1, md: 1 }}>
+                <DetailField label={t("consultants.bio")} value={detail.bio || "—"} />
+              </DetailGrid>
               {detail.specializations?.length ? (
-                <Box>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-                    {t("consultants.specializations")}
-                  </Typography>
-                  <Stack direction="row" spacing={0.5} sx={{ flexWrap: "wrap", gap: 0.5, mt: 0.75 }}>
-                    {detail.specializations.map((item) => (
-                      <Chip key={item} label={item} size="small" variant="outlined" />
-                    ))}
-                  </Stack>
-                </Box>
+                <DetailGrid columns={{ xs: 1, sm: 1, md: 1 }}>
+                  <DetailField
+                    label={t("consultants.specializations")}
+                    value={
+                      <Stack direction="row" spacing={0.5} sx={{ flexWrap: "wrap", gap: 0.5 }}>
+                        {detail.specializations.map((item) => (
+                          <Chip key={item} label={item} size="small" variant="outlined" />
+                        ))}
+                      </Stack>
+                    }
+                  />
+                </DetailGrid>
               ) : null}
             </Stack>
           ),

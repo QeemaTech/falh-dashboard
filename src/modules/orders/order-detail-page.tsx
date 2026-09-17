@@ -10,6 +10,8 @@ import {
 } from "../../services/admin-api";
 import { resolveAssetUrl } from "../../utils/asset-url";
 
+const BRAND_GREEN = "#23673A";
+
 function formatAddress(address?: AdminOrderAddress | null) {
   if (!address) return null;
   const parts = [address.street, address.district, address.city].filter(Boolean);
@@ -132,10 +134,12 @@ export function OrderDetailPage() {
               {
                 title: t("orders.detail.sectionAddress"),
                 content: (
-                  <DetailField
-                    label={t("orders.detail.address")}
-                    value={formatAddress(orderDetail.address)}
-                  />
+                  <DetailGrid columns={{ xs: 1, sm: 1, md: 1 }}>
+                    <DetailField
+                      label={t("orders.detail.address")}
+                      value={formatAddress(orderDetail.address)}
+                    />
+                  </DetailGrid>
                 ),
               },
             ]
@@ -143,7 +147,7 @@ export function OrderDetailPage() {
         {
           title: `${t("orders.detail.sectionItems")} (${orderDetail.items?.length || 0})`,
           content: orderDetail.items?.length ? (
-            <Stack spacing={1.5}>
+            <Stack spacing={1.25}>
               {orderDetail.items.map((item) => {
                 const imagePath = item.product?.images?.[0]?.path;
                 const lineTotal = item.price * item.quantity;
@@ -153,7 +157,7 @@ export function OrderDetailPage() {
                     direction="row"
                     spacing={1.5}
                     sx={{
-                      p: 1.25,
+                      p: 1.5,
                       borderRadius: "8px",
                       border: 1,
                       borderColor: "divider",
@@ -165,8 +169,8 @@ export function OrderDetailPage() {
                         src={resolveAssetUrl(imagePath)}
                         alt={item.title}
                         sx={{
-                          width: 48,
-                          height: 48,
+                          width: 56,
+                          height: 56,
                           borderRadius: "8px",
                           objectFit: "cover",
                           flexShrink: 0,
@@ -182,7 +186,7 @@ export function OrderDetailPage() {
                         {item.unit ? ` (${item.unit})` : ""}
                       </Typography>
                     </Box>
-                    <Typography variant="body2" sx={{ fontWeight: 600, flexShrink: 0 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 700, flexShrink: 0 }}>
                       {formatMoney(lineTotal, locale, currency)}
                     </Typography>
                   </Stack>
@@ -200,11 +204,17 @@ export function OrderDetailPage() {
               {
                 title: t("orders.detail.sectionHistory"),
                 content: (
-                  <Stack spacing={1}>
+                  <Stack spacing={1.25}>
                     {orderDetail.statusHistory.map((entry) => (
                       <Box
                         key={entry.id}
-                        sx={{ pl: 1.5, borderLeft: 2, borderColor: "primary.main" }}
+                        sx={{
+                          pl: 1.75,
+                          py: 0.75,
+                          borderLeft: `3px solid ${BRAND_GREEN}`,
+                          borderRadius: "0 8px 8px 0",
+                          bgcolor: "action.hover",
+                        }}
                       >
                         <Typography variant="body2" sx={{ fontWeight: 600 }}>
                           {statusLabel(entry.status)}

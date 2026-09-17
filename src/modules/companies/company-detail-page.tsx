@@ -9,7 +9,6 @@ import {
   Chip,
   CircularProgress,
   Link,
-  Paper,
   Stack,
   TextField,
   Typography,
@@ -242,60 +241,64 @@ export function CompanyDetailPage() {
         {
           title: t("companies.detailsTitle"),
           content: (
-            <DetailGrid>
-              <DetailField label={t("companies.fieldName")} value={company.name} />
-              <DetailField
-                label={t("companies.fieldApplicant")}
-                value={company.applicantName || company.joinApplication?.fullName}
-              />
-              <DetailField label={t("companies.col.phone")} value={company.phone} />
-              <DetailField
-                label={t("companies.fieldEmail")}
-                value={company.email_public || company.joinApplication?.email}
-              />
-              <DetailField label={t("consultants.col.city")} value={company.city} />
-              <DetailField label={t("companies.fieldProductsCount")} value={String(company.productsCount ?? 0)} />
-              <DetailField label={t("companies.fieldProductLimit")} value={String(company.maxProducts ?? "-")} />
-              <DetailField label={t("companies.fieldDisplayDays")} value={String(company.displayDays ?? 30)} />
-              <DetailField
-                label={t("companies.fieldListingExpires")}
-                value={
-                  company.listingExpiresAt
-                    ? new Date(company.listingExpiresAt).toLocaleString(locale)
-                    : "-"
-                }
-              />
-              <DetailField
-                label={t("companies.fieldRevenue")}
-                value={`${t("market.currency")} ${Number(company.revenue || 0).toLocaleString(locale)}`}
-              />
-              <DetailField
-                label={t("companies.fieldRating")}
-                value={Number(company.rating || 0).toFixed(1)}
-              />
-              <DetailField
-                label={t("companies.fieldDescription")}
-                value={company.description || company.joinApplication?.description}
-              />
-              <DetailField
-                label={t("companies.fieldBusinessLicense")}
-                value={
-                  <AssetLink
-                    path={company.businessLicense || company.joinApplication?.businessLicense}
-                    label={t("companies.viewFile")}
-                  />
-                }
-              />
-              <DetailField
-                label={t("companies.fieldCommercialReg")}
-                value={
-                  <AssetLink
-                    path={company.commercialReg || company.joinApplication?.commercialReg}
-                    label={t("companies.viewFile")}
-                  />
-                }
-              />
-            </DetailGrid>
+            <Stack spacing={2}>
+              <DetailGrid>
+                <DetailField label={t("companies.fieldName")} value={company.name} />
+                <DetailField
+                  label={t("companies.fieldApplicant")}
+                  value={company.applicantName || company.joinApplication?.fullName}
+                />
+                <DetailField label={t("companies.col.phone")} value={company.phone} />
+                <DetailField
+                  label={t("companies.fieldEmail")}
+                  value={company.email_public || company.joinApplication?.email}
+                />
+                <DetailField label={t("consultants.col.city")} value={company.city} />
+                <DetailField label={t("companies.fieldProductsCount")} value={String(company.productsCount ?? 0)} />
+                <DetailField label={t("companies.fieldProductLimit")} value={String(company.maxProducts ?? "-")} />
+                <DetailField label={t("companies.fieldDisplayDays")} value={String(company.displayDays ?? 30)} />
+                <DetailField
+                  label={t("companies.fieldListingExpires")}
+                  value={
+                    company.listingExpiresAt
+                      ? new Date(company.listingExpiresAt).toLocaleString(locale)
+                      : "-"
+                  }
+                />
+                <DetailField
+                  label={t("companies.fieldRevenue")}
+                  value={`${t("market.currency")} ${Number(company.revenue || 0).toLocaleString(locale)}`}
+                />
+                <DetailField
+                  label={t("companies.fieldRating")}
+                  value={Number(company.rating || 0).toFixed(1)}
+                />
+                <DetailField
+                  label={t("companies.fieldBusinessLicense")}
+                  value={
+                    <AssetLink
+                      path={company.businessLicense || company.joinApplication?.businessLicense}
+                      label={t("companies.viewFile")}
+                    />
+                  }
+                />
+                <DetailField
+                  label={t("companies.fieldCommercialReg")}
+                  value={
+                    <AssetLink
+                      path={company.commercialReg || company.joinApplication?.commercialReg}
+                      label={t("companies.viewFile")}
+                    />
+                  }
+                />
+              </DetailGrid>
+              <DetailGrid columns={{ xs: 1, sm: 1, md: 1 }}>
+                <DetailField
+                  label={t("companies.fieldDescription")}
+                  value={company.description || company.joinApplication?.description}
+                />
+              </DetailGrid>
+            </Stack>
           ),
         },
         ...(isPending && !credentials
@@ -303,7 +306,7 @@ export function CompanyDetailPage() {
               {
                 title: t("companies.reviewTitle"),
                 content: (
-                  <Stack spacing={2}>
+                  <Stack spacing={2} sx={{ maxWidth: 480 }}>
                     <TextField
                       label={t("companies.productQuota")}
                       type="number"
@@ -312,6 +315,7 @@ export function CompanyDetailPage() {
                       slotProps={{ htmlInput: { min: 1 } }}
                       value={maxProducts}
                       onChange={(e) => setMaxProducts(e.target.value)}
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
                     />
                     <TextField
                       label={t("companies.displayDays")}
@@ -322,6 +326,7 @@ export function CompanyDetailPage() {
                       slotProps={{ htmlInput: { min: 1 } }}
                       value={displayDays}
                       onChange={(e) => setDisplayDays(e.target.value)}
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
                     />
                     <TextField
                       label={t("companies.loginEmail")}
@@ -330,6 +335,7 @@ export function CompanyDetailPage() {
                       fullWidth
                       value={companyEmail}
                       onChange={(e) => setCompanyEmail(e.target.value)}
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
                     />
                     <Stack direction="row" spacing={1}>
                       <TextField
@@ -339,6 +345,7 @@ export function CompanyDetailPage() {
                         fullWidth
                         value={companyPassword}
                         onChange={(e) => setCompanyPassword(e.target.value)}
+                        sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
                       />
                       <Button
                         type="button"
@@ -355,6 +362,7 @@ export function CompanyDetailPage() {
                       fullWidth
                       value={adminNote}
                       onChange={(e) => setAdminNote(e.target.value)}
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
                     />
                     {formError ? <Alert severity="error">{formError}</Alert> : null}
                   </Stack>
@@ -367,20 +375,22 @@ export function CompanyDetailPage() {
               {
                 title: t("companies.accountCreated"),
                 content: (
-                  <Paper variant="outlined" sx={{ p: 2, borderRadius: "8px", borderColor: "primary.light" }}>
-                    <Typography variant="body2">
-                      {t("companies.fieldEmail")}: {credentials.email}
-                    </Typography>
-                    <Typography variant="body2">
-                      {t("companies.loginPassword")}: {credentials.password}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
+                  <Stack spacing={2}>
+                    <DetailGrid columns={{ xs: 1, sm: 2, md: 2 }}>
+                      <DetailField label={t("companies.fieldEmail")} value={credentials.email} />
+                      <DetailField label={t("companies.loginPassword")} value={credentials.password} />
+                    </DetailGrid>
+                    <Typography variant="caption" color="text.secondary">
                       {t("companies.credentialsHint")}
                     </Typography>
-                    <Button sx={{ mt: 1, borderRadius: "8px" }} onClick={() => navigate("/companies")}>
+                    <Button
+                      variant="outlined"
+                      sx={{ borderRadius: "8px", alignSelf: "flex-start" }}
+                      onClick={() => navigate("/companies")}
+                    >
                       {t("companies.close")}
                     </Button>
-                  </Paper>
+                  </Stack>
                 ),
               },
             ]
@@ -399,6 +409,7 @@ export function CompanyDetailPage() {
                       slotProps={{ htmlInput: { min: 1 } }}
                       value={newLimit}
                       onChange={(e) => setNewLimit(Number(e.target.value))}
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
                     />
                     <TextField
                       label={t("companies.displayDays")}
@@ -409,6 +420,7 @@ export function CompanyDetailPage() {
                       slotProps={{ htmlInput: { min: 1 } }}
                       value={editDisplayDays}
                       onChange={(e) => setEditDisplayDays(Number(e.target.value))}
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
                     />
                     <Button
                       variant="contained"
@@ -430,6 +442,7 @@ export function CompanyDetailPage() {
                         slotProps={{ htmlInput: { min: 0 } }}
                         value={editPartnerSortOrder}
                         onChange={(e) => setEditPartnerSortOrder(Number(e.target.value))}
+                        sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
                       />
                       <Button
                         variant="outlined"

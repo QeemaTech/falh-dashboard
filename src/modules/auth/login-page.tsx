@@ -182,14 +182,11 @@ export function LoginPage() {
               {form.formState.isSubmitting ? t("login.signingIn") : t("login.signIn")}
             </Button>
 
-            <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 1 }}>
+            <Stack direction="row" sx={{ justifyContent: "flex-start", alignItems: "center" }}>
               <FormControlLabel
                 control={<Checkbox {...form.register("rememberMe")} defaultChecked />}
                 label={<Typography variant="body2">{t("login.rememberMe")}</Typography>}
               />
-              <Link component={RouterLink} to="/forgot-password" underline="hover" variant="body2">
-                {t("login.forgotPassword")}
-              </Link>
             </Stack>
           </Stack>
         </Box>

@@ -81,42 +81,46 @@ export function FinanceDetailPage() {
         {
           title: t("finance.detailsTitle"),
           content: (
-            <Stack spacing={2.5}>
-              <DetailGrid>
-                <DetailField
-                  label={t("finance.col.gross")}
-                  value={formatMoney(details.summary.grossSales, locale, currency)}
-                />
-                <DetailField
-                  label={t("finance.col.commission")}
-                  value={formatMoney(details.summary.commissionAmount, locale, currency)}
-                />
-                <DetailField
-                  label={t("finance.col.net")}
-                  value={formatMoney(details.summary.netToCompany, locale, currency)}
-                />
-                <DetailField label={t("finance.col.orders")} value={String(details.summary.ordersCount)} />
-              </DetailGrid>
-              <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ maxWidth: 480 }}>
-                <TextField
-                  label={t("finance.commissionRate")}
-                  type="number"
-                  size="small"
-                  fullWidth
-                  helperText={t("finance.commissionHint")}
-                  slotProps={{ htmlInput: { min: 0, max: 100, step: 0.5 } }}
-                  value={commissionRate}
-                  onChange={(e) => setCommissionRate(e.target.value)}
-                />
-                <Button
-                  variant="contained"
-                  onClick={saveCommission}
-                  disabled={commissionMutation.isPending}
-                  sx={{ borderRadius: "8px", alignSelf: { sm: "flex-start" }, mt: { sm: 0.5 } }}
-                >
-                  {t("finance.saveCommission")}
-                </Button>
-              </Stack>
+            <DetailGrid>
+              <DetailField
+                label={t("finance.col.gross")}
+                value={formatMoney(details.summary.grossSales, locale, currency)}
+              />
+              <DetailField
+                label={t("finance.col.commission")}
+                value={formatMoney(details.summary.commissionAmount, locale, currency)}
+              />
+              <DetailField
+                label={t("finance.col.net")}
+                value={formatMoney(details.summary.netToCompany, locale, currency)}
+              />
+              <DetailField label={t("finance.col.orders")} value={String(details.summary.ordersCount)} />
+            </DetailGrid>
+          ),
+        },
+        {
+          title: t("finance.commissionRate"),
+          content: (
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ maxWidth: 480 }}>
+              <TextField
+                label={t("finance.commissionRate")}
+                type="number"
+                size="small"
+                fullWidth
+                helperText={t("finance.commissionHint")}
+                slotProps={{ htmlInput: { min: 0, max: 100, step: 0.5 } }}
+                value={commissionRate}
+                onChange={(e) => setCommissionRate(e.target.value)}
+                sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
+              />
+              <Button
+                variant="contained"
+                onClick={saveCommission}
+                disabled={commissionMutation.isPending}
+                sx={{ borderRadius: "8px", alignSelf: { sm: "flex-start" }, mt: { sm: 0.5 } }}
+              >
+                {t("finance.saveCommission")}
+              </Button>
             </Stack>
           ),
         },
@@ -127,7 +131,7 @@ export function FinanceDetailPage() {
               {t("finance.noOrders")}
             </Typography>
           ) : (
-            <Stack spacing={1.5}>
+            <Stack spacing={1.25}>
               {details.orders.map((order) => (
                 <Stack
                   key={order.orderId}
@@ -135,7 +139,7 @@ export function FinanceDetailPage() {
                   sx={{ p: 1.5, border: 1, borderColor: "divider", borderRadius: "8px" }}
                 >
                   <Stack direction="row" sx={{ justifyContent: "space-between", gap: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 700 }}>
                       #{order.orderId.slice(0, 8)}
                     </Typography>
                     <Chip size="small" label={orderStatusLabel(order.status)} variant="outlined" />
@@ -149,7 +153,7 @@ export function FinanceDetailPage() {
                       {formatMoney(item.lineTotal, locale, currency)}
                     </Typography>
                   ))}
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>
                     {t("finance.col.net")}: {formatMoney(order.netToCompany, locale, currency)}
                   </Typography>
                 </Stack>

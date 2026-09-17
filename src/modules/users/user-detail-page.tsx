@@ -2,14 +2,11 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import {
-  CalendarMonth,
-  Email,
   Inventory2,
   LocationOn,
   Notifications,
   Paid,
   Person,
-  Phone,
   ShoppingCart,
   SmartToy,
 } from "@mui/icons-material";
@@ -26,7 +23,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { DetailPageShell, EmptyState } from "../../components/layout";
+import { DetailField, DetailGrid, DetailPageShell, EmptyState } from "../../components/layout";
 import { PermissionGate } from "../../components/permission-gate";
 import { useI18n } from "../../hooks/use-i18n";
 import {
@@ -39,6 +36,8 @@ import {
 } from "../../services/admin-api";
 import type { User } from "../../types/dashboard";
 import { toast } from "../../components/ui/sonner";
+
+const BRAND_GREEN = "#23673A";
 
 function statusChipColor(status: User["status"]): "success" | "warning" | "error" | "default" {
   if (status === "ACTIVE") return "success";
@@ -53,35 +52,6 @@ function userInitials(name: string) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? "")
     .join("");
-}
-
-function InfoItem({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
-  return (
-    <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
-      <Box
-        sx={{
-          width: 40,
-          height: 40,
-          flexShrink: 0,
-          borderRadius: "8px",
-          bgcolor: "action.hover",
-          color: "primary.main",
-          display: "grid",
-          placeItems: "center",
-        }}
-      >
-        {icon}
-      </Box>
-      <Box sx={{ minWidth: 0 }}>
-        <Typography variant="caption" color="text.secondary" sx={{ display: "block", lineHeight: 1.3 }}>
-          {label}
-        </Typography>
-        <Typography variant="body2" sx={{ fontWeight: 600, wordBreak: "break-word" }}>
-          {value}
-        </Typography>
-      </Box>
-    </Stack>
-  );
 }
 
 function MiniStat({
@@ -112,7 +82,7 @@ function MiniStat({
             width: 32,
             height: 32,
             borderRadius: "8px",
-            bgcolor: `${accent}22`,
+            bgcolor: `${accent}18`,
             color: accent,
             display: "grid",
             placeItems: "center",
@@ -124,7 +94,14 @@ function MiniStat({
           <Typography
             variant="caption"
             color="text.secondary"
-            sx={{ display: "block", fontWeight: 600, letterSpacing: 0.3, lineHeight: 1.3 }}
+            sx={{
+              display: "block",
+              fontWeight: 700,
+              letterSpacing: 0.6,
+              lineHeight: 1.3,
+              textTransform: "uppercase",
+              fontSize: "0.65rem",
+            }}
           >
             {label}
           </Typography>
@@ -223,7 +200,6 @@ export function UserDetailPage() {
                 variant="contained"
                 disabled={statusMutation.isPending}
                 onClick={() => statusMutation.mutate({ userId: detail.id, action: "activate" })}
-                sx={{ borderRadius: "8px" }}
               >
                 {t("users.activate")}
               </Button>
@@ -234,7 +210,6 @@ export function UserDetailPage() {
                 color="error"
                 disabled={statusMutation.isPending}
                 onClick={() => statusMutation.mutate({ userId: detail.id, action: "suspend" })}
-                sx={{ borderRadius: "8px" }}
               >
                 {t("users.suspend")}
               </Button>
@@ -243,13 +218,13 @@ export function UserDetailPage() {
         </PermissionGate>
       }
       headerExtra={
-        <Stack direction="row" spacing={2} sx={{ alignItems: "center", mt: 1 }}>
+        <Stack direction="row" spacing={2} sx={{ alignItems: "center" }}>
           <Avatar
             sx={{
               width: 48,
               height: 48,
-              bgcolor: "primary.main",
-              color: "primary.contrastText",
+              bgcolor: BRAND_GREEN,
+              color: "#fff",
               fontWeight: 700,
               borderRadius: "8px",
             }}
@@ -268,17 +243,16 @@ export function UserDetailPage() {
         {
           title: t("users.detailsTitle"),
           content: (
-            <Stack spacing={2}>
+            <DetailGrid>
               {detail.email ? (
-                <InfoItem icon={<Email fontSize="small" />} label={t("users.col.email")} value={detail.email} />
+                <DetailField label={t("users.col.email")} value={detail.email} />
               ) : null}
-              <InfoItem icon={<Phone fontSize="small" />} label={t("users.col.phone")} value={detail.phone} />
-              <InfoItem
-                icon={<CalendarMonth fontSize="small" />}
+              <DetailField label={t("users.col.phone")} value={detail.phone} />
+              <DetailField
                 label={t("users.memberSince")}
                 value={new Date(detail.createdAt).toLocaleString(locale)}
               />
-            </Stack>
+            </DetailGrid>
           ),
         },
         ...(detail.role === "ADMIN"
@@ -295,6 +269,7 @@ export function UserDetailPage() {
                         label={t("users.adminRole")}
                         value={adminRoleId || userAdminRole?.role?.id || ""}
                         onChange={(e) => setAdminRoleId(e.target.value)}
+                        sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
                       >
                         {adminRoles.map((item) => (
                           <MenuItem key={item.id} value={item.id}>
@@ -331,7 +306,7 @@ export function UserDetailPage() {
                   icon={<ShoppingCart sx={{ fontSize: 18 }} />}
                   label={t("users.stats.orders")}
                   value={String(detail.stats.ordersCount)}
-                  accent="#4caf50"
+                  accent={BRAND_GREEN}
                 />
               </Grid>
               <Grid size={{ xs: 6, md: 4 }}>
@@ -339,7 +314,7 @@ export function UserDetailPage() {
                   icon={<Inventory2 sx={{ fontSize: 18 }} />}
                   label={t("users.stats.products")}
                   value={String(detail.stats.productsCount)}
-                  accent="#2196f3"
+                  accent="#1B7A4A"
                 />
               </Grid>
               <Grid size={{ xs: 6, md: 4 }}>
@@ -347,7 +322,7 @@ export function UserDetailPage() {
                   icon={<Paid sx={{ fontSize: 18 }} />}
                   label={t("users.stats.ordersTotal")}
                   value={`${detail.stats.ordersTotalAmount.toLocaleString(locale)} ${t("market.currency")}`}
-                  accent="#ff9800"
+                  accent="#2E8B57"
                 />
               </Grid>
               <Grid size={{ xs: 6, md: 4 }}>
@@ -355,7 +330,7 @@ export function UserDetailPage() {
                   icon={<LocationOn sx={{ fontSize: 18 }} />}
                   label={t("users.stats.addresses")}
                   value={String(detail.stats.addressesCount)}
-                  accent="#9c27b0"
+                  accent="#3A8F5C"
                 />
               </Grid>
               <Grid size={{ xs: 6, md: 4 }}>
@@ -363,7 +338,7 @@ export function UserDetailPage() {
                   icon={<Notifications sx={{ fontSize: 18 }} />}
                   label={t("users.stats.notifications")}
                   value={String(detail.stats.notificationsCount)}
-                  accent="#00bcd4"
+                  accent="#4A9B6A"
                 />
               </Grid>
               <Grid size={{ xs: 6, md: 4 }}>
@@ -371,7 +346,7 @@ export function UserDetailPage() {
                   icon={<SmartToy sx={{ fontSize: 18 }} />}
                   label={t("users.stats.aiChats")}
                   value={String(detail.stats.aiConversationsCount)}
-                  accent="#e91e63"
+                  accent="#5AAD78"
                 />
               </Grid>
             </Grid>
@@ -382,22 +357,21 @@ export function UserDetailPage() {
               {
                 title: t("users.pendingApplication"),
                 content: (
-                  <Stack spacing={1}>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {detail.pendingApplication.companyName || detail.pendingApplication.fullName}
-                    </Typography>
-                    {detail.pendingApplication.city ? (
-                      <Typography variant="body2" color="text.secondary">
-                        {detail.pendingApplication.city}
-                      </Typography>
-                    ) : null}
-                    <Chip
-                      label={detail.pendingApplication.status}
-                      color="warning"
-                      size="small"
-                      sx={{ alignSelf: "flex-start" }}
+                  <DetailGrid>
+                    <DetailField
+                      label={t("users.col.name", "Name")}
+                      value={detail.pendingApplication.companyName || detail.pendingApplication.fullName}
                     />
-                  </Stack>
+                    {detail.pendingApplication.city ? (
+                      <DetailField label={t("users.col.city", "City")} value={detail.pendingApplication.city} />
+                    ) : null}
+                    <DetailField
+                      label={t("users.col.status", "Status")}
+                      value={
+                        <Chip label={detail.pendingApplication.status} color="warning" size="small" />
+                      }
+                    />
+                  </DetailGrid>
                 ),
               },
             ]
@@ -407,17 +381,16 @@ export function UserDetailPage() {
               {
                 title: t("users.companyProfile"),
                 content: (
-                  <Stack spacing={1}>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {detail.company.name}
-                    </Typography>
+                  <DetailGrid>
+                    <DetailField label={t("users.col.name", "Name")} value={detail.company.name} />
                     {detail.company.city ? (
-                      <Typography variant="body2" color="text.secondary">
-                        {detail.company.city}
-                      </Typography>
+                      <DetailField label={t("users.col.city", "City")} value={detail.company.city} />
                     ) : null}
-                    <Chip label={detail.company.status} size="small" sx={{ alignSelf: "flex-start" }} />
-                  </Stack>
+                    <DetailField
+                      label={t("users.col.status", "Status")}
+                      value={<Chip label={detail.company.status} size="small" />}
+                    />
+                  </DetailGrid>
                 ),
               },
             ]
@@ -425,7 +398,7 @@ export function UserDetailPage() {
         {
           title: t("users.recentOrders"),
           content: detail.recentOrders.length ? (
-            <Stack spacing={1}>
+            <Stack spacing={1.25}>
               {detail.recentOrders.map((order) => (
                 <Paper
                   key={order.id}

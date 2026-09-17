@@ -8,7 +8,6 @@ import {
   Chip,
   CircularProgress,
   Link,
-  Paper,
   Stack,
   TextField,
   Typography,
@@ -186,6 +185,8 @@ export function JoinRequestDetailPage() {
     );
   }
 
+  const showReviewForm = detail.status === "PENDING" && !credentials;
+
   return (
     <DetailPageShell
       title={t("joinUs.reviewTitle")}
@@ -200,14 +201,9 @@ export function JoinRequestDetailPage() {
         />
       }
       actions={
-        !credentials && detail.status === "PENDING" ? (
+        showReviewForm ? (
           <>
-            <Button
-              variant="contained"
-              disabled={reviewMutation.isPending}
-              onClick={handleApprove}
-              sx={{ borderRadius: "8px" }}
-            >
+            <Button variant="contained" disabled={reviewMutation.isPending} onClick={handleApprove}>
               {detail.applicationType === "COMPANY"
                 ? t("joinUs.approveCompany")
                 : t("joinUs.approveProvider")}
@@ -217,7 +213,6 @@ export function JoinRequestDetailPage() {
               color="error"
               disabled={reviewMutation.isPending}
               onClick={() => reviewMutation.mutate({ action: "REJECT" })}
-              sx={{ borderRadius: "8px" }}
             >
               {t("joinUs.reject")}
             </Button>
@@ -228,199 +223,226 @@ export function JoinRequestDetailPage() {
         {
           title: t("joinUs.reviewTitle"),
           content: (
-            <Stack spacing={2.5}>
-              <DetailGrid>
-                <DetailField label={t("joinUs.fieldType")} value={typeLabel(detail.applicationType)} />
-                <DetailField label={t("joinUs.fieldStatus")} value={statusLabel(detail.status)} />
-                {isCompanyReview ? (
-                  <>
-                    <DetailField
-                      label={t("joinUs.fieldCompanyName")}
-                      value={String(reviewFields.companyName || detail.companyName || "-")}
-                    />
-                    <DetailField
-                      label={t("joinUs.fieldApplicant")}
-                      value={String(reviewFields.applicantName || detail.fullName)}
-                    />
-                    <DetailField
-                      label={t("joinUs.fieldPhone")}
-                      value={String(reviewFields.phone || detail.phone)}
-                    />
-                    <DetailField
-                      label={t("joinUs.fieldEmail")}
-                      value={String(reviewFields.email || detail.email || "-")}
-                    />
-                    <DetailField
-                      label={t("joinUs.fieldCity")}
-                      value={String(reviewFields.city || detail.city)}
-                    />
-                    <DetailField
-                      label={t("joinUs.fieldDescription")}
-                      value={String(reviewFields.description || detail.description || "-")}
-                    />
-                    <DetailField
-                      label={t("companies.fieldBusinessLicense")}
-                      value={
-                        <AssetLink
-                          path={String(reviewFields.businessLicense || detail.businessLicense || "")}
-                          label={t("joinUs.viewFile")}
-                        />
-                      }
-                    />
-                    <DetailField
-                      label={t("companies.fieldCommercialReg")}
-                      value={
-                        <AssetLink
-                          path={String(reviewFields.commercialReg || detail.commercialReg || "")}
-                          label={t("joinUs.viewFile")}
-                        />
-                      }
-                    />
-                  </>
-                ) : (
-                  <>
-                    <DetailField
-                      label={t("joinUs.fieldFullName")}
-                      value={String(reviewFields.fullName || detail.fullName)}
-                    />
-                    <DetailField
-                      label={t("joinUs.fieldCity")}
-                      value={String(reviewFields.city || detail.city)}
-                    />
-                    <DetailField
-                      label={t("joinUs.fieldWhatsapp")}
-                      value={String(reviewFields.whatsapp || detail.whatsappNumber || "-")}
-                    />
-                    <DetailField
-                      label={t("joinUs.fieldPhone")}
-                      value={String(reviewFields.phone || detail.phone)}
-                    />
-                    <DetailField
-                      label={t("joinUs.fieldBio")}
-                      value={String(reviewFields.bio || detail.bio || "-")}
-                    />
-                    <DetailField
-                      label={t("joinUs.fieldSpecializations")}
-                      value={
-                        Array.isArray(reviewFields.specializations)
-                          ? (reviewFields.specializations as string[]).join(", ") || "-"
-                          : (detail.specializations || []).join(", ") || "-"
-                      }
-                    />
-                    <DetailField
-                      label={t("joinUs.fieldExperience")}
-                      value={`${String(reviewFields.experience ?? detail.yearsOfExperience ?? "-")} ${t("joinUs.years")}`}
-                    />
-                    {detail.otherTypeLabel ? (
-                      <DetailField label={t("joinUs.fieldOtherType")} value={detail.otherTypeLabel} />
-                    ) : null}
-                    <DetailField
-                      label={t("joinUs.fieldIdImage")}
-                      value={
-                        <AssetLink
-                          path={String(reviewFields.idImage || detail.idImage || "")}
-                          label={t("joinUs.viewFile")}
-                        />
-                      }
-                    />
-                    <DetailField
-                      label={t("joinUs.fieldLicenseImage")}
-                      value={
-                        <AssetLink
-                          path={String(reviewFields.licenseImage || detail.licenseImage || "")}
-                          label={t("joinUs.viewFile")}
-                        />
-                      }
-                    />
-                  </>
-                )}
-              </DetailGrid>
-
-              {isCompanyReview && detail.status === "PENDING" && !credentials ? (
-                <Stack spacing={2} sx={{ maxWidth: 480 }}>
-                  <TextField
-                    label={t("companies.productQuota")}
-                    type="number"
-                    size="small"
-                    fullWidth
-                    slotProps={{ htmlInput: { min: 1 } }}
-                    value={maxProducts}
-                    onChange={(e) => setMaxProducts(e.target.value)}
+            <DetailGrid>
+              <DetailField label={t("joinUs.fieldType")} value={typeLabel(detail.applicationType)} />
+              <DetailField label={t("joinUs.fieldStatus")} value={statusLabel(detail.status)} />
+              {isCompanyReview ? (
+                <>
+                  <DetailField
+                    label={t("joinUs.fieldCompanyName")}
+                    value={String(reviewFields.companyName || detail.companyName || "-")}
                   />
-                  <TextField
-                    label={t("companies.displayDays")}
-                    type="number"
-                    size="small"
-                    fullWidth
-                    helperText={t("companies.displayDaysHint")}
-                    slotProps={{ htmlInput: { min: 1 } }}
-                    value={displayDays}
-                    onChange={(e) => setDisplayDays(e.target.value)}
+                  <DetailField
+                    label={t("joinUs.fieldApplicant")}
+                    value={String(reviewFields.applicantName || detail.fullName)}
                   />
-                  <TextField
-                    label={t("companies.loginEmail")}
-                    type="email"
-                    size="small"
-                    fullWidth
-                    value={companyEmail}
-                    onChange={(e) => setCompanyEmail(e.target.value)}
+                  <DetailField
+                    label={t("joinUs.fieldPhone")}
+                    value={String(reviewFields.phone || detail.phone)}
                   />
-                  <Stack direction="row" spacing={1}>
-                    <TextField
-                      label={t("companies.loginPassword")}
-                      type="text"
-                      size="small"
-                      fullWidth
-                      value={companyPassword}
-                      onChange={(e) => setCompanyPassword(e.target.value)}
-                    />
-                    <Button
-                      type="button"
-                      variant="outlined"
-                      onClick={() => setCompanyPassword(generatePassword())}
-                      sx={{ borderRadius: "8px" }}
-                    >
-                      {t("companies.generatePassword")}
-                    </Button>
-                  </Stack>
-                </Stack>
-              ) : null}
-
-              {detail.status === "PENDING" && !credentials ? (
-                <TextField
-                  label={t("companies.adminNote")}
-                  size="small"
-                  fullWidth
-                  value={adminNote}
-                  onChange={(e) => setAdminNote(e.target.value)}
-                  sx={{ maxWidth: 480 }}
-                />
-              ) : null}
-
-              {credentials ? (
-                <Paper variant="outlined" sx={{ p: 2, borderRadius: "8px", borderColor: "primary.light" }}>
-                  <Typography variant="subtitle2" color="primary.main" gutterBottom>
-                    {t("companies.accountCreated")}
-                  </Typography>
-                  <Typography variant="body2">
-                    {t("companies.fieldEmail")}: {credentials.email}
-                  </Typography>
-                  <Typography variant="body2">
-                    {t("companies.loginPassword")}: {credentials.password}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
-                    {t("companies.credentialsHint")}
-                  </Typography>
-                  <Button sx={{ mt: 1, borderRadius: "8px" }} onClick={() => navigate("/join-requests")}>
-                    {t("companies.close")}
-                  </Button>
-                </Paper>
-              ) : null}
-
-              {formError ? <Alert severity="error">{formError}</Alert> : null}
-            </Stack>
+                  <DetailField
+                    label={t("joinUs.fieldEmail")}
+                    value={String(reviewFields.email || detail.email || "-")}
+                  />
+                  <DetailField
+                    label={t("joinUs.fieldCity")}
+                    value={String(reviewFields.city || detail.city)}
+                  />
+                  <DetailField
+                    label={t("companies.fieldBusinessLicense")}
+                    value={
+                      <AssetLink
+                        path={String(reviewFields.businessLicense || detail.businessLicense || "")}
+                        label={t("joinUs.viewFile")}
+                      />
+                    }
+                  />
+                  <DetailField
+                    label={t("companies.fieldCommercialReg")}
+                    value={
+                      <AssetLink
+                        path={String(reviewFields.commercialReg || detail.commercialReg || "")}
+                        label={t("joinUs.viewFile")}
+                      />
+                    }
+                  />
+                </>
+              ) : (
+                <>
+                  <DetailField
+                    label={t("joinUs.fieldFullName")}
+                    value={String(reviewFields.fullName || detail.fullName)}
+                  />
+                  <DetailField
+                    label={t("joinUs.fieldCity")}
+                    value={String(reviewFields.city || detail.city)}
+                  />
+                  <DetailField
+                    label={t("joinUs.fieldWhatsapp")}
+                    value={String(reviewFields.whatsapp || detail.whatsappNumber || "-")}
+                  />
+                  <DetailField
+                    label={t("joinUs.fieldPhone")}
+                    value={String(reviewFields.phone || detail.phone)}
+                  />
+                  <DetailField
+                    label={t("joinUs.fieldSpecializations")}
+                    value={
+                      Array.isArray(reviewFields.specializations)
+                        ? (reviewFields.specializations as string[]).join(", ") || "-"
+                        : (detail.specializations || []).join(", ") || "-"
+                    }
+                  />
+                  <DetailField
+                    label={t("joinUs.fieldExperience")}
+                    value={`${String(reviewFields.experience ?? detail.yearsOfExperience ?? "-")} ${t("joinUs.years")}`}
+                  />
+                  {detail.otherTypeLabel ? (
+                    <DetailField label={t("joinUs.fieldOtherType")} value={detail.otherTypeLabel} />
+                  ) : null}
+                  <DetailField
+                    label={t("joinUs.fieldIdImage")}
+                    value={
+                      <AssetLink
+                        path={String(reviewFields.idImage || detail.idImage || "")}
+                        label={t("joinUs.viewFile")}
+                      />
+                    }
+                  />
+                  <DetailField
+                    label={t("joinUs.fieldLicenseImage")}
+                    value={
+                      <AssetLink
+                        path={String(reviewFields.licenseImage || detail.licenseImage || "")}
+                        label={t("joinUs.viewFile")}
+                      />
+                    }
+                  />
+                </>
+              )}
+            </DetailGrid>
           ),
         },
+        {
+          title: isCompanyReview ? t("joinUs.fieldDescription") : t("joinUs.fieldBio"),
+          content: (
+            <DetailGrid columns={{ xs: 1, sm: 1, md: 1 }}>
+              <DetailField
+                label={isCompanyReview ? t("joinUs.fieldDescription") : t("joinUs.fieldBio")}
+                value={
+                  isCompanyReview
+                    ? String(reviewFields.description || detail.description || "-")
+                    : String(reviewFields.bio || detail.bio || "-")
+                }
+              />
+            </DetailGrid>
+          ),
+        },
+        ...(isCompanyReview && showReviewForm
+          ? [
+              {
+                title: t("companies.reviewTitle"),
+                content: (
+                  <Stack spacing={2} sx={{ maxWidth: 480 }}>
+                    <TextField
+                      label={t("companies.productQuota")}
+                      type="number"
+                      size="small"
+                      fullWidth
+                      slotProps={{ htmlInput: { min: 1 } }}
+                      value={maxProducts}
+                      onChange={(e) => setMaxProducts(e.target.value)}
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
+                    />
+                    <TextField
+                      label={t("companies.displayDays")}
+                      type="number"
+                      size="small"
+                      fullWidth
+                      helperText={t("companies.displayDaysHint")}
+                      slotProps={{ htmlInput: { min: 1 } }}
+                      value={displayDays}
+                      onChange={(e) => setDisplayDays(e.target.value)}
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
+                    />
+                    <TextField
+                      label={t("companies.loginEmail")}
+                      type="email"
+                      size="small"
+                      fullWidth
+                      value={companyEmail}
+                      onChange={(e) => setCompanyEmail(e.target.value)}
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
+                    />
+                    <Stack direction="row" spacing={1}>
+                      <TextField
+                        label={t("companies.loginPassword")}
+                        type="text"
+                        size="small"
+                        fullWidth
+                        value={companyPassword}
+                        onChange={(e) => setCompanyPassword(e.target.value)}
+                        sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
+                      />
+                      <Button
+                        type="button"
+                        variant="outlined"
+                        onClick={() => setCompanyPassword(generatePassword())}
+                        sx={{ borderRadius: "8px" }}
+                      >
+                        {t("companies.generatePassword")}
+                      </Button>
+                    </Stack>
+                  </Stack>
+                ),
+              },
+            ]
+          : []),
+        ...(showReviewForm
+          ? [
+              {
+                title: t("companies.adminNote"),
+                content: (
+                  <Stack spacing={2} sx={{ maxWidth: 480 }}>
+                    <TextField
+                      label={t("companies.adminNote")}
+                      size="small"
+                      fullWidth
+                      value={adminNote}
+                      onChange={(e) => setAdminNote(e.target.value)}
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
+                    />
+                    {formError ? <Alert severity="error">{formError}</Alert> : null}
+                  </Stack>
+                ),
+              },
+            ]
+          : []),
+        ...(credentials
+          ? [
+              {
+                title: t("companies.accountCreated"),
+                content: (
+                  <Stack spacing={2}>
+                    <DetailGrid columns={{ xs: 1, sm: 2, md: 2 }}>
+                      <DetailField label={t("companies.fieldEmail")} value={credentials.email} />
+                      <DetailField label={t("companies.loginPassword")} value={credentials.password} />
+                    </DetailGrid>
+                    <Typography variant="caption" color="text.secondary">
+                      {t("companies.credentialsHint")}
+                    </Typography>
+                    <Button
+                      variant="outlined"
+                      sx={{ borderRadius: "8px", alignSelf: "flex-start" }}
+                      onClick={() => navigate("/join-requests")}
+                    >
+                      {t("companies.close")}
+                    </Button>
+                  </Stack>
+                ),
+              },
+            ]
+          : []),
       ]}
     />
   );

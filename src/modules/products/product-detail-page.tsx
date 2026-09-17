@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Edit } from "@mui/icons-material";
-import { Box, Button, Chip, CircularProgress, Stack, TextField, Typography } from "@mui/material";
+import { Box, Button, Chip, CircularProgress, Stack, TextField } from "@mui/material";
 import { useNavigate, useParams } from "react-router-dom";
 import { useState } from "react";
 import { DetailField, DetailGrid, DetailPageShell, EmptyState } from "../../components/layout";
@@ -109,23 +109,37 @@ export function ProductDetailPage({ backTo = "/products", allowModerate = true }
         </>
       }
       sections={[
+        ...(images.length
+          ? [
+              {
+                title: t("products.field.images", "Images"),
+                content: (
+                  <Stack direction="row" spacing={1.5} sx={{ flexWrap: "wrap", gap: 1.5 }}>
+                    {images.map((img) => (
+                      <Box
+                        key={img.id}
+                        component="img"
+                        src={resolveAssetUrl(img.path)}
+                        alt=""
+                        sx={{
+                          height: 112,
+                          width: 112,
+                          borderRadius: "8px",
+                          objectFit: "cover",
+                          border: 1,
+                          borderColor: "divider",
+                        }}
+                      />
+                    ))}
+                  </Stack>
+                ),
+              },
+            ]
+          : []),
         {
           title: t("products.detailsTitle"),
           content: (
-            <Stack spacing={2.5}>
-              {images.length ? (
-                <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
-                  {images.map((img) => (
-                    <Box
-                      key={img.id}
-                      component="img"
-                      src={resolveAssetUrl(img.path)}
-                      alt=""
-                      sx={{ height: 96, width: 96, borderRadius: "8px", objectFit: "cover", border: 1, borderColor: "divider" }}
-                    />
-                  ))}
-                </Stack>
-              ) : null}
+            <Stack spacing={2}>
               <DetailGrid>
                 <DetailField label={t("products.field.title")} value={product.title} />
                 <DetailField label={t("products.field.category")} value={categoryLabel(product, language)} />
@@ -144,19 +158,29 @@ export function ProductDetailPage({ backTo = "/products", allowModerate = true }
                   value={new Date(product.createdAt).toLocaleString(locale)}
                 />
               </DetailGrid>
-              <DetailField label={t("products.field.description")} value={product.description || "-"} />
-              {canModerate ? (
-                <TextField
-                  size="small"
-                  fullWidth
-                  placeholder={t("products.rejectNote")}
-                  value={rejectNote}
-                  onChange={(e) => setRejectNote(e.target.value)}
-                />
-              ) : null}
+              <DetailGrid columns={{ xs: 1, sm: 1, md: 1 }}>
+                <DetailField label={t("products.field.description")} value={product.description || "-"} />
+              </DetailGrid>
             </Stack>
           ),
         },
+        ...(canModerate
+          ? [
+              {
+                title: t("products.rejectNote", "Reject note"),
+                content: (
+                  <TextField
+                    size="small"
+                    fullWidth
+                    placeholder={t("products.rejectNote")}
+                    value={rejectNote}
+                    onChange={(e) => setRejectNote(e.target.value)}
+                    sx={{ maxWidth: 480, "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
+                  />
+                ),
+              },
+            ]
+          : []),
       ]}
     />
   );
