@@ -17,6 +17,7 @@ export function useBreadcrumbs() {
       orders: "nav.orders",
       finance: "nav.finance",
       banners: "nav.banners",
+      onboarding: "nav.onboarding",
       notifications: isCompany ? "company.nav.notifications" : "nav.notifications",
       consultants: "nav.consultants",
       "ai-settings": "nav.aiSettings",
