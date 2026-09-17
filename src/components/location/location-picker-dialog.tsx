@@ -63,7 +63,8 @@ export function LocationPickerDialog({
   const { isArabic } = useI18n();
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
-  const [mapEl, setMapEl] = useState<HTMLDivElement | null>(null);
+  const mapElRef = useRef<HTMLDivElement | null>(null);
+  const [mapMounted, setMapMounted] = useState(false);
   const [dialogReady, setDialogReady] = useState(false);
 
   const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -71,7 +72,8 @@ export function LocationPickerDialog({
   const [searching, setSearching] = useState(false);
 
   const mapContainerRef = useCallback((node: HTMLDivElement | null) => {
-    setMapEl(node);
+    mapElRef.current = node;
+    setMapMounted(node !== null);
   }, []);
 
   useEffect(() => {
@@ -104,7 +106,8 @@ export function LocationPickerDialog({
 
   // Create map only after Dialog transition finishes AND the container is mounted
   useEffect(() => {
-    if (!open || !dialogReady || !mapEl) return;
+    const mapEl = mapElRef.current;
+    if (!open || !dialogReady || !mapMounted || !mapEl) return;
     if (mapInstanceRef.current) return;
 
     const defaultLat = initialLat ?? 30.0444;
@@ -151,7 +154,7 @@ export function LocationPickerDialog({
       mapInstanceRef.current = null;
       markerRef.current = null;
     };
-  }, [open, dialogReady, mapEl, initialLat, initialLng]);
+  }, [open, dialogReady, mapMounted, initialLat, initialLng]);
 
   async function handleSearch() {
     if (!searchQuery.trim() || !mapInstanceRef.current) return;

@@ -25,7 +25,10 @@ function itemKey(item: ProductImageItem, index: number) {
 export function ProductImagePicker({ items, onChange, label, hint, addLabel, disabled }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const itemsRef = useRef(items);
-  itemsRef.current = items;
+
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
 
   useEffect(() => {
     return () => {

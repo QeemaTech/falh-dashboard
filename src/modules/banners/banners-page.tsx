@@ -13,6 +13,7 @@ import { useI18n } from "../../hooks/use-i18n";
 
 export function BannersPage() {
   const { t, language } = useI18n();
+  const [now] = useState(() => Date.now());
 
   const bannerTitle = (banner: AdminBanner) =>
     language === "ar"
@@ -21,9 +22,9 @@ export function BannersPage() {
 
   const bannerDisplayLabel = (banner: AdminBanner) => {
     if (!banner.displayDays) return t("banners.unlimited");
-    const expired = banner.expiresAt && new Date(banner.expiresAt) <= new Date();
+    const expired = banner.expiresAt && new Date(banner.expiresAt).getTime() <= now;
     const daysLeft = banner.expiresAt
-      ? Math.max(0, Math.ceil((new Date(banner.expiresAt).getTime() - Date.now()) / 86400000))
+      ? Math.max(0, Math.ceil((new Date(banner.expiresAt).getTime() - now) / 86400000))
       : banner.displayDays;
     if (expired) return t("banners.expired");
     return t("banners.daysRemaining").replace("{{days}}", String(daysLeft));
@@ -31,7 +32,7 @@ export function BannersPage() {
 
   const bannerStatusVariant = (banner: AdminBanner): "success" | "warning" | "neutral" => {
     if (!banner.isActive) return "neutral";
-    if (banner.expiresAt && new Date(banner.expiresAt) <= new Date()) return "warning";
+    if (banner.expiresAt && new Date(banner.expiresAt).getTime() <= now) return "warning";
     return "success";
   };
   const queryClient = useQueryClient();

@@ -38,7 +38,7 @@ export function NotificationMenu({
   const theme = useTheme();
   const navigate = useNavigate();
   const internalDropdown = useDropdown();
-  const { open, close, toggle, containerRef } = externalDropdown ?? internalDropdown;
+  const { open, close, toggle, containerRef, anchorEl } = externalDropdown ?? internalDropdown;
   const { t, language } = useI18n();
   const { items, unreadCount, isLoading, markAsRead, markAllAsRead, isMarkingRead } = useNotifications(8);
 
@@ -71,7 +71,7 @@ export function NotificationMenu({
       </IconButton>
 
       <Menu
-        anchorEl={containerRef.current}
+        anchorEl={anchorEl}
         open={open}
         onClose={close}
         anchorOrigin={{ vertical: "bottom", horizontal: menuAnchorHorizontal }}

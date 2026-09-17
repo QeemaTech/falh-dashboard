@@ -25,7 +25,7 @@ type Props = {
 export function UserMenu({ onOpen, dropdown: externalDropdown }: Props) {
   const theme = useTheme();
   const internalDropdown = useDropdown();
-  const { open, close, toggle, containerRef } = externalDropdown ?? internalDropdown;
+  const { open, close, toggle, containerRef, anchorEl } = externalDropdown ?? internalDropdown;
   const { mode, toggleColorMode } = useColorMode();
   const { language, setLanguage } = useUiStore();
   const { t } = useI18n();
@@ -64,7 +64,7 @@ export function UserMenu({ onOpen, dropdown: externalDropdown }: Props) {
       </Button>
 
       <Menu
-        anchorEl={containerRef.current}
+        anchorEl={anchorEl}
         open={open}
         onClose={close}
         anchorOrigin={{ vertical: "bottom", horizontal: menuAnchorHorizontal }}

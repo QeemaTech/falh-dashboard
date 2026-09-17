@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type Options = {
   /** Close when pointer leaves the container. Default false — use outside click only. */
@@ -8,7 +8,10 @@ type Options = {
 export function useDropdown(options: Options = {}) {
   const { closeOnPointerLeave = false } = options;
   const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null);
+  const containerRef = useCallback((node: HTMLDivElement | null) => {
+    setContainerEl(node);
+  }, []);
 
   const close = useCallback(() => setOpen(false), []);
   const toggle = useCallback(() => setOpen((current) => !current), []);
@@ -17,23 +20,23 @@ export function useDropdown(options: Options = {}) {
     if (!open) return;
     const onPointerDown = (event: MouseEvent) => {
       const target = event.target as Node;
-      if (containerRef.current && !containerRef.current.contains(target)) {
+      if (containerEl && !containerEl.contains(target)) {
         setOpen(false);
       }
     };
     document.addEventListener("mousedown", onPointerDown);
     return () => document.removeEventListener("mousedown", onPointerDown);
-  }, [open]);
+  }, [open, containerEl]);
 
   const onContainerMouseLeave = useCallback(
     (event: React.MouseEvent) => {
       if (!closeOnPointerLeave || !open) return;
       const next = event.relatedTarget as Node | null;
-      if (!containerRef.current?.contains(next)) {
+      if (!containerEl?.contains(next)) {
         setOpen(false);
       }
     },
-    [closeOnPointerLeave, open]
+    [closeOnPointerLeave, open, containerEl]
   );
 
   return {
@@ -42,6 +45,7 @@ export function useDropdown(options: Options = {}) {
     close,
     toggle,
     containerRef,
+    anchorEl: containerEl,
     onContainerMouseLeave,
   };
 }
