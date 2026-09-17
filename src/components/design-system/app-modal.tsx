@@ -21,7 +21,14 @@ type AppModalProps = PropsWithChildren<{
 
 export function AppModal({ open, onClose, title, description, footer, className, children }: AppModalProps) {
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm" className={className} PaperProps={{ sx: { borderRadius: "8px" } }}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      fullWidth
+      maxWidth="sm"
+      className={className}
+      slotProps={{ paper: { sx: { borderRadius: "8px" } } }}
+    >
       <DialogTitle sx={{ pr: 6 }}>
         <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "flex-start" }}>
           <Stack spacing={0.5}>

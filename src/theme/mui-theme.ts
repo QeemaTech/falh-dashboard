@@ -35,7 +35,7 @@ export function createAppTheme(mode: PaletteMode, direction: "ltr" | "rtl" = "lt
     typography: {
       fontFamily:
         direction === "rtl"
-          ? '"Cairo", "Roboto", "Helvetica", "Arial", sans-serif'
+          ? '"Alexandria", "Roboto", "Helvetica", "Arial", sans-serif'
           : '"Roboto", "Helvetica", "Arial", sans-serif',
       h1: { fontWeight: 700, fontSize: "2rem" },
       h2: { fontWeight: 700, fontSize: "1.5rem" },

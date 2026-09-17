@@ -20,10 +20,10 @@ import {
   DescriptionOutlined,
   Inventory2Outlined,
   LocationOnOutlined,
-  MailOutline,
+  MailOutlined,
   OpenInNew,
   PhoneOutlined,
-  StarOutline,
+  StarOutlined,
   VerifiedOutlined,
 } from "@mui/icons-material";
 import { EmptyState } from "../../components/layout";
@@ -509,7 +509,7 @@ export function CompanyDetailPage() {
                   ) : null}
                   {email ? (
                     <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
-                      <MailOutline sx={{ fontSize: 16 }} />
+                      <MailOutlined sx={{ fontSize: 16 }} />
                       <Typography variant="body2">{email}</Typography>
                     </Stack>
                   ) : null}
@@ -572,7 +572,7 @@ export function CompanyDetailPage() {
         <MetricTile
           label={t("companies.fieldRating")}
           value={Number(company.rating || 0).toFixed(1)}
-          icon={<StarOutline fontSize="small" />}
+          icon={<StarOutlined fontSize="small" />}
         />
       </Box>
 

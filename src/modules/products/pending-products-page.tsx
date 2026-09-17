@@ -27,7 +27,6 @@ import {
   bulkReviewProductsApi,
   fetchAdminProducts,
   reviewProductApi,
-  type AdminProduct,
 } from "../../services/admin-api";
 import {
   categoryLabel,
