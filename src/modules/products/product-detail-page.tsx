@@ -103,7 +103,7 @@ export function ProductDetailPage({ backTo = "/products", allowModerate = true }
 
       <DetailHero
         media={
-          <DetailMediaFrame size={{ xs: 88, md: 108 }}>
+          <DetailMediaFrame size={{ xs: 72, md: 88 }}>
             {coverPath && !coverFailed ? (
               <Box
                 component="img"

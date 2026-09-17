@@ -43,34 +43,22 @@ export function DetailHero({
         borderRadius: "8px",
         borderColor: "divider",
         overflow: "hidden",
-        position: "relative",
+        borderTop: `3px solid ${DETAIL_BRAND}`,
+        background: (theme) =>
+          theme.palette.mode === "dark"
+            ? `linear-gradient(135deg, rgba(35,103,58,0.14) 0%, transparent 42%)`
+            : `linear-gradient(135deg, rgba(35,103,58,0.06) 0%, #fff 40%)`,
       }}
     >
-      <Box
-        sx={{
-          height: { xs: 72, md: 96 },
-          background: (theme) =>
-            theme.palette.mode === "dark"
-              ? `linear-gradient(125deg, ${DETAIL_BRAND} 0%, #163d24 55%, #0f1f14 100%)`
-              : `linear-gradient(125deg, ${DETAIL_BRAND} 0%, #2f8a4d 48%, #4D9A5B 100%)`,
-          position: "relative",
-          "&::after": {
-            content: '""',
-            position: "absolute",
-            inset: 0,
-            background: "radial-gradient(circle at 88% 18%, rgba(255,255,255,0.2), transparent 42%)",
-          },
-        }}
-      />
-      <Box sx={{ px: { xs: 2, md: 3 }, pb: { xs: 2.25, md: 2.75 }, mt: { xs: -4, md: -5 } }}>
+      <Box sx={{ px: { xs: 2, md: 2.75 }, py: { xs: 2, md: 2.5 } }}>
         <Stack
           direction={{ xs: "column", md: "row" }}
           spacing={2}
-          sx={{ alignItems: { xs: "stretch", md: "flex-end" }, justifyContent: "space-between" }}
+          sx={{ alignItems: { xs: "stretch", md: "center" }, justifyContent: "space-between" }}
         >
-          <Stack direction="row" spacing={2} sx={{ alignItems: "flex-end", minWidth: 0, flex: 1 }}>
+          <Stack direction="row" spacing={2} sx={{ alignItems: "center", minWidth: 0, flex: 1 }}>
             <Box sx={{ flexShrink: 0 }}>{media}</Box>
-            <Box sx={{ minWidth: 0, pb: 0.25, flex: 1 }}>
+            <Box sx={{ minWidth: 0, flex: 1 }}>
               <Stack
                 direction="row"
                 spacing={1}
@@ -81,7 +69,7 @@ export function DetailHero({
                   variant="h5"
                   sx={{
                     fontWeight: 800,
-                    fontSize: { xs: "1.15rem", md: "1.4rem" },
+                    fontSize: { xs: "1.15rem", md: "1.35rem" },
                     letterSpacing: "-0.02em",
                     lineHeight: 1.25,
                     wordBreak: "break-word",
@@ -95,7 +83,12 @@ export function DetailHero({
             </Box>
           </Stack>
           {actions ? (
-            <Stack direction="row" spacing={1} useFlexGap sx={{ flexShrink: 0, flexWrap: "wrap" }}>
+            <Stack
+              direction="row"
+              spacing={1}
+              useFlexGap
+              sx={{ flexShrink: 0, flexWrap: "wrap", alignItems: "center" }}
+            >
               {actions}
             </Stack>
           ) : null}
@@ -107,7 +100,7 @@ export function DetailHero({
 
 export function DetailMediaFrame({
   children,
-  size = { xs: 72, md: 88 },
+  size = { xs: 64, md: 72 },
 }: {
   children: ReactNode;
   size?: { xs: number; md: number };
@@ -118,16 +111,16 @@ export function DetailMediaFrame({
         width: size,
         height: size,
         borderRadius: "8px",
-        border: "3px solid",
-        borderColor: "background.paper",
-        bgcolor: "background.paper",
+        border: 1,
+        borderColor: "divider",
+        bgcolor: (theme) =>
+          theme.palette.mode === "dark" ? "rgba(77,154,91,0.12)" : "rgba(35,103,58,0.08)",
         color: "primary.main",
         display: "grid",
         placeItems: "center",
-        boxShadow: "0 8px 24px rgba(15,23,42,0.12)",
         overflow: "hidden",
         fontWeight: 800,
-        fontSize: { xs: "1.25rem", md: "1.5rem" },
+        fontSize: { xs: "1.15rem", md: "1.35rem" },
         letterSpacing: 0.4,
       }}
     >
