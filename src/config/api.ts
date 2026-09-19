@@ -6,10 +6,7 @@ function normalizeApiBaseUrl(raw: string) {
   if (trimmed.endsWith("/api")) return trimmed;
   return `${trimmed}/api`;
 }
-/**
- * 
-lllllllllll
- */
+
 
 /** Axios base URL — set `VITE_API_URL` in `.env` (e.g. https://falh.nodeteam.site). */
 export const API_BASE_URL = normalizeApiBaseUrl(import.meta.env.VITE_API_URL ?? DEFAULT_API_BASE_URL);
