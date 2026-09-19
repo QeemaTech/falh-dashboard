@@ -19,8 +19,6 @@ import { OrderDetailPage } from "../modules/orders/order-detail-page";
 import { CategoriesPage } from "../modules/categories/categories-page";
 import { BannersPage } from "../modules/banners/banners-page";
 import { BannerCreatePage } from "../modules/banners/banner-form-page";
-import { OnboardingPage } from "../modules/onboarding/onboarding-page";
-import { OnboardingCreatePage } from "../modules/onboarding/onboarding-form-page";
 import { NotificationsPage } from "../modules/notifications/notifications-page";
 import { FinancePage } from "../modules/finance/finance-page";
 import { FinanceDetailPage } from "../modules/finance/finance-detail-page";
@@ -108,8 +106,7 @@ export const router = createBrowserRouter([
           { path: "categories", element: <CategoriesPage /> },
           { path: "banners", element: <BannersPage /> },
           { path: "banners/new", element: <BannerCreatePage /> },
-          { path: "onboarding", element: <OnboardingPage /> },
-          { path: "onboarding/new", element: <OnboardingCreatePage /> },
+          { path: "onboarding", element: <Navigate to="/banners" replace /> },
           { path: "notifications", element: <NotificationsPage /> },
           { path: "content-management", element: <ContentManagementPage /> },
           { path: "content-management/terms/new", element: <TermCreatePage /> },

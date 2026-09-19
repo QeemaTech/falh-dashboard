@@ -17,7 +17,6 @@ import {
   WbSunny,
   AccountBalance,
   Article,
-  ViewCarousel,
 } from "@mui/icons-material";
 import {
   Box,
@@ -64,7 +63,6 @@ const sections: Array<{ titleKey: string; items: NavItem[] }> = [
     titleKey: "nav.section.content",
     items: [
       { to: "/banners", labelKey: "nav.banners", icon: Campaign, permission: "banners.view" },
-      { to: "/onboarding", labelKey: "nav.onboarding", icon: ViewCarousel, permission: "banners.view" },
       { to: "/notifications", labelKey: "nav.notifications", icon: Notifications, permission: "notifications.view" },
       { to: "/content-management", labelKey: "nav.contentManagement", icon: Article, permission: "settings.view" },
     ],
