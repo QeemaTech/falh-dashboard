@@ -407,8 +407,37 @@ export function ProductManagementPage() {
                       }
                     />
                   </AppTableCell>
-                  <AppTableCell sx={{ whiteSpace: "nowrap" }}>
-                    {product.price ? formatCurrency(product.price, language, t("market.currency")) : "-"}
+                  <AppTableCell>
+                    {product.price !== undefined ? (
+                      <Stack direction="row" spacing={0.75} sx={{ alignItems: "center", flexWrap: "wrap" }}>
+                        {product.originalPrice && product.originalPrice > product.price ? (
+                          <>
+                            <Typography
+                              variant="caption"
+                              sx={{ textDecoration: "line-through", color: "text.secondary" }}
+                            >
+                              {formatCurrency(product.originalPrice, language, t("market.currency"))}
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: "success.main" }}>
+                              {formatCurrency(product.price, language, t("market.currency"))}
+                            </Typography>
+                            <Chip
+                              size="small"
+                              color="error"
+                              variant="outlined"
+                              label={`-${Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%`}
+                              sx={{ height: 20, fontSize: "0.7rem", px: 0.25 }}
+                            />
+                          </>
+                        ) : (
+                          <Typography variant="body2">
+                            {product.price ? formatCurrency(product.price, language, t("market.currency")) : "-"}
+                          </Typography>
+                        )}
+                      </Stack>
+                    ) : (
+                      "-"
+                    )}
                   </AppTableCell>
                   <AppTableCell>{product.city || "-"}</AppTableCell>
                   <AppTableCell sx={{ whiteSpace: "nowrap" }}>

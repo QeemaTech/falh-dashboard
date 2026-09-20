@@ -81,6 +81,7 @@ export function ProductForm({
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [price, setPrice] = useState(0);
+  const [originalPrice, setOriginalPrice] = useState<number | "">("");
   const [city, setCity] = useState("");
   const [latInput, setLatInput] = useState("");
   const [lngInput, setLngInput] = useState("");
@@ -144,6 +145,9 @@ export function ProductForm({
       setWhatsappNumber(source.whatsappNumber || "");
       setCategoryId(source.category?.id || "");
       setPrice(source.price || 0);
+      setOriginalPrice(
+        source.originalPrice !== undefined && source.originalPrice !== null ? source.originalPrice : ""
+      );
       setCity(source.city || "");
       setLatInput(source.lat !== undefined && source.lat !== null ? String(source.lat) : "");
       setLngInput(source.lng !== undefined && source.lng !== null ? String(source.lng) : "");
@@ -160,6 +164,7 @@ export function ProductForm({
       setWhatsappNumber("");
       setCategoryId("");
       setPrice(0);
+      setOriginalPrice("");
       setCity("");
       setLatInput("");
       setLngInput("");
@@ -210,6 +215,19 @@ export function ProductForm({
         throw new Error(t("products.form.errorPrice"));
       }
 
+      const numOrigPrice =
+        originalPrice !== "" && originalPrice !== undefined && originalPrice !== null
+          ? Number(originalPrice)
+          : undefined;
+      if (numOrigPrice !== undefined) {
+        if (Number.isNaN(numOrigPrice) || numOrigPrice < 0) {
+          throw new Error(t("products.form.errorOriginalPrice"));
+        }
+        if (numOrigPrice > 0 && numOrigPrice <= Number(price)) {
+          throw new Error(t("products.form.errorOriginalPrice"));
+        }
+      }
+
       const uploadImages = scope === "admin" ? uploadAdminProductImagesApi : uploadCompanyProductImagesApi;
       const images = await resolveProductImagePaths(imageItems, uploadImages);
 
@@ -232,6 +250,7 @@ export function ProductForm({
         whatsappNumber: whatsappNumber.trim() || undefined,
         categoryId,
         price: Number(price),
+        originalPrice: numOrigPrice ?? null,
         city: requiresGovernorate ? (city || undefined) : undefined,
         lat: parsedLat,
         lng: parsedLng,
@@ -362,15 +381,35 @@ export function ProductForm({
           t={t}
         />
       ) : null}
-      <TextField
-        size="small"
-        fullWidth
-        type="number"
-        label={t("products.form.price")}
-        value={price}
-        onChange={(e) => setPrice(Number(e.target.value))}
-        slotProps={{ htmlInput: { min: 0 } }}
-      />
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+        <TextField
+          size="small"
+          fullWidth
+          type="number"
+          label={t("products.form.price")}
+          value={price}
+          onChange={(e) => setPrice(Number(e.target.value))}
+          slotProps={{ htmlInput: { min: 0, step: "any" } }}
+          helperText={originalPrice ? t("products.form.sellingPrice") : undefined}
+        />
+        <TextField
+          size="small"
+          fullWidth
+          type="number"
+          label={t("products.form.originalPrice")}
+          value={originalPrice}
+          onChange={(e) => setOriginalPrice(e.target.value === "" ? "" : Number(e.target.value))}
+          slotProps={{ htmlInput: { min: 0, step: "any" } }}
+          helperText={
+            originalPrice !== "" && Number(originalPrice) > Number(price) && Number(price) > 0
+              ? t("products.form.discountBadge").replace(
+                  "{{percent}}",
+                  String(Math.round(((Number(originalPrice) - Number(price)) / Number(originalPrice)) * 100))
+                )
+              : undefined
+          }
+        />
+      </Stack>
       {requiresGovernorate ? (
         <TextField
           select

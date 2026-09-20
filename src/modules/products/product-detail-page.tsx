@@ -206,6 +206,18 @@ export function ProductDetailPage({ backTo = "/products", allowModerate = true }
               <InfoRow label={t("products.field.owner")} value={owner} />
               <InfoRow label={t("products.field.status")} value={statusLabel} />
               <InfoRow label={t("products.field.price")} value={priceLabel} />
+              {product.originalPrice && product.originalPrice > (product.price || 0) ? (
+                <>
+                  <InfoRow
+                    label={t("products.field.originalPrice")}
+                    value={`${t("market.currency")} ${Number(product.originalPrice).toLocaleString(locale)}`}
+                  />
+                  <InfoRow
+                    label={t("products.field.discount")}
+                    value={`-${Math.round(((product.originalPrice - (product.price || 0)) / product.originalPrice) * 100)}%`}
+                  />
+                </>
+              ) : null}
               <InfoRow label={t("products.field.location")} value={product.city || "—"} />
               {product.quantity != null ? (
                 <InfoRow

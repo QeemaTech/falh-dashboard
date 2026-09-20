@@ -142,7 +142,35 @@ export function CompanyProductsPage() {
           {
             key: "price",
             label: t("company.products.col.price"),
-            render: (row) => (row.price ? `EGP ${row.price}` : "-"),
+            render: (row) =>
+              row.price !== undefined ? (
+                <Stack direction="row" spacing={0.75} sx={{ alignItems: "center", flexWrap: "wrap" }}>
+                  {row.originalPrice && row.originalPrice > row.price ? (
+                    <>
+                      <Typography
+                        variant="caption"
+                        sx={{ textDecoration: "line-through", color: "text.secondary" }}
+                      >
+                        {row.originalPrice}
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: "success.main" }}>
+                        EGP {row.price}
+                      </Typography>
+                      <Chip
+                        size="small"
+                        color="error"
+                        variant="outlined"
+                        label={`-${Math.round(((row.originalPrice - row.price) / row.originalPrice) * 100)}%`}
+                        sx={{ height: 20, fontSize: "0.7rem", px: 0.25 }}
+                      />
+                    </>
+                  ) : (
+                    <Typography variant="body2">{row.price ? `EGP ${row.price}` : "-"}</Typography>
+                  )}
+                </Stack>
+              ) : (
+                "-"
+              ),
           },
           {
             key: "id",
@@ -215,6 +243,40 @@ export function CompanyProductsPage() {
               </Box>{" "}
               {viewProduct.status}
             </Typography>
+            <Typography variant="body2">
+              <Box component="span" sx={{ fontWeight: 600 }}>
+                {t("company.products.col.price")}:
+              </Box>{" "}
+              {viewProduct.price ? `EGP ${viewProduct.price}` : "-"}
+            </Typography>
+            {viewProduct.originalPrice && viewProduct.originalPrice > (viewProduct.price || 0) ? (
+              <>
+                <Typography variant="body2">
+                  <Box component="span" sx={{ fontWeight: 600 }}>
+                    {t("products.field.originalPrice")}:
+                  </Box>{" "}
+                  <Typography
+                    component="span"
+                    variant="body2"
+                    sx={{ textDecoration: "line-through", color: "text.secondary" }}
+                  >
+                    EGP {viewProduct.originalPrice}
+                  </Typography>
+                </Typography>
+                <Typography variant="body2">
+                  <Box component="span" sx={{ fontWeight: 600 }}>
+                    {t("products.field.discount")}:
+                  </Box>{" "}
+                  <Chip
+                    size="small"
+                    color="error"
+                    variant="outlined"
+                    label={`-${Math.round((((viewProduct.originalPrice - (viewProduct.price || 0))) / viewProduct.originalPrice) * 100)}%`}
+                    sx={{ height: 20, fontSize: "0.75rem" }}
+                  />
+                </Typography>
+              </>
+            ) : null}
             <Typography variant="body2">
               <Box component="span" sx={{ fontWeight: 600 }}>
                 {t("company.profile.description")}:

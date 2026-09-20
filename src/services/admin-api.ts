@@ -116,6 +116,7 @@ export type AdminProduct = {
   mostRequestedSortOrder?: number;
   status: string;
   price?: number;
+  originalPrice?: number | null;
   quantity?: number;
   unit?: string;
   target?: string;
@@ -227,6 +228,7 @@ export type ProductFormPayload = {
   quantity?: number;
   unit?: string;
   price: number;
+  originalPrice?: number | null;
   city?: string;
   lat?: number;
   lng?: number;

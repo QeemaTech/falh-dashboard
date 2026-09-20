@@ -289,8 +289,37 @@ export function PendingProductsPage() {
                         </Typography>
                       </AppTableCell>
                       <AppTableCell>{categoryLabel(product, language)}</AppTableCell>
-                      <AppTableCell sx={{ whiteSpace: "nowrap" }}>
-                        {product.price ? `${t("market.currency")} ${product.price}` : "-"}
+                      <AppTableCell>
+                        {product.price !== undefined ? (
+                          <Stack direction="row" spacing={0.75} sx={{ alignItems: "center", flexWrap: "wrap" }}>
+                            {product.originalPrice && product.originalPrice > product.price ? (
+                              <>
+                                <Typography
+                                  variant="caption"
+                                  sx={{ textDecoration: "line-through", color: "text.secondary" }}
+                                >
+                                  {product.originalPrice}
+                                </Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 600, color: "success.main" }}>
+                                  {product.price} {t("market.currency")}
+                                </Typography>
+                                <Chip
+                                  size="small"
+                                  color="error"
+                                  variant="outlined"
+                                  label={`-${Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%`}
+                                  sx={{ height: 20, fontSize: "0.7rem", px: 0.25 }}
+                                />
+                              </>
+                            ) : (
+                              <Typography variant="body2">
+                                {product.price ? `${t("market.currency")} ${product.price}` : "-"}
+                              </Typography>
+                            )}
+                          </Stack>
+                        ) : (
+                          "-"
+                        )}
                       </AppTableCell>
                       <AppTableCell>{product.city || "-"}</AppTableCell>
                       <AppTableCell sx={{ whiteSpace: "nowrap" }}>
@@ -374,7 +403,6 @@ export function PendingProductsPage() {
           </Stack>
         </Paper>
       ) : null}
-
     </Stack>
   );
 }
