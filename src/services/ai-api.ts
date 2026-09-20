@@ -12,6 +12,7 @@ type ApiResponse<T> = {
   meta?: { page?: number; limit?: number; total?: number; totalPages?: number };
 };
 
+/** POST /api/ai/ask — send a message (creates conversation when conversationId is omitted) */
 /** POST /api/ai/chat — send a message (creates conversation when conversationId is omitted) */
 export async function sendAiChatMessageApi(payload: AiChatMessagePayload) {
   const { data } = await http.post<ApiResponse<AiChatResponse>>("/ai/chat", payload);
