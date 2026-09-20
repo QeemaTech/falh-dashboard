@@ -82,6 +82,8 @@ export function ProductForm({
   const [contactPhone, setContactPhone] = useState("");
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [quantity, setQuantity] = useState<number | "">("");
+  const [unit, setUnit] = useState("");
   const [price, setPrice] = useState(0);
   const [originalPrice, setOriginalPrice] = useState<number | "">("");
   const [city, setCity] = useState("");
@@ -146,6 +148,8 @@ export function ProductForm({
       setContactPhone(source.contactPhone || "");
       setWhatsappNumber(source.whatsappNumber || "");
       setCategoryId(source.category?.id || "");
+      setQuantity(source.quantity !== undefined && source.quantity !== null ? source.quantity : "");
+      setUnit(source.unit || "");
       setPrice(source.price || 0);
       setOriginalPrice(
         source.originalPrice !== undefined && source.originalPrice !== null ? source.originalPrice : ""
@@ -165,6 +169,8 @@ export function ProductForm({
       setContactPhone("");
       setWhatsappNumber("");
       setCategoryId("");
+      setQuantity("");
+      setUnit("");
       setPrice(0);
       setOriginalPrice("");
       setCity("");
@@ -198,6 +204,29 @@ export function ProductForm({
     [categories, categoryId]
   );
   const requiresGovernorate = selectedCategory?.requiresGovernorate === true;
+  const unitOptions = useMemo(() => {
+    const units = (selectedCategory as { units?: Array<{ id: string; symbol: string; nameAr?: string; nameEn?: string | null; name?: string }> } | undefined)?.units || [];
+    return units
+      .filter((item) => item.symbol)
+      .map((item) => ({
+        value: item.symbol,
+        label:
+          language === "ar"
+            ? item.nameAr || item.name || item.symbol
+            : item.nameEn || item.name || item.nameAr || item.symbol,
+      }));
+  }, [selectedCategory, language]);
+
+  useEffect(() => {
+    if (!unitOptions.length) {
+      if (unit) setUnit("");
+      return;
+    }
+    if (!unitOptions.some((option) => option.value === unit)) {
+      setUnit(unitOptions[0].value);
+    }
+  }, [unitOptions, unit]);
+
   const governorateOpts = useMemo(() => governorateOptions(language), [language]);
   const citySelectValue = requiresGovernorate
     ? governorateOpts.find((option) => option.value === city || option.label === city)?.value ?? ""
@@ -213,6 +242,10 @@ export function ProductForm({
         throw new Error(t("products.form.errorDescription"));
       }
       if (!categoryId) throw new Error(t("products.form.errorCategory"));
+      if (quantity === "" || Number.isNaN(Number(quantity)) || Number(quantity) < 0) {
+        throw new Error(t("products.form.errorQuantity"));
+      }
+      if (!unit.trim()) throw new Error(t("products.form.errorUnit"));
       if (Number.isNaN(Number(price)) || Number(price) < 0) {
         throw new Error(t("products.form.errorPrice"));
       }
@@ -251,6 +284,8 @@ export function ProductForm({
         contactPhone: contactPhone.trim() || undefined,
         whatsappNumber: whatsappNumber.trim() || undefined,
         categoryId,
+        quantity: Number(quantity),
+        unit,
         price: Number(price),
         originalPrice: numOrigPrice ?? null,
         city: requiresGovernorate ? (city || undefined) : undefined,
@@ -363,6 +398,38 @@ export function ProductForm({
                 </MenuItem>
               ))}
             </TextField>
+
+            <Stack direction="row" spacing={1.5} sx={{ alignItems: "flex-start" }}>
+              <TextField
+                size="small"
+                fullWidth
+                type="number"
+                label={t("products.form.quantity")}
+                placeholder={t("products.form.quantityPlaceholder")}
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value === "" ? "" : Number(e.target.value))}
+                disabled={!categoryId || unitOptions.length === 0}
+                slotProps={{ htmlInput: { min: 0, step: "any" } }}
+              />
+              <TextField
+                select
+                size="small"
+                label={t("products.form.unit")}
+                value={unit}
+                onChange={(e) => setUnit(e.target.value)}
+                disabled={!categoryId || unitOptions.length === 0}
+                helperText={
+                  categoryId && unitOptions.length === 0 ? t("products.form.noCategoryUnits") : undefined
+                }
+                sx={{ minWidth: { xs: 120, sm: 160 }, flexShrink: 0 }}
+              >
+                {unitOptions.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Stack>
 
             <TextField
               size="small"

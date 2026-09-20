@@ -30,6 +30,15 @@ export type ProductCategory = {
   nameEn?: string;
   image?: string | null;
   requiresGovernorate?: boolean;
+  units?: Array<{
+    id: string;
+    nameAr?: string;
+    nameEn?: string | null;
+    symbol: string;
+    name?: string;
+    isActive?: boolean;
+  }>;
+  unitIds?: string[];
 };
 
 export async function fetchProductCategories() {

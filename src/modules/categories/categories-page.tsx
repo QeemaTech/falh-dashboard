@@ -2,9 +2,11 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Add } from "@mui/icons-material";
 import {
+  Autocomplete,
   Box,
   Button,
   Checkbox,
+  Chip,
   CircularProgress,
   FormControlLabel,
   MenuItem,
@@ -29,9 +31,11 @@ import {
   createAdminCategoryApi,
   deleteAdminCategoryApi,
   fetchAdminCategories,
+  fetchAdminUnits,
   updateAdminCategoryApi,
   uploadAdminCategoryImageApi,
   type AdminCategory,
+  type AdminUnit,
 } from "../../services/admin-api";
 import { CategoryFieldsBuilder } from "./category-fields-builder";
 import {
@@ -48,6 +52,7 @@ const emptyForm = {
   allowsAdvertisement: false,
   requiresGovernorate: false,
   isActive: true,
+  unitIds: [] as string[],
 };
 
 const fieldSx = { "& .MuiOutlinedInput-root": { borderRadius: "8px" } };
@@ -76,10 +81,17 @@ export function CategoriesPage() {
       previousData && Array.isArray(previousData.items) ? previousData : undefined,
   });
 
+  const { data: unitsData } = useQuery({
+    queryKey: ["admin-units-options"],
+    queryFn: () => fetchAdminUnits({ page: 1, limit: 100, sortBy: "sortOrder", sortOrder: "asc" }),
+  });
+  const allUnits = (unitsData?.items || []).filter((unit) => unit.isActive !== false);
+
   const categories = Array.isArray(data?.items) ? data.items : [];
   const totalPages = resolveTotalPages(data?.meta);
   const selectedCategory = categories.find((c) => c.id === selectedCategoryId);
   const isEditing = Boolean(editingId);
+  const selectedUnits = allUnits.filter((unit) => form.unitIds.includes(unit.id));
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -92,6 +104,7 @@ export function CategoriesPage() {
         allowsAdvertisement: form.allowsAdvertisement,
         requiresGovernorate: form.requiresGovernorate,
         isActive: form.isActive,
+        unitIds: form.unitIds,
         ...(image !== null ? { image } : editingId ? { image: null } : {}),
       };
       if (editingId) return updateAdminCategoryApi(editingId, payload);
@@ -141,6 +154,7 @@ export function CategoriesPage() {
       allowsAdvertisement: category.allowsAdvertisement === true,
       requiresGovernorate: category.requiresGovernorate === true,
       isActive: category.isActive !== false,
+      unitIds: category.unitIds || category.units?.map((unit) => unit.id) || [],
     });
     setImageState(category.image ? { kind: "existing", path: category.image } : { kind: "none" });
     setModalOpen(true);
@@ -187,6 +201,7 @@ export function CategoriesPage() {
               <AppTableHeaderCell width={72}>{t("categories.col.image")}</AppTableHeaderCell>
               <AppTableHeaderCell sx={{ minWidth: 160 }}>{t("categories.col.name")}</AppTableHeaderCell>
               <AppTableHeaderCell width={80}>{t("categories.col.sort")}</AppTableHeaderCell>
+              <AppTableHeaderCell sx={{ minWidth: 140 }}>{t("categories.col.units")}</AppTableHeaderCell>
               <AppTableHeaderCell>{t("categories.col.adType")}</AppTableHeaderCell>
               <AppTableHeaderCell>{t("categories.col.status")}</AppTableHeaderCell>
               <AppTableHeaderCell align="right" width={200}>
@@ -236,6 +251,19 @@ export function CategoriesPage() {
                   </AppTableCell>
                   <AppTableCell>{category.sortOrder ?? 0}</AppTableCell>
                   <AppTableCell>
+                    {(category.units || []).length ? (
+                      <Stack direction="row" spacing={0.5} useFlexGap sx={{ flexWrap: "wrap" }}>
+                        {(category.units || []).map((unit) => (
+                          <Chip key={unit.id} size="small" label={unit.symbol} sx={{ borderRadius: "8px" }} />
+                        ))}
+                      </Stack>
+                    ) : (
+                      <Typography variant="caption" color="text.secondary">
+                        —
+                      </Typography>
+                    )}
+                  </AppTableCell>
+                  <AppTableCell>
                     <AppBadge variant={category.allowsAdvertisement ? "success" : "neutral"}>
                       {category.allowsAdvertisement
                         ? t("categories.adType.advertisement")
@@ -277,7 +305,7 @@ export function CategoriesPage() {
               ))
             ) : (
               <AppTableRow hover={false}>
-                <AppTableCell colSpan={6}>
+                <AppTableCell colSpan={7}>
                   <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: "center" }}>
                     {t("categories.empty")}
                   </Typography>
@@ -387,6 +415,41 @@ export function CategoriesPage() {
               <MenuItem value="false">{t("categories.inactive")}</MenuItem>
             </TextField>
           </Stack>
+
+          <Autocomplete
+            multiple
+            options={allUnits}
+            value={selectedUnits}
+            onChange={(_event, value: AdminUnit[]) =>
+              setForm((f) => ({ ...f, unitIds: value.map((unit) => unit.id) }))
+            }
+            getOptionLabel={(option) =>
+              language === "ar"
+                ? `${option.nameAr || option.nameEn || ""} (${option.symbol})`
+                : `${option.nameEn || option.nameAr || ""} (${option.symbol})`
+            }
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            renderTags={(value, getTagProps) =>
+              value.map((option, index) => (
+                <Chip
+                  {...getTagProps({ index })}
+                  key={option.id}
+                  size="small"
+                  label={option.symbol}
+                  sx={{ borderRadius: "8px" }}
+                />
+              ))
+            }
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                size="small"
+                label={t("categories.units")}
+                helperText={t("categories.unitsHint")}
+                sx={fieldSx}
+              />
+            )}
+          />
 
           <Stack spacing={0.5}>
             <FormControlLabel

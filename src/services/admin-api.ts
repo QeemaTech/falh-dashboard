@@ -552,6 +552,15 @@ export async function updateCompanyCommissionApi(companyId: string, commissionRa
   return data.data;
 }
 
+export type AdminUnit = {
+  id: string;
+  nameAr: string;
+  nameEn?: string | null;
+  symbol: string;
+  sortOrder?: number;
+  isActive?: boolean;
+};
+
 export type AdminCategory = {
   id: string;
   nameAr?: string;
@@ -561,6 +570,8 @@ export type AdminCategory = {
   allowsAdvertisement?: boolean;
   requiresGovernorate?: boolean;
   isActive?: boolean;
+  units?: AdminUnit[];
+  unitIds?: string[];
 };
 
 export type DynamicFieldType =
@@ -627,6 +638,7 @@ export async function createAdminCategoryApi(payload: {
   allowsAdvertisement: boolean;
   requiresGovernorate?: boolean;
   isActive?: boolean;
+  unitIds?: string[];
 }) {
   const { data } = await http.post<ApiResponse<AdminCategory>>("/admin/categories", payload);
   return data.data;
@@ -642,6 +654,7 @@ export async function updateAdminCategoryApi(
     allowsAdvertisement: boolean;
     requiresGovernorate: boolean;
     isActive: boolean;
+    unitIds: string[];
   }>
 ) {
   const { data } = await http.patch<ApiResponse<AdminCategory>>(`/admin/categories/${categoryId}`, payload);
@@ -650,6 +663,51 @@ export async function updateAdminCategoryApi(
 
 export async function deleteAdminCategoryApi(categoryId: string) {
   await http.delete(`/admin/categories/${categoryId}`);
+}
+
+export async function fetchAdminUnits(params?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+}) {
+  const { data } = await http.get<ApiResponse<AdminUnit[]>>("/admin/units", {
+    params: { page: 1, limit: 100, sortBy: "sortOrder", sortOrder: "asc", ...(params || {}) },
+  });
+  return {
+    items: Array.isArray(data.data) ? data.data : [],
+    meta: data.meta as { page?: number; limit?: number; total?: number; totalPages?: number },
+  };
+}
+
+export async function createAdminUnitApi(payload: {
+  nameAr: string;
+  nameEn?: string;
+  symbol: string;
+  sortOrder?: number;
+  isActive?: boolean;
+}) {
+  const { data } = await http.post<ApiResponse<AdminUnit>>("/admin/units", payload);
+  return data.data;
+}
+
+export async function updateAdminUnitApi(
+  unitId: string,
+  payload: Partial<{
+    nameAr: string;
+    nameEn: string | null;
+    symbol: string;
+    sortOrder: number;
+    isActive: boolean;
+  }>
+) {
+  const { data } = await http.patch<ApiResponse<AdminUnit>>(`/admin/units/${unitId}`, payload);
+  return data.data;
+}
+
+export async function deleteAdminUnitApi(unitId: string) {
+  await http.delete(`/admin/units/${unitId}`);
 }
 
 export type { MarketItem, MarketTrend, LatestMarketData, LivestockCategory, MarketPagination } from "../types/market";
