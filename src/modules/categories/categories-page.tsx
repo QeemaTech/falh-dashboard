@@ -429,16 +429,19 @@ export function CategoriesPage() {
                 : `${option.nameEn || option.nameAr || ""} (${option.symbol})`
             }
             isOptionEqualToValue={(option, value) => option.id === value.id}
-            renderTags={(value, getTagProps) =>
-              value.map((option, index) => (
-                <Chip
-                  {...getTagProps({ index })}
-                  key={option.id}
-                  size="small"
-                  label={option.symbol}
-                  sx={{ borderRadius: "8px" }}
-                />
-              ))
+            renderValue={(value, getItemProps) =>
+              value.map((option, index) => {
+                const { key, ...itemProps } = getItemProps({ index });
+                return (
+                  <Chip
+                    {...itemProps}
+                    key={key}
+                    size="small"
+                    label={option.symbol}
+                    sx={{ borderRadius: "8px" }}
+                  />
+                );
+              })
             }
             renderInput={(params) => (
               <TextField
