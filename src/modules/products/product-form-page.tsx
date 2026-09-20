@@ -16,6 +16,7 @@ export function ProductCreatePage() {
       title={t("products.form.addTitle")}
       subtitle={t("products.subtitle")}
       backTo="/products"
+      plain
     >
       <ProductForm
         scope="admin"
@@ -48,6 +49,7 @@ export function ProductEditPage() {
       title={t("products.form.editTitle")}
       subtitle={t("products.subtitle")}
       backTo={`/products/${id}`}
+      plain
     >
       <ProductForm
         scope="admin"

@@ -11,6 +11,7 @@ type FormPageShellProps = {
   onBack?: () => void;
   actions?: ReactNode;
   maxWidth?: number | string;
+  plain?: boolean;
   children: ReactNode;
 };
 
@@ -20,7 +21,8 @@ export function FormPageShell({
   backTo,
   onBack,
   actions,
-  maxWidth = 880,
+  maxWidth = "100%",
+  plain = false,
   children,
 }: FormPageShellProps) {
   const navigate = useNavigate();
@@ -39,7 +41,7 @@ export function FormPageShell({
   };
 
   return (
-    <Stack spacing={2.5} sx={{ width: "100%", maxWidth, mx: "auto" }}>
+    <Stack spacing={2.5} sx={{ width: "100%", maxWidth: maxWidth || "100%", mx: "auto" }}>
       <Stack
         direction={{ xs: "column", sm: "row" }}
         spacing={1.5}
@@ -70,16 +72,20 @@ export function FormPageShell({
         {actions ? <Box sx={{ flexShrink: 0 }}>{actions}</Box> : null}
       </Stack>
 
-      <Paper
-        variant="outlined"
-        sx={{
-          borderRadius: "8px",
-          borderColor: "divider",
-          p: { xs: 2, md: 3 },
-        }}
-      >
-        {children}
-      </Paper>
+      {plain ? (
+        children
+      ) : (
+        <Paper
+          variant="outlined"
+          sx={{
+            borderRadius: "8px",
+            borderColor: "divider",
+            p: { xs: 2, md: 3 },
+          }}
+        >
+          {children}
+        </Paper>
+      )}
     </Stack>
   );
 }

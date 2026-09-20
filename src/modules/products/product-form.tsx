@@ -295,231 +295,333 @@ export function ProductForm({
   const canSave = !saveMutation.isPending && !(!canAdd && scope === "company" && !isEdit && !saveAsDraft);
   const onSave = () => saveMutation.mutate();
 
+  const sectionCardSx = {
+    p: { xs: 2, md: 2.5 },
+    borderRadius: "8px",
+    bgcolor: "background.paper",
+    border: 1,
+    borderColor: "divider",
+  };
+
   const fields = (
-    <Stack spacing={2}>
+    <Box
+      sx={{
+        display: "grid",
+        gridTemplateColumns: { xs: "1fr", lg: "1.15fr 0.85fr" },
+        gap: 2.5,
+        width: "100%",
+        alignItems: "start",
+      }}
+    >
       {error ? (
-        <Typography variant="body2" color="error">
-          {error}
-        </Typography>
+        <Box sx={{ gridColumn: "1 / -1" }}>
+          <Typography variant="body2" color="error" sx={{ mb: 1 }}>
+            {error}
+          </Typography>
+        </Box>
       ) : null}
-      <TextField
-        size="small"
-        fullWidth
-        label={t("products.form.titleAr")}
-        value={titleAr}
-        onChange={(e) => setTitleAr(e.target.value)}
-      />
-      <TextField
-        size="small"
-        fullWidth
-        label={t("products.form.titleEn")}
-        value={titleEn}
-        onChange={(e) => setTitleEn(e.target.value)}
-      />
-      <TextField
-        size="small"
-        fullWidth
-        multiline
-        minRows={2}
-        label={t("products.form.descriptionAr")}
-        value={descriptionAr}
-        onChange={(e) => setDescriptionAr(e.target.value)}
-      />
-      <TextField
-        size="small"
-        fullWidth
-        label={t("products.form.advertiserName")}
-        value={advertiserName}
-        onChange={(e) => setAdvertiserName(e.target.value)}
-      />
-      <TextField
-        size="small"
-        fullWidth
-        label={t("products.form.contactPhone")}
-        value={contactPhone}
-        onChange={(e) => setContactPhone(e.target.value)}
-      />
-      <TextField
-        size="small"
-        fullWidth
-        label={t("products.form.whatsappNumber")}
-        value={whatsappNumber}
-        onChange={(e) => setWhatsappNumber(e.target.value)}
-      />
-      <TextField
-        select
-        size="small"
-        fullWidth
-        label={t("products.form.category")}
-        value={categoryId}
-        onChange={(e) => setCategoryId(e.target.value)}
-      >
-        <MenuItem value="">{t("products.form.selectCategory")}</MenuItem>
-        {categories.map((cat) => (
-          <MenuItem key={cat.id} value={cat.id}>
-            {categoryName(cat)}
-          </MenuItem>
-        ))}
-      </TextField>
-      {categoryId && categoryFieldsLoading ? (
-        <Typography variant="body2" color="text.secondary">
-          {t("products.form.loadingFields")}
-        </Typography>
-      ) : null}
-      {categoryId && !categoryFieldsLoading ? (
-        <ProductDynamicFieldsForm
-          fields={categoryFields}
-          values={dynamicValues}
-          onChange={setDynamicValues}
-          language={language}
-          disabled={saveMutation.isPending}
-          onUploadFile={async (file) => {
-            const upload = scope === "admin" ? uploadAdminProductImagesApi : uploadCompanyProductImagesApi;
-            const paths = await upload([file]);
-            return paths[0] || "";
-          }}
-          t={t}
-        />
-      ) : null}
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-        <TextField
-          size="small"
-          fullWidth
-          type="number"
-          label={t("products.form.price")}
-          value={price}
-          onChange={(e) => setPrice(Number(e.target.value))}
-          slotProps={{ htmlInput: { min: 0, step: "any" } }}
-          helperText={originalPrice ? t("products.form.sellingPrice") : undefined}
-        />
-        <TextField
-          size="small"
-          fullWidth
-          type="number"
-          label={t("products.form.originalPrice")}
-          value={originalPrice}
-          onChange={(e) => setOriginalPrice(e.target.value === "" ? "" : Number(e.target.value))}
-          slotProps={{ htmlInput: { min: 0, step: "any" } }}
-          helperText={
-            originalPrice !== "" && Number(originalPrice) > Number(price) && Number(price) > 0
-              ? t("products.form.discountBadge").replace(
-                  "{{percent}}",
-                  String(Math.round(((Number(originalPrice) - Number(price)) / Number(originalPrice)) * 100))
-                )
-              : undefined
-          }
-        />
+
+      {/* Main Column */}
+      <Stack spacing={2.5} sx={{ minWidth: 0 }}>
+        {/* Basic Details */}
+        <Paper variant="outlined" sx={sectionCardSx}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: "text.primary" }}>
+            {isArabic ? "البيانات الأساسية" : "Basic Information"}
+          </Typography>
+          <Stack spacing={2}>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+              <TextField
+                size="small"
+                fullWidth
+                label={t("products.form.titleAr")}
+                value={titleAr}
+                onChange={(e) => setTitleAr(e.target.value)}
+              />
+              <TextField
+                size="small"
+                fullWidth
+                label={t("products.form.titleEn")}
+                value={titleEn}
+                onChange={(e) => setTitleEn(e.target.value)}
+              />
+            </Stack>
+
+            <TextField
+              select
+              size="small"
+              fullWidth
+              label={t("products.form.category")}
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+            >
+              <MenuItem value="">{t("products.form.selectCategory")}</MenuItem>
+              {categories.map((cat) => (
+                <MenuItem key={cat.id} value={cat.id}>
+                  {categoryName(cat)}
+                </MenuItem>
+              ))}
+            </TextField>
+
+            <TextField
+              size="small"
+              fullWidth
+              multiline
+              minRows={3}
+              label={t("products.form.descriptionAr")}
+              value={descriptionAr}
+              onChange={(e) => setDescriptionAr(e.target.value)}
+            />
+
+            {categoryId && categoryFieldsLoading ? (
+              <Typography variant="body2" color="text.secondary">
+                {t("products.form.loadingFields")}
+              </Typography>
+            ) : null}
+            {categoryId && !categoryFieldsLoading ? (
+              <ProductDynamicFieldsForm
+                fields={categoryFields}
+                values={dynamicValues}
+                onChange={setDynamicValues}
+                language={language}
+                disabled={saveMutation.isPending}
+                onUploadFile={async (file) => {
+                  const upload =
+                    scope === "admin" ? uploadAdminProductImagesApi : uploadCompanyProductImagesApi;
+                  const paths = await upload([file]);
+                  return paths[0] || "";
+                }}
+                t={t}
+              />
+            ) : null}
+          </Stack>
+        </Paper>
+
+        {/* Pricing & Discounts */}
+        <Paper variant="outlined" sx={sectionCardSx}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: "text.primary" }}>
+            {isArabic ? "الأسعار والخصومات" : "Pricing & Discounts"}
+          </Typography>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+            <TextField
+              size="small"
+              fullWidth
+              type="number"
+              label={t("products.form.price")}
+              value={price}
+              onChange={(e) => setPrice(Number(e.target.value))}
+              slotProps={{ htmlInput: { min: 0, step: "any" } }}
+              helperText={originalPrice ? t("products.form.sellingPrice") : undefined}
+            />
+            <TextField
+              size="small"
+              fullWidth
+              type="number"
+              label={t("products.form.originalPrice")}
+              value={originalPrice}
+              onChange={(e) => setOriginalPrice(e.target.value === "" ? "" : Number(e.target.value))}
+              slotProps={{ htmlInput: { min: 0, step: "any" } }}
+              helperText={
+                originalPrice !== "" && Number(originalPrice) > Number(price) && Number(price) > 0
+                  ? t("products.form.discountBadge").replace(
+                      "{{percent}}",
+                      String(
+                        Math.round(
+                          ((Number(originalPrice) - Number(price)) / Number(originalPrice)) * 100
+                        )
+                      )
+                    )
+                  : undefined
+              }
+            />
+          </Stack>
+        </Paper>
+
+        {/* Contact Information */}
+        <Paper variant="outlined" sx={sectionCardSx}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: "text.primary" }}>
+            {isArabic ? "بيانات صاحب الإعلان للتواصل" : "Advertiser Contact Details"}
+          </Typography>
+          <Stack spacing={2}>
+            <TextField
+              size="small"
+              fullWidth
+              label={t("products.form.advertiserName")}
+              value={advertiserName}
+              onChange={(e) => setAdvertiserName(e.target.value)}
+            />
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+              <TextField
+                size="small"
+                fullWidth
+                label={t("products.form.contactPhone")}
+                value={contactPhone}
+                onChange={(e) => setContactPhone(e.target.value)}
+              />
+              <TextField
+                size="small"
+                fullWidth
+                label={t("products.form.whatsappNumber")}
+                value={whatsappNumber}
+                onChange={(e) => setWhatsappNumber(e.target.value)}
+              />
+            </Stack>
+          </Stack>
+        </Paper>
       </Stack>
-      {requiresGovernorate ? (
-        <TextField
-          select
-          size="small"
-          fullWidth
-          label={t("products.form.city")}
-          value={citySelectValue}
-          onChange={(e) => {
-            const selected = governorateOpts.find((option) => option.value === e.target.value);
-            setCity(selected?.label ?? e.target.value);
-          }}
-        >
-          <MenuItem value="">{t("categories.fields.select")}</MenuItem>
-          {governorateOpts.map((option) => (
-            <MenuItem key={option.value} value={option.value}>
-              {option.label}
-            </MenuItem>
-          ))}
-        </TextField>
-      ) : null}
 
-      {latInput && lngInput ? (
-        <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-          <Button
-            fullWidth
-            size="small"
-            variant="outlined"
-            color="success"
-            startIcon={<LocationOn />}
-            onClick={() => setIsMapOpen(true)}
-          >
-            {isArabic
-              ? `الموقع المحدد: (${latInput}, ${lngInput})`
-              : `Location Set: (${latInput}, ${lngInput})`}
-          </Button>
-          <IconButton
-            size="small"
-            color="error"
-            onClick={() => {
-              setLatInput("");
-              setLngInput("");
-            }}
-            title={isArabic ? "مسح الموقع" : "Clear location"}
-          >
-            <Clear />
-          </IconButton>
-        </Stack>
-      ) : (
-        <Button
-          fullWidth
-          size="small"
-          variant="outlined"
-          startIcon={<AddLocationAlt />}
-          onClick={() => setIsMapOpen(true)}
-        >
-          {isArabic ? "تحديد الموقع على الخريطة (اختياري)" : "Select Location on Map (Optional)"}
-        </Button>
-      )}
-      <ProductImagePicker
-        items={imageItems}
-        onChange={setImageItems}
-        label={t("products.form.images")}
-        hint={t("products.form.uploadImagesHint")}
-        addLabel={t("products.form.addImages")}
-        disabled={saveMutation.isPending}
-      />
-      {scope === "admin" && !isEdit ? (
-        <TextField
-          select
-          size="small"
-          fullWidth
-          label={t("products.form.ownerCompany")}
-          value={companyId}
-          onChange={(e) => setCompanyId(e.target.value)}
-        >
-          <MenuItem value="">{t("products.form.globalOwner")}</MenuItem>
-          {(companiesData?.items || []).map((company) => (
-            <MenuItem key={company.id} value={company.id}>
-              {company.name}
-            </MenuItem>
-          ))}
-        </TextField>
-      ) : null}
-      {scope === "admin" ? (
-        <FormControlLabel
-          control={<Checkbox checked={publishActive} onChange={(e) => setPublishActive(e.target.checked)} />}
-          label={t("products.form.publishActive")}
-        />
-      ) : (
-        <FormControlLabel
-          control={<Checkbox checked={saveAsDraft} onChange={(e) => setSaveAsDraft(e.target.checked)} />}
-          label={t("products.form.saveDraft")}
-        />
-      )}
+      {/* Side Column */}
+      <Stack spacing={2.5} sx={{ minWidth: 0 }}>
+        {/* Images */}
+        <Paper variant="outlined" sx={sectionCardSx}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: "text.primary" }}>
+            {t("products.form.images")}
+          </Typography>
+          <ProductImagePicker
+            items={imageItems}
+            onChange={setImageItems}
+            label={t("products.form.images")}
+            hint={t("products.form.uploadImagesHint")}
+            addLabel={t("products.form.addImages")}
+            disabled={saveMutation.isPending}
+          />
+        </Paper>
 
-      {showActions && !actionsSlot ? (
-        <Stack direction="row" spacing={1} sx={{ pt: 1 }}>
-          <Button variant="contained" disabled={!canSave} onClick={onSave}>
-            {saveMutation.isPending
-              ? t("products.form.saving")
-              : isEdit
-                ? t("products.form.save")
-                : t("products.form.create")}
-          </Button>
-          <Button onClick={onCancel}>{t("products.cancel")}</Button>
-        </Stack>
-      ) : null}
-      {actionsSlot
-        ? actionsSlot({ saving: saveMutation.isPending, onSave, onCancel, canSave })
-        : null}
+        {/* Location */}
+        <Paper variant="outlined" sx={sectionCardSx}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: "text.primary" }}>
+            {isArabic ? "الموقع الجغرافي" : "Location"}
+          </Typography>
+          <Stack spacing={2}>
+            {requiresGovernorate ? (
+              <TextField
+                select
+                size="small"
+                fullWidth
+                label={t("products.form.city")}
+                value={citySelectValue}
+                onChange={(e) => {
+                  const selected = governorateOpts.find((option) => option.value === e.target.value);
+                  setCity(selected?.label ?? e.target.value);
+                }}
+              >
+                <MenuItem value="">{t("categories.fields.select")}</MenuItem>
+                {governorateOpts.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </TextField>
+            ) : null}
+
+            {latInput && lngInput ? (
+              <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                <Button
+                  fullWidth
+                  size="small"
+                  variant="outlined"
+                  color="success"
+                  startIcon={<LocationOn />}
+                  onClick={() => setIsMapOpen(true)}
+                >
+                  {isArabic
+                    ? `الموقع المحدد: (${latInput}, ${lngInput})`
+                    : `Location Set: (${latInput}, ${lngInput})`}
+                </Button>
+                <IconButton
+                  size="small"
+                  color="error"
+                  onClick={() => {
+                    setLatInput("");
+                    setLngInput("");
+                  }}
+                  title={isArabic ? "مسح الموقع" : "Clear location"}
+                >
+                  <Clear />
+                </IconButton>
+              </Stack>
+            ) : (
+              <Button
+                fullWidth
+                size="small"
+                variant="outlined"
+                startIcon={<AddLocationAlt />}
+                onClick={() => setIsMapOpen(true)}
+              >
+                {isArabic ? "تحديد الموقع على الخريطة (اختياري)" : "Select Location on Map (Optional)"}
+              </Button>
+            )}
+          </Stack>
+        </Paper>
+
+        {/* Publishing & Owner */}
+        <Paper variant="outlined" sx={sectionCardSx}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: "text.primary" }}>
+            {isArabic ? "إعدادات النشر" : "Publishing & Options"}
+          </Typography>
+          <Stack spacing={2}>
+            {scope === "admin" && !isEdit ? (
+              <TextField
+                select
+                size="small"
+                fullWidth
+                label={t("products.form.ownerCompany")}
+                value={companyId}
+                onChange={(e) => setCompanyId(e.target.value)}
+              >
+                <MenuItem value="">{t("products.form.globalOwner")}</MenuItem>
+                {(companiesData?.items || []).map((company) => (
+                  <MenuItem key={company.id} value={company.id}>
+                    {company.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+            ) : null}
+            {scope === "admin" ? (
+              <FormControlLabel
+                control={
+                  <Checkbox checked={publishActive} onChange={(e) => setPublishActive(e.target.checked)} />
+                }
+                label={t("products.form.publishActive")}
+              />
+            ) : (
+              <FormControlLabel
+                control={
+                  <Checkbox checked={saveAsDraft} onChange={(e) => setSaveAsDraft(e.target.checked)} />
+                }
+                label={t("products.form.saveDraft")}
+              />
+            )}
+          </Stack>
+        </Paper>
+
+        {/* Actions */}
+        <Paper variant="outlined" sx={{ ...sectionCardSx, p: 2 }}>
+          {showActions && !actionsSlot ? (
+            <Stack direction="row" spacing={1.5}>
+              <Button
+                variant="contained"
+                size="medium"
+                fullWidth
+                disabled={!canSave}
+                onClick={onSave}
+                sx={{ py: 1, fontWeight: 700 }}
+              >
+                {saveMutation.isPending
+                  ? t("products.form.saving")
+                  : isEdit
+                    ? t("products.form.save")
+                    : t("products.form.create")}
+              </Button>
+              <Button variant="outlined" size="medium" fullWidth onClick={onCancel} sx={{ py: 1 }}>
+                {t("products.cancel")}
+              </Button>
+            </Stack>
+          ) : null}
+          {actionsSlot
+            ? actionsSlot({ saving: saveMutation.isPending, onSave, onCancel, canSave })
+            : null}
+        </Paper>
+      </Stack>
 
       <LocationPickerDialog
         open={isMapOpen}
@@ -536,7 +638,7 @@ export function ProductForm({
           }
         }}
       />
-    </Stack>
+    </Box>
   );
 
   return fields;
