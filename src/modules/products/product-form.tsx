@@ -242,10 +242,13 @@ export function ProductForm({
         throw new Error(t("products.form.errorDescription"));
       }
       if (!categoryId) throw new Error(t("products.form.errorCategory"));
-      if (quantity === "" || Number.isNaN(Number(quantity)) || Number(quantity) < 0) {
-        throw new Error(t("products.form.errorQuantity"));
+      const categoryHasUnits = unitOptions.length > 0;
+      if (categoryHasUnits) {
+        if (quantity === "" || Number.isNaN(Number(quantity)) || Number(quantity) < 0) {
+          throw new Error(t("products.form.errorQuantity"));
+        }
+        if (!unit.trim()) throw new Error(t("products.form.errorUnit"));
       }
-      if (!unit.trim()) throw new Error(t("products.form.errorUnit"));
       if (Number.isNaN(Number(price)) || Number(price) < 0) {
         throw new Error(t("products.form.errorPrice"));
       }
@@ -284,13 +287,11 @@ export function ProductForm({
         contactPhone: contactPhone.trim() || undefined,
         whatsappNumber: whatsappNumber.trim() || undefined,
         categoryId,
-        quantity: Number(quantity),
-        unit,
+        ...(categoryHasUnits ? { quantity: Number(quantity), unit } : {}),
         price: Number(price),
         originalPrice: numOrigPrice ?? null,
         city: requiresGovernorate ? (city || undefined) : undefined,
-        lat: parsedLat,
-        lng: parsedLng,
+        ...(parsedLat !== undefined && parsedLng !== undefined ? { lat: parsedLat, lng: parsedLng } : {}),
         images,
         dynamicFields: buildDynamicFieldsPayload(categoryFields, dynamicValues),
       };
@@ -399,37 +400,34 @@ export function ProductForm({
               ))}
             </TextField>
 
-            <Stack direction="row" spacing={1.5} sx={{ alignItems: "flex-start" }}>
-              <TextField
-                size="small"
-                fullWidth
-                type="number"
-                label={t("products.form.quantity")}
-                placeholder={t("products.form.quantityPlaceholder")}
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value === "" ? "" : Number(e.target.value))}
-                disabled={!categoryId || unitOptions.length === 0}
-                slotProps={{ htmlInput: { min: 0, step: "any" } }}
-              />
-              <TextField
-                select
-                size="small"
-                label={t("products.form.unit")}
-                value={unit}
-                onChange={(e) => setUnit(e.target.value)}
-                disabled={!categoryId || unitOptions.length === 0}
-                helperText={
-                  categoryId && unitOptions.length === 0 ? t("products.form.noCategoryUnits") : undefined
-                }
-                sx={{ minWidth: { xs: 120, sm: 160 }, flexShrink: 0 }}
-              >
-                {unitOptions.map((option) => (
-                  <MenuItem key={option.value} value={option.value}>
-                    {option.label}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Stack>
+            {unitOptions.length > 0 ? (
+              <Stack direction="row" spacing={1.5} sx={{ alignItems: "flex-start" }}>
+                <TextField
+                  size="small"
+                  fullWidth
+                  type="number"
+                  label={t("products.form.quantity")}
+                  placeholder={t("products.form.quantityPlaceholder")}
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value === "" ? "" : Number(e.target.value))}
+                  slotProps={{ htmlInput: { min: 0, step: "any" } }}
+                />
+                <TextField
+                  select
+                  size="small"
+                  label={t("products.form.unit")}
+                  value={unit}
+                  onChange={(e) => setUnit(e.target.value)}
+                  sx={{ minWidth: { xs: 120, sm: 160 }, flexShrink: 0 }}
+                >
+                  {unitOptions.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Stack>
+            ) : null}
 
             <TextField
               size="small"
@@ -558,7 +556,7 @@ export function ProductForm({
         {/* Location */}
         <Paper variant="outlined" sx={sectionCardSx}>
           <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: "text.primary" }}>
-            {isArabic ? "الموقع الجغرافي" : "Location"}
+            {t("products.form.locationTitle")}
           </Typography>
           <Stack spacing={2}>
             {requiresGovernorate ? (
