@@ -9,10 +9,10 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { createAdminBannerApi, fetchAdminCompanies } from "../../services/admin-api";
+import { createAdminBannerApi, fetchAdminCompanies, fetchAdminProducts } from "../../services/admin-api";
 import { getApiErrorMessage } from "../../utils/api-error";
 import { useI18n } from "../../hooks/use-i18n";
-import { BannerCompanyPicker } from "./banner-company-picker";
+import { BannerTargetFields, type BannerTargetType } from "./banner-target-fields";
 
 export type BannerFormProps = {
   onSuccess: () => void;
@@ -34,7 +34,10 @@ export function BannerForm({
   const { t } = useI18n();
   const [titleAr, setTitleAr] = useState("");
   const [titleEn, setTitleEn] = useState("");
+  const [targetType, setTargetType] = useState<BannerTargetType>("company");
   const [companyId, setCompanyId] = useState("");
+  const [productId, setProductId] = useState("");
+  const [externalUrl, setExternalUrl] = useState("");
   const [sortOrder, setSortOrder] = useState(0);
   const [displayDays, setDisplayDays] = useState<number | "">(7);
   const [isActive, setIsActive] = useState(true);
@@ -47,6 +50,11 @@ export function BannerForm({
     queryFn: () => fetchAdminCompanies({ page: 1, limit: 100, status: "APPROVED" }),
   });
   const companies = companiesData?.items || [];
+  const { data: productsData, isLoading: productsLoading } = useQuery({
+    queryKey: ["admin-products-banner-target"],
+    queryFn: () => fetchAdminProducts({ page: 1, limit: 100, status: "ACTIVE", sortBy: "createdAt", sortOrder: "desc" }),
+  });
+  const products = productsData?.items || [];
 
   useEffect(() => {
     if (!imageFile) {
@@ -66,11 +74,17 @@ export function BannerForm({
       if (displayDays !== "" && (Number.isNaN(Number(displayDays)) || Number(displayDays) < 1)) {
         throw new Error(t("banners.errorDisplayDays"));
       }
+      if (targetType === "company" && !companyId) throw new Error(t("banners.companyRequired"));
+      if (targetType === "product" && !productId) throw new Error(t("banners.productRequired"));
+      if (targetType === "url" && !externalUrl.trim()) throw new Error(t("banners.urlRequired"));
       return createAdminBannerApi({
         titleAr: titleAr.trim(),
         titleEn: titleEn.trim(),
         image: imageFile,
-        companyId: companyId || undefined,
+        linkType: targetType,
+        companyId: targetType === "company" ? companyId : undefined,
+        productId: targetType === "product" ? productId : undefined,
+        linkValue: targetType === "url" ? externalUrl.trim() : undefined,
         sortOrder: Number(sortOrder),
         displayDays: displayDays === "" ? null : Number(displayDays),
         isActive,
@@ -120,15 +134,20 @@ export function BannerForm({
         />
       ) : null}
 
-      <BannerCompanyPicker
+      <BannerTargetFields
+        targetType={targetType}
+        onTargetType={setTargetType}
+        companyId={companyId}
+        onCompanyId={setCompanyId}
+        productId={productId}
+        onProductId={setProductId}
+        externalUrl={externalUrl}
+        onExternalUrl={setExternalUrl}
         companies={companies}
-        loading={companiesLoading}
-        selectedCompanyId={companyId}
-        onSelect={setCompanyId}
-        label={t("banners.fieldCompany")}
-        hint={t("banners.fieldCompanyHint")}
-        searchPlaceholder={t("banners.fieldCompanySearch")}
-        emptyLabel={t("banners.fieldCompanyEmpty")}
+        companiesLoading={companiesLoading}
+        products={products}
+        productsLoading={productsLoading}
+        t={t}
       />
 
       <TextField

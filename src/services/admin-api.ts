@@ -92,8 +92,15 @@ export type AdminBanner = {
   imagePath: string;
   companyId?: string | null;
   company?: { id: string; name?: string; city?: string; status?: string; logo?: string | null } | null;
-  linkType?: string;
-  linkValue?: string;
+  linkType?: "company" | "product" | "url" | string | null;
+  linkValue?: string | null;
+  product?: { id: string; title?: string; titleAr?: string; titleEn?: string; status?: string } | null;
+  navigation?: {
+    type: "company" | "product" | "url" | null;
+    companyId?: string | null;
+    productId?: string | null;
+    url?: string | null;
+  };
   sortOrder: number;
   isActive: boolean;
   displayDays?: number | null;
@@ -132,7 +139,13 @@ export type AdminProduct = {
     fieldId?: string;
     value?: string | null;
     fileUrl?: string | null;
-    field?: { id: string };
+    field?: {
+      id: string;
+      label?: string;
+      labelEn?: string | null;
+      fieldKey?: string;
+      options?: Array<{ value?: string; label?: string; labelEn?: string }> | null;
+    };
   }>;
 };
 
@@ -846,7 +859,10 @@ export type BannerFormPayload = {
   titleAr: string;
   titleEn: string;
   image: File;
+  linkType: "company" | "product" | "url";
   companyId?: string | null;
+  productId?: string | null;
+  linkValue?: string | null;
   sortOrder?: number;
   isActive?: boolean;
   displayDays?: number | null;
@@ -857,8 +873,15 @@ export async function createAdminBannerApi(payload: BannerFormPayload) {
   formData.append("titleAr", payload.titleAr);
   formData.append("titleEn", payload.titleEn);
   formData.append("image", payload.image);
+  formData.append("linkType", payload.linkType);
   if (payload.companyId) {
     formData.append("companyId", payload.companyId);
+  }
+  if (payload.productId) {
+    formData.append("productId", payload.productId);
+  }
+  if (payload.linkValue) {
+    formData.append("linkValue", payload.linkValue);
   }
   formData.append("sortOrder", String(payload.sortOrder ?? 0));
   if (payload.displayDays != null && payload.displayDays > 0) {

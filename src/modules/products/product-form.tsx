@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
+  Autocomplete,
   Box,
   Button,
   Checkbox,
+  CircularProgress,
   FormControlLabel,
   IconButton,
   MenuItem,
@@ -82,8 +84,6 @@ export function ProductForm({
   const [contactPhone, setContactPhone] = useState("");
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [categoryId, setCategoryId] = useState("");
-  const [quantity, setQuantity] = useState<number | "">("");
-  const [unit, setUnit] = useState("");
   const [price, setPrice] = useState(0);
   const [originalPrice, setOriginalPrice] = useState<number | "">("");
   const [city, setCity] = useState("");
@@ -125,9 +125,9 @@ export function ProductForm({
       scope === "admin" ? fetchCategoryDynamicFields(categoryId, false) : fetchCategoryFormFields(categoryId),
     enabled: active && Boolean(categoryId),
   });
-  const { data: companiesData } = useQuery({
+  const { data: companiesData, isLoading: companiesLoading } = useQuery({
     queryKey: ["admin-companies-select"],
-    queryFn: () => fetchAdminCompanies({ page: 1, limit: 100, status: "APPROVED" }),
+    queryFn: () => fetchAdminCompanies({ page: 1, limit: 200, status: "APPROVED", sortBy: "name", sortOrder: "asc" }),
     enabled: active && scope === "admin" && !isEdit,
   });
 
@@ -148,8 +148,6 @@ export function ProductForm({
       setContactPhone(source.contactPhone || "");
       setWhatsappNumber(source.whatsappNumber || "");
       setCategoryId(source.category?.id || "");
-      setQuantity(source.quantity !== undefined && source.quantity !== null ? source.quantity : "");
-      setUnit(source.unit || "");
       setPrice(source.price || 0);
       setOriginalPrice(
         source.originalPrice !== undefined && source.originalPrice !== null ? source.originalPrice : ""
@@ -169,8 +167,6 @@ export function ProductForm({
       setContactPhone("");
       setWhatsappNumber("");
       setCategoryId("");
-      setQuantity("");
-      setUnit("");
       setPrice(0);
       setOriginalPrice("");
       setCity("");
@@ -204,28 +200,6 @@ export function ProductForm({
     [categories, categoryId]
   );
   const requiresGovernorate = selectedCategory?.requiresGovernorate === true;
-  const unitOptions = useMemo(() => {
-    const units = (selectedCategory as { units?: Array<{ id: string; symbol: string; nameAr?: string; nameEn?: string | null; name?: string }> } | undefined)?.units || [];
-    return units
-      .filter((item) => item.symbol)
-      .map((item) => ({
-        value: item.symbol,
-        label:
-          language === "ar"
-            ? item.nameAr || item.name || item.symbol
-            : item.nameEn || item.name || item.nameAr || item.symbol,
-      }));
-  }, [selectedCategory, language]);
-
-  useEffect(() => {
-    if (!unitOptions.length) {
-      if (unit) setUnit("");
-      return;
-    }
-    if (!unitOptions.some((option) => option.value === unit)) {
-      setUnit(unitOptions[0].value);
-    }
-  }, [unitOptions, unit]);
 
   const governorateOpts = useMemo(() => governorateOptions(language), [language]);
   const citySelectValue = requiresGovernorate
@@ -242,13 +216,6 @@ export function ProductForm({
         throw new Error(t("products.form.errorDescription"));
       }
       if (!categoryId) throw new Error(t("products.form.errorCategory"));
-      const categoryHasUnits = unitOptions.length > 0;
-      if (categoryHasUnits) {
-        if (quantity === "" || Number.isNaN(Number(quantity)) || Number(quantity) < 0) {
-          throw new Error(t("products.form.errorQuantity"));
-        }
-        if (!unit.trim()) throw new Error(t("products.form.errorUnit"));
-      }
       if (Number.isNaN(Number(price)) || Number(price) < 0) {
         throw new Error(t("products.form.errorPrice"));
       }
@@ -287,7 +254,6 @@ export function ProductForm({
         contactPhone: contactPhone.trim() || undefined,
         whatsappNumber: whatsappNumber.trim() || undefined,
         categoryId,
-        ...(categoryHasUnits ? { quantity: Number(quantity), unit } : {}),
         price: Number(price),
         originalPrice: numOrigPrice ?? null,
         city: requiresGovernorate ? (city || undefined) : undefined,
@@ -367,6 +333,55 @@ export function ProductForm({
             {isArabic ? "البيانات الأساسية" : "Basic Information"}
           </Typography>
           <Stack spacing={2}>
+            {scope === "admin" && !isEdit ? (
+              <Autocomplete
+                options={companiesData?.items || []}
+                loading={companiesLoading}
+                value={(companiesData?.items || []).find((company) => company.id === companyId) || null}
+                onChange={(_event, company) => setCompanyId(company?.id || "")}
+                getOptionLabel={(company) => company.name || ""}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                noOptionsText={isArabic ? "لا توجد شركات معتمدة" : "No approved companies"}
+                renderOption={(props, company) => {
+                  const { key, ...optionProps } = props;
+                  return (
+                    <li key={key} {...optionProps}>
+                      <Box>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          {company.name}
+                        </Typography>
+                        {company.city ? (
+                          <Typography variant="caption" color="text.secondary">
+                            {company.city}
+                          </Typography>
+                        ) : null}
+                      </Box>
+                    </li>
+                  );
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    size="small"
+                    label={t("products.form.ownerCompany")}
+                    placeholder={t("products.form.selectCompany")}
+                    helperText={t("products.form.ownerCompanyHint")}
+                    slotProps={{
+                      ...params.slotProps,
+                      input: {
+                        ...params.slotProps?.input,
+                        endAdornment: (
+                          <>
+                            {companiesLoading ? <CircularProgress color="inherit" size={16} /> : null}
+                            {params.slotProps?.input?.endAdornment}
+                          </>
+                        ),
+                      },
+                    }}
+                  />
+                )}
+              />
+            ) : null}
             <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
               <TextField
                 size="small"
@@ -399,35 +414,6 @@ export function ProductForm({
                 </MenuItem>
               ))}
             </TextField>
-
-            {unitOptions.length > 0 ? (
-              <Stack direction="row" spacing={1.5} sx={{ alignItems: "flex-start" }}>
-                <TextField
-                  size="small"
-                  fullWidth
-                  type="number"
-                  label={t("products.form.quantity")}
-                  placeholder={t("products.form.quantityPlaceholder")}
-                  value={quantity}
-                  onChange={(e) => setQuantity(e.target.value === "" ? "" : Number(e.target.value))}
-                  slotProps={{ htmlInput: { min: 0, step: "any" } }}
-                />
-                <TextField
-                  select
-                  size="small"
-                  label={t("products.form.unit")}
-                  value={unit}
-                  onChange={(e) => setUnit(e.target.value)}
-                  sx={{ minWidth: { xs: 120, sm: 160 }, flexShrink: 0 }}
-                >
-                  {unitOptions.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Stack>
-            ) : null}
 
             <TextField
               size="small"
@@ -626,23 +612,6 @@ export function ProductForm({
             {isArabic ? "إعدادات النشر" : "Publishing & Options"}
           </Typography>
           <Stack spacing={2}>
-            {scope === "admin" && !isEdit ? (
-              <TextField
-                select
-                size="small"
-                fullWidth
-                label={t("products.form.ownerCompany")}
-                value={companyId}
-                onChange={(e) => setCompanyId(e.target.value)}
-              >
-                <MenuItem value="">{t("products.form.globalOwner")}</MenuItem>
-                {(companiesData?.items || []).map((company) => (
-                  <MenuItem key={company.id} value={company.id}>
-                    {company.name}
-                  </MenuItem>
-                ))}
-              </TextField>
-            ) : null}
             {scope === "admin" ? (
               <FormControlLabel
                 control={

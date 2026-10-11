@@ -30,6 +30,24 @@ export function BannersPage() {
       ? banner.titleAr || banner.title
       : banner.titleEn || banner.titleAr || banner.title;
 
+  const bannerTargetLabel = (banner: AdminBanner) => {
+    const type = banner.navigation?.type || banner.linkType;
+    if (type === "company") return `${t("banners.linkCompany")}: ${banner.company?.name || "—"}`;
+    if (type === "product") {
+      const name =
+        language === "ar"
+          ? banner.product?.titleAr || banner.product?.title
+          : banner.product?.titleEn || banner.product?.titleAr || banner.product?.title;
+      return `${t("banners.linkProduct")}: ${name || "—"}`;
+    }
+    if (type === "url") {
+      const url = banner.navigation?.url || banner.linkValue || "";
+      if (!url) return t("banners.linkUrl");
+      return url.length > 48 ? `${url.slice(0, 48)}…` : url;
+    }
+    return banner.company?.name || "—";
+  };
+
   const bannerDisplayLabel = (banner: AdminBanner) => {
     if (!banner.displayDays) return t("banners.unlimited");
     const expired = banner.expiresAt && new Date(banner.expiresAt).getTime() <= now;
@@ -105,7 +123,7 @@ export function BannersPage() {
             <tr>
               <AppTableHeaderCell>{t("banners.colImage")}</AppTableHeaderCell>
               <AppTableHeaderCell>{t("banners.colTitle")}</AppTableHeaderCell>
-              <AppTableHeaderCell>{t("banners.colCompany")}</AppTableHeaderCell>
+              <AppTableHeaderCell>{t("banners.colTarget")}</AppTableHeaderCell>
               <AppTableHeaderCell>{t("banners.colSortOrder")}</AppTableHeaderCell>
               <AppTableHeaderCell>{t("banners.colDisplay")}</AppTableHeaderCell>
               <AppTableHeaderCell>{t("banners.colStatus")}</AppTableHeaderCell>
@@ -128,7 +146,7 @@ export function BannersPage() {
                   )}
                 </AppTableCell>
                 <AppTableCell>{bannerTitle(banner)}</AppTableCell>
-                <AppTableCell>{banner.company?.name || "—"}</AppTableCell>
+                <AppTableCell>{bannerTargetLabel(banner)}</AppTableCell>
                 <AppTableCell>{banner.sortOrder ?? 0}</AppTableCell>
                 <AppTableCell>{bannerDisplayLabel(banner)}</AppTableCell>
                 <AppTableCell>

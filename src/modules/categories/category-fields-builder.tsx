@@ -74,6 +74,18 @@ const exampleTemplates = {
       isRequired: true,
     },
     {
+      label: "السوق",
+      labelEn: "Market",
+      fieldKey: "target",
+      fieldType: "SELECT" as DynamicFieldType,
+      inputMode: "OPTIONS" as DynamicFieldInputMode,
+      isRequired: false,
+      options: [
+        { value: "LOCAL", label: "محلي", labelEn: "Local" },
+        { value: "EXPORT", label: "تصدير", labelEn: "Export" },
+      ],
+    },
+    {
       label: "جودة التصدير",
       labelEn: "Export Quality",
       fieldKey: "export_quality",
@@ -398,7 +410,9 @@ export function CategoryFieldsBuilder({ categoryId, categoryLabel }: Props) {
           isRequired: item.isRequired,
           inputMode: item.fieldType === "SELECT" || item.fieldType === "RADIO" ? "OPTIONS" : "VALUE",
           options:
-            item.fieldType === "SELECT"
+            "options" in item && item.options
+              ? item.options
+              : item.fieldType === "SELECT"
               ? [
                   { value: "canal", label: "Canal" },
                   { value: "well", label: "Well" },

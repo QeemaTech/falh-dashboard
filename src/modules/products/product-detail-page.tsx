@@ -35,6 +35,23 @@ import {
   statusChipColor,
 } from "./product-shared";
 
+type FieldOption = { value?: string; label?: string; labelEn?: string };
+
+function fieldValueLabel(
+  item: {
+    value?: string | null;
+    field?: { options?: FieldOption[] | null };
+  },
+  language: "ar" | "en"
+) {
+  const raw = String(item.value ?? "").trim();
+  const options = Array.isArray(item.field?.options) ? item.field.options : [];
+  const match = options.find((option) => String(option?.value ?? "") === raw);
+  if (!match) return raw || "—";
+  if (language === "en") return match.labelEn || match.label || raw;
+  return match.label || match.labelEn || raw;
+}
+
 type Props = {
   backTo?: string;
   allowModerate?: boolean;
@@ -219,12 +236,19 @@ export function ProductDetailPage({ backTo = "/products", allowModerate = true }
                 </>
               ) : null}
               <InfoRow label={t("products.field.location")} value={product.city || "—"} />
-              {product.quantity != null ? (
-                <InfoRow
-                  label={t("products.field.quantity", "Quantity")}
-                  value={`${product.quantity}${product.unit ? ` ${product.unit}` : ""}`}
-                />
-              ) : null}
+              {(product.fieldValues || [])
+                .filter((item) => item.field && (item.value || item.fileUrl))
+                .map((item) => (
+                  <InfoRow
+                    key={item.fieldId || item.field?.id || item.field?.fieldKey}
+                    label={
+                      language === "en"
+                        ? item.field?.labelEn || item.field?.label || item.field?.fieldKey || ""
+                        : item.field?.label || item.field?.labelEn || item.field?.fieldKey || ""
+                    }
+                    value={fieldValueLabel(item, language)}
+                  />
+                ))}
               {product.contactPhone ? (
                 <InfoRow label={t("products.field.phone", "Phone")} value={product.contactPhone} />
               ) : null}
