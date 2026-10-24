@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import { Business, ContentCopy, Key, Search, Tune } from "@mui/icons-material";
+import { Add, Business, ContentCopy, Key, Search, Tune } from "@mui/icons-material";
 import {
   Box,
   Button,
@@ -31,12 +31,14 @@ import {
 import { EmptyState, FilterBar, PageHeader, TablePaginationBar, TableRowActions, resolveTotalPages } from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
 import {
+  createAdminCompanyApi,
   fetchAdminCompanies,
   resetCompanyPasswordApi,
   setCompanyPartnerApi,
   setCompanyStatusApi,
   type AdminCompany,
 } from "../../services/admin-api";
+import { getApiErrorMessage } from "../../utils/api-error";
 import { generatePassword } from "../../utils/generate-password";
 import { prefillCompanyLoginEmail } from "../../utils/company-approval-email";
 import { formatCurrency, formatDate } from "../../utils/format";
@@ -96,6 +98,18 @@ export function CompanyManagementPage() {
     email: string;
     password: string;
   } | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    name: "",
+    city: "",
+    phone: "",
+    email: "",
+    password: "",
+    maxProducts: "10",
+    displayDays: "30",
+  });
+  const [createCredentials, setCreateCredentials] = useState<{ email: string; password: string } | null>(null);
+  const [createError, setCreateError] = useState("");
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 350);
@@ -176,6 +190,19 @@ export function CompanyManagementPage() {
     },
   });
 
+  const createMutation = useMutation({
+    mutationFn: createAdminCompanyApi,
+    onSuccess: (result) => {
+      invalidate();
+      setCreateCredentials(result.credentials || { email: createForm.email, password: createForm.password });
+      setCreateError("");
+      toast.success(t("companies.addSuccess"));
+    },
+    onError: (err: unknown) => {
+      setCreateError(getApiErrorMessage(err, t("companies.createFailed")));
+    },
+  });
+
   const resetPasswordMutation = useMutation({
     mutationFn: ({ companyId, newPassword }: { companyId: string; newPassword: string }) =>
       resetCompanyPasswordApi(companyId, newPassword),
@@ -225,6 +252,81 @@ export function CompanyManagementPage() {
     resetPasswordMutation.mutate({ companyId: resetPasswordCompany.id, newPassword: password });
   }
 
+  function openCreateCompany() {
+    setCreateOpen(true);
+    setCreateCredentials(null);
+    setCreateError("");
+    setCreateForm({
+      name: "",
+      city: "",
+      phone: "",
+      email: "",
+      password: generatePassword(),
+      maxProducts: "10",
+      displayDays: "30",
+    });
+  }
+
+  function closeCreateCompany() {
+    setCreateOpen(false);
+    setCreateCredentials(null);
+    setCreateError("");
+  }
+
+  function submitCreateCompany() {
+    const name = createForm.name.trim();
+    const city = createForm.city.trim();
+    const phone = createForm.phone.trim();
+    const email = createForm.email.trim().toLowerCase();
+    const password = createForm.password.trim();
+    const quota = Number(createForm.maxProducts);
+    const days = Number(createForm.displayDays);
+    if (!name) {
+      setCreateError(t("companies.nameRequired"));
+      return;
+    }
+    if (!city) {
+      setCreateError(t("companies.cityRequired"));
+      return;
+    }
+    if (!phone) {
+      setCreateError(t("companies.phoneRequired"));
+      return;
+    }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setCreateError(t("companies.invalidEmail"));
+      return;
+    }
+    if (password.length < 6) {
+      setCreateError(t("companies.passwordMin"));
+      return;
+    }
+    if (!Number.isInteger(quota) || quota < 1) {
+      setCreateError(t("companies.quotaMin"));
+      return;
+    }
+    if (!Number.isInteger(days) || days < 1) {
+      setCreateError(t("companies.displayDaysMin"));
+      return;
+    }
+    setCreateError("");
+    createMutation.mutate({
+      name,
+      city,
+      phone,
+      email,
+      password,
+      maxProducts: quota,
+      displayDays: days,
+    });
+  }
+
+  async function copyCreateCredentials() {
+    if (!createCredentials) return;
+    await navigator.clipboard.writeText(`${createCredentials.email}\n${createCredentials.password}`);
+    toast.success(t("companies.credentialsCopied"));
+  }
+
   async function copyResetPassword() {
     if (!resetPasswordResult?.password) return;
     await navigator.clipboard.writeText(resetPasswordResult.password);
@@ -245,7 +347,15 @@ export function CompanyManagementPage() {
 
   return (
     <Stack spacing={3}>
-      <PageHeader title={t("companies.title")} subtitle={t("companies.subtitle")} />
+      <PageHeader
+        title={t("companies.title")}
+        subtitle={t("companies.subtitle")}
+        action={
+          <Button variant="contained" startIcon={<Add />} onClick={openCreateCompany}>
+            {t("companies.addButton")}
+          </Button>
+        }
+      />
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
@@ -545,6 +655,133 @@ export function CompanyManagementPage() {
           totalItems={data?.meta?.total}
         />
       ) : null}
+
+      <AppModal
+        open={createOpen}
+        onClose={closeCreateCompany}
+        title={t("companies.addTitle")}
+        description={t("companies.addDescription")}
+        footer={
+          createCredentials ? (
+            <Button variant="contained" onClick={closeCreateCompany}>
+              {t("companies.close")}
+            </Button>
+          ) : (
+            <Stack direction="row" spacing={1}>
+              <Button variant="outlined" onClick={closeCreateCompany}>
+                {t("common.cancel")}
+              </Button>
+              <Button
+                variant="contained"
+                disabled={createMutation.isPending}
+                onClick={submitCreateCompany}
+              >
+                {t("companies.saveCompany")}
+              </Button>
+            </Stack>
+          )
+        }
+      >
+        <Stack spacing={2}>
+          {createError ? (
+            <Typography variant="body2" color="error">
+              {createError}
+            </Typography>
+          ) : null}
+
+          {createCredentials ? (
+            <Paper variant="outlined" sx={{ p: 2, borderColor: "primary.light" }}>
+              <Typography variant="subtitle2" color="primary.main" gutterBottom>
+                {t("companies.accountCreated")}
+              </Typography>
+              <Typography variant="body2" sx={{ fontFamily: "monospace" }}>
+                {createCredentials.email}
+              </Typography>
+              <Typography variant="body2" sx={{ fontFamily: "monospace", wordBreak: "break-all" }}>
+                {createCredentials.password}
+              </Typography>
+              <Button
+                size="small"
+                startIcon={<ContentCopy fontSize="small" />}
+                sx={{ mt: 1.5 }}
+                onClick={copyCreateCredentials}
+              >
+                {t("companies.copyCredentials")}
+              </Button>
+            </Paper>
+          ) : (
+            <>
+              <TextField
+                size="small"
+                fullWidth
+                label={t("companies.fieldName")}
+                value={createForm.name}
+                onChange={(e) => setCreateForm((f) => ({ ...f, name: e.target.value }))}
+              />
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+                <TextField
+                  size="small"
+                  fullWidth
+                  label={t("companies.fieldCity")}
+                  value={createForm.city}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, city: e.target.value }))}
+                />
+                <TextField
+                  size="small"
+                  fullWidth
+                  label={t("companies.fieldPhone")}
+                  value={createForm.phone}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, phone: e.target.value }))}
+                />
+              </Stack>
+              <TextField
+                size="small"
+                fullWidth
+                label={t("companies.loginEmail")}
+                value={createForm.email}
+                onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))}
+              />
+              <Stack direction="row" spacing={1}>
+                <TextField
+                  size="small"
+                  fullWidth
+                  label={t("companies.loginPassword")}
+                  value={createForm.password}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, password: e.target.value }))}
+                />
+                <Button
+                  variant="outlined"
+                  sx={{ flexShrink: 0, alignSelf: "flex-end" }}
+                  onClick={() => setCreateForm((f) => ({ ...f, password: generatePassword() }))}
+                >
+                  {t("companies.generatePassword")}
+                </Button>
+              </Stack>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+                <TextField
+                  size="small"
+                  fullWidth
+                  type="number"
+                  label={t("companies.fieldProductLimit")}
+                  value={createForm.maxProducts}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, maxProducts: e.target.value }))}
+                  slotProps={{ htmlInput: { min: 1 } }}
+                />
+                <TextField
+                  size="small"
+                  fullWidth
+                  type="number"
+                  label={t("companies.displayDays")}
+                  value={createForm.displayDays}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, displayDays: e.target.value }))}
+                  helperText={t("companies.displayDaysHint")}
+                  slotProps={{ htmlInput: { min: 1 } }}
+                />
+              </Stack>
+            </>
+          )}
+        </Stack>
+      </AppModal>
 
       <AppModal
         open={Boolean(resetPasswordCompany)}

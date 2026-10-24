@@ -407,6 +407,26 @@ export async function approveCompanyWithCredentialsApi(
   return data.data;
 }
 
+export type AdminCreateCompanyPayload = {
+  name: string;
+  city: string;
+  phone: string;
+  email: string;
+  password: string;
+  maxProducts: number;
+  displayDays: number;
+  description?: string;
+  whatsappNumber?: string;
+  applicantName?: string;
+};
+
+export async function createAdminCompanyApi(payload: AdminCreateCompanyPayload) {
+  const { data } = await http.post<
+    ApiResponse<AdminCompany & { credentials?: { email: string; password: string } }>
+  >("/admin/companies", payload);
+  return data.data;
+}
+
 export async function fetchAdminCompanies(params: {
   page: number;
   limit: number;
