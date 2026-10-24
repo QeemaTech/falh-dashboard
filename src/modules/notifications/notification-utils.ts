@@ -53,7 +53,12 @@ export function formatNotificationDate(value: string, language: TranslationLangu
 
 export function notificationTypeLabel(
   type: string,
-  t: (key: string, fallback?: string) => string
+  t: (key: string, fallback?: string) => string,
+  rawNotification?: NotificationRecord
 ) {
+  const subType = (rawNotification?.data as Record<string, unknown> | undefined)?.subType;
+  if (subType && typeof subType === "string") {
+    return t(`notifications.types.${subType}.label`, subType.replaceAll("_", " "));
+  }
   return t(`notifications.types.${type}.label`, type.replaceAll("_", " "));
 }

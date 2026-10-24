@@ -235,13 +235,11 @@ export type ProductFormPayload = {
   descriptionAr: string;
   descriptionEn?: string;
   advertiserName?: string;
-  contactPhone?: string;
-  whatsappNumber?: string;
+  contactPhone: string;
+  whatsappNumber: string;
   categoryId: string;
   quantity?: number;
   unit?: string;
-  price: number;
-  originalPrice?: number | null;
   city?: string;
   lat?: number;
   lng?: number;

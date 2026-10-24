@@ -49,7 +49,7 @@ export function NotificationsPage() {
       const localized = localizeNotification(notification, language, t);
       return {
         id: notification.id,
-        type: notificationTypeLabel(notification.type, t),
+        type: notificationTypeLabel(notification.type, t, notification),
         title: localized.title,
         body: localized.body,
         isRead: notification.isRead ? t("notifications.read") : t("notifications.unread"),

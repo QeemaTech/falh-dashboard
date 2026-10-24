@@ -84,8 +84,6 @@ export function ProductForm({
   const [contactPhone, setContactPhone] = useState("");
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [categoryId, setCategoryId] = useState("");
-  const [price, setPrice] = useState(0);
-  const [originalPrice, setOriginalPrice] = useState<number | "">("");
   const [city, setCity] = useState("");
   const [latInput, setLatInput] = useState("");
   const [lngInput, setLngInput] = useState("");
@@ -148,10 +146,6 @@ export function ProductForm({
       setContactPhone(source.contactPhone || "");
       setWhatsappNumber(source.whatsappNumber || "");
       setCategoryId(source.category?.id || "");
-      setPrice(source.price || 0);
-      setOriginalPrice(
-        source.originalPrice !== undefined && source.originalPrice !== null ? source.originalPrice : ""
-      );
       setCity(source.city || "");
       setLatInput(source.lat !== undefined && source.lat !== null ? String(source.lat) : "");
       setLngInput(source.lng !== undefined && source.lng !== null ? String(source.lng) : "");
@@ -167,8 +161,6 @@ export function ProductForm({
       setContactPhone("");
       setWhatsappNumber("");
       setCategoryId("");
-      setPrice(0);
-      setOriginalPrice("");
       setCity("");
       setLatInput("");
       setLngInput("");
@@ -216,22 +208,8 @@ export function ProductForm({
         throw new Error(t("products.form.errorDescription"));
       }
       if (!categoryId) throw new Error(t("products.form.errorCategory"));
-      if (Number.isNaN(Number(price)) || Number(price) < 0) {
-        throw new Error(t("products.form.errorPrice"));
-      }
-
-      const numOrigPrice =
-        originalPrice !== "" && originalPrice !== undefined && originalPrice !== null
-          ? Number(originalPrice)
-          : undefined;
-      if (numOrigPrice !== undefined) {
-        if (Number.isNaN(numOrigPrice) || numOrigPrice < 0) {
-          throw new Error(t("products.form.errorOriginalPrice"));
-        }
-        if (numOrigPrice > 0 && numOrigPrice <= Number(price)) {
-          throw new Error(t("products.form.errorOriginalPrice"));
-        }
-      }
+      if (contactPhone.trim().length < 8) throw new Error(t("products.form.errorContactPhone"));
+      if (whatsappNumber.trim().length < 8) throw new Error(t("products.form.errorWhatsappNumber"));
 
       const uploadImages = scope === "admin" ? uploadAdminProductImagesApi : uploadCompanyProductImagesApi;
       const images = await resolveProductImagePaths(imageItems, uploadImages);
@@ -251,11 +229,9 @@ export function ProductForm({
         titleEn: titleEn.trim() || titleAr.trim(),
         descriptionAr: descriptionAr.trim(),
         advertiserName: advertiserName.trim() || undefined,
-        contactPhone: contactPhone.trim() || undefined,
-        whatsappNumber: whatsappNumber.trim() || undefined,
+        contactPhone: contactPhone.trim(),
+        whatsappNumber: whatsappNumber.trim(),
         categoryId,
-        price: Number(price),
-        originalPrice: numOrigPrice ?? null,
         city: requiresGovernorate ? (city || undefined) : undefined,
         ...(parsedLat !== undefined && parsedLng !== undefined ? { lat: parsedLat, lng: parsedLng } : {}),
         images,
@@ -449,46 +425,6 @@ export function ProductForm({
           </Stack>
         </Paper>
 
-        {/* Pricing & Discounts */}
-        <Paper variant="outlined" sx={sectionCardSx}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: "text.primary" }}>
-            {isArabic ? "الأسعار والخصومات" : "Pricing & Discounts"}
-          </Typography>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-            <TextField
-              size="small"
-              fullWidth
-              type="number"
-              label={t("products.form.price")}
-              value={price}
-              onChange={(e) => setPrice(Number(e.target.value))}
-              slotProps={{ htmlInput: { min: 0, step: "any" } }}
-              helperText={originalPrice ? t("products.form.sellingPrice") : undefined}
-            />
-            <TextField
-              size="small"
-              fullWidth
-              type="number"
-              label={t("products.form.originalPrice")}
-              value={originalPrice}
-              onChange={(e) => setOriginalPrice(e.target.value === "" ? "" : Number(e.target.value))}
-              slotProps={{ htmlInput: { min: 0, step: "any" } }}
-              helperText={
-                originalPrice !== "" && Number(originalPrice) > Number(price) && Number(price) > 0
-                  ? t("products.form.discountBadge").replace(
-                      "{{percent}}",
-                      String(
-                        Math.round(
-                          ((Number(originalPrice) - Number(price)) / Number(originalPrice)) * 100
-                        )
-                      )
-                    )
-                  : undefined
-              }
-            />
-          </Stack>
-        </Paper>
-
         {/* Contact Information */}
         <Paper variant="outlined" sx={sectionCardSx}>
           <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: "text.primary" }}>
@@ -506,6 +442,7 @@ export function ProductForm({
               <TextField
                 size="small"
                 fullWidth
+                required
                 label={t("products.form.contactPhone")}
                 value={contactPhone}
                 onChange={(e) => setContactPhone(e.target.value)}
@@ -513,6 +450,7 @@ export function ProductForm({
               <TextField
                 size="small"
                 fullWidth
+                required
                 label={t("products.form.whatsappNumber")}
                 value={whatsappNumber}
                 onChange={(e) => setWhatsappNumber(e.target.value)}
