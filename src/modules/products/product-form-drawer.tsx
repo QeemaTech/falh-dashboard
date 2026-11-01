@@ -13,7 +13,7 @@ type Props = {
 };
 
 export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, canAdd = true }: Props) {
-  const { t } = useI18n();
+  const { t, isArabic } = useI18n();
   const isEdit = Boolean(product);
 
   return (
@@ -21,12 +21,23 @@ export function ProductFormDrawer({ open, onClose, onSuccess, scope, product, ca
       open={open}
       onClose={onClose}
       title={isEdit ? t("products.form.editTitle") : t("products.form.addTitle")}
+      description={
+        isEdit
+          ? isArabic
+            ? "قم بتعديل بيانات ومواصفات وصور المنتج"
+            : "Update product details, specs, and photos"
+          : isArabic
+            ? "أضف منتجاً جديداً مع تحديد التصنيف والبيانات والصور"
+            : "Add a new product with category details and photos"
+      }
+      width={{ xs: "100vw", sm: "94vw", md: 780, lg: 880 }}
     >
       <ProductForm
         scope={scope}
         product={product}
         canAdd={canAdd}
         active={open}
+        inDrawer={true}
         onSuccess={() => {
           onSuccess();
           onClose();

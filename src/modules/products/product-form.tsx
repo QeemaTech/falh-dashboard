@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
+  Alert,
   Autocomplete,
   Box,
   Button,
@@ -11,10 +12,23 @@ import {
   MenuItem,
   Paper,
   Stack,
+  Switch,
   TextField,
   Typography,
 } from "@mui/material";
-import { AddLocationAlt, Clear, LocationOn } from "@mui/icons-material";
+import {
+  AddLocationAlt,
+  Call,
+  CategoryOutlined,
+  Clear,
+  ContentCopy,
+  LocationOn,
+  PhoneIphone,
+  PhotoCameraOutlined,
+  Save,
+  SettingsOutlined,
+  WhatsApp,
+} from "@mui/icons-material";
 import { LocationPickerDialog } from "../../components/location/location-picker-dialog";
 import { governorateOptions } from "../../constants/egypt-governorates";
 import { useI18n } from "../../hooks/use-i18n";
@@ -61,6 +75,7 @@ export type ProductFormProps = {
   onCancel: () => void;
   showActions?: boolean;
   actionsSlot?: (props: { saving: boolean; onSave: () => void; onCancel: () => void; canSave: boolean }) => ReactNode;
+  inDrawer?: boolean;
 };
 
 export function ProductForm({
@@ -73,6 +88,7 @@ export function ProductForm({
   onCancel,
   showActions = true,
   actionsSlot,
+  inDrawer = false,
 }: ProductFormProps) {
   const { t, language, isArabic } = useI18n();
   const resolvedId = productId || product?.id;
@@ -123,6 +139,7 @@ export function ProductForm({
       scope === "admin" ? fetchCategoryDynamicFields(categoryId, false) : fetchCategoryFormFields(categoryId),
     enabled: active && Boolean(categoryId),
   });
+
   const { data: companiesData, isLoading: companiesLoading } = useQuery({
     queryKey: ["admin-companies-select"],
     queryFn: () => fetchAdminCompanies({ page: 1, limit: 200, status: "APPROVED", sortBy: "name", sortOrder: "asc" }),
@@ -280,330 +297,548 @@ export function ProductForm({
     onError: (err: unknown) => setError(getApiErrorMessage(err, t("products.form.saveFailed"))),
   });
 
-  const canSave = !saveMutation.isPending && !(!canAdd && scope === "company" && !isEdit && !saveAsDraft);
+  const isQuotaExceeded = scope === "company" && !canAdd && !isEdit && !saveAsDraft;
+  const canSave = !saveMutation.isPending && !isQuotaExceeded;
   const onSave = () => saveMutation.mutate();
 
   const sectionCardSx = {
-    p: { xs: 2, md: 2.5 },
-    borderRadius: "8px",
+    p: { xs: 2, sm: 2.5 },
+    borderRadius: "10px",
     bgcolor: "background.paper",
     border: 1,
     borderColor: "divider",
+    boxShadow: (theme: any) =>
+      theme.palette.mode === "dark" ? "none" : "0 1px 3px rgba(0,0,0,0.04)",
   };
 
-  const fields = (
-    <Box
-      sx={{
-        display: "grid",
-        gridTemplateColumns: { xs: "1fr", lg: "1.15fr 0.85fr" },
-        gap: 2.5,
-        width: "100%",
-        alignItems: "start",
-      }}
-    >
-      {error ? (
-        <Box sx={{ gridColumn: "1 / -1" }}>
-          <Typography variant="body2" color="error" sx={{ mb: 1 }}>
-            {error}
+  // Section 1: Basic Details & Category
+  const basicDetailsSection = (
+    <Paper variant="outlined" sx={sectionCardSx}>
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", mb: 2 }}>
+        <CategoryOutlined color="primary" fontSize="small" />
+        <Box>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, color: "text.primary", lineHeight: 1.2 }}>
+            {isArabic ? "البيانات الأساسية والتصنيف" : "Basic Information & Category"}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {isArabic ? "حدد القسم المناسب واسم المنتج والوصف" : "Select category, product title, and description"}
           </Typography>
         </Box>
-      ) : null}
+      </Stack>
 
-      {/* Main Column */}
-      <Stack spacing={2.5} sx={{ minWidth: 0 }}>
-        {/* Basic Details */}
-        <Paper variant="outlined" sx={sectionCardSx}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: "text.primary" }}>
-            {isArabic ? "البيانات الأساسية" : "Basic Information"}
-          </Typography>
-          <Stack spacing={2}>
-            {scope === "admin" && !isEdit ? (
-              <Autocomplete
-                options={companiesData?.items || []}
-                loading={companiesLoading}
-                value={(companiesData?.items || []).find((company) => company.id === companyId) || null}
-                onChange={(_event, company) => setCompanyId(company?.id || "")}
-                getOptionLabel={(company) => company.name || ""}
-                isOptionEqualToValue={(option, value) => option.id === value.id}
-                noOptionsText={isArabic ? "لا توجد شركات معتمدة" : "No approved companies"}
-                renderOption={(props, company) => {
-                  const { key, ...optionProps } = props;
-                  return (
-                    <li key={key} {...optionProps}>
-                      <Box>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {company.name}
-                        </Typography>
-                        {company.city ? (
-                          <Typography variant="caption" color="text.secondary">
-                            {company.city}
-                          </Typography>
-                        ) : null}
-                      </Box>
-                    </li>
-                  );
-                }}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    size="small"
-                    label={t("products.form.ownerCompany")}
-                    placeholder={t("products.form.selectCompany")}
-                    helperText={t("products.form.ownerCompanyHint")}
-                    slotProps={{
-                      ...params.slotProps,
-                      input: {
-                        ...params.slotProps?.input,
-                        endAdornment: (
-                          <>
-                            {companiesLoading ? <CircularProgress color="inherit" size={16} /> : null}
-                            {params.slotProps?.input?.endAdornment}
-                          </>
-                        ),
-                      },
-                    }}
-                  />
-                )}
-              />
-            ) : null}
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+      <Stack spacing={2.25}>
+        {scope === "admin" && !isEdit ? (
+          <Autocomplete
+            options={companiesData?.items || []}
+            loading={companiesLoading}
+            value={(companiesData?.items || []).find((company) => company.id === companyId) || null}
+            onChange={(_event, company) => setCompanyId(company?.id || "")}
+            getOptionLabel={(company) => company.name || ""}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            noOptionsText={isArabic ? "لا توجد شركات معتمدة" : "No approved companies"}
+            renderOption={(props, company) => {
+              const { key, ...optionProps } = props;
+              return (
+                <li key={key} {...optionProps}>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {company.name}
+                    </Typography>
+                    {company.city ? (
+                      <Typography variant="caption" color="text.secondary">
+                        {company.city}
+                      </Typography>
+                    ) : null}
+                  </Box>
+                </li>
+              );
+            }}
+            renderInput={(params) => (
               <TextField
+                {...params}
                 size="small"
-                fullWidth
-                label={t("products.form.titleAr")}
-                value={titleAr}
-                onChange={(e) => setTitleAr(e.target.value)}
-              />
-              <TextField
-                size="small"
-                fullWidth
-                label={t("products.form.titleEn")}
-                value={titleEn}
-                onChange={(e) => setTitleEn(e.target.value)}
-              />
-            </Stack>
-
-            <TextField
-              select
-              size="small"
-              fullWidth
-              label={t("products.form.category")}
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-            >
-              <MenuItem value="">{t("products.form.selectCategory")}</MenuItem>
-              {categoryOptions.map((cat) => (
-                <MenuItem key={cat.id} value={cat.id}>
-                  {categoryName(cat)}
-                </MenuItem>
-              ))}
-            </TextField>
-
-            <TextField
-              size="small"
-              fullWidth
-              multiline
-              minRows={3}
-              label={t("products.form.descriptionAr")}
-              value={descriptionAr}
-              onChange={(e) => setDescriptionAr(e.target.value)}
-            />
-
-            {categoryId && categoryFieldsLoading ? (
-              <Typography variant="body2" color="text.secondary">
-                {t("products.form.loadingFields")}
-              </Typography>
-            ) : null}
-            {categoryId && !categoryFieldsLoading ? (
-              <ProductDynamicFieldsForm
-                fields={categoryFields}
-                values={dynamicValues}
-                onChange={setDynamicValues}
-                language={language}
-                disabled={saveMutation.isPending}
-                onUploadFile={async (file) => {
-                  const upload =
-                    scope === "admin" ? uploadAdminProductImagesApi : uploadCompanyProductImagesApi;
-                  const paths = await upload([file]);
-                  return paths[0] || "";
+                label={t("products.form.ownerCompany")}
+                placeholder={t("products.form.selectCompany")}
+                helperText={t("products.form.ownerCompanyHint")}
+                slotProps={{
+                  ...params.slotProps,
+                  input: {
+                    ...params.slotProps?.input,
+                    endAdornment: (
+                      <>
+                        {companiesLoading ? <CircularProgress color="inherit" size={16} /> : null}
+                        {params.slotProps?.input?.endAdornment}
+                      </>
+                    ),
+                  },
                 }}
-                t={t}
               />
-            ) : null}
-          </Stack>
-        </Paper>
+            )}
+          />
+        ) : null}
 
-        {/* Contact Information */}
-        <Paper variant="outlined" sx={sectionCardSx}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: "text.primary" }}>
+        <TextField
+          select
+          required
+          size="small"
+          fullWidth
+          label={t("products.form.category")}
+          value={categoryId}
+          onChange={(e) => setCategoryId(e.target.value)}
+          helperText={
+            !categoryId
+              ? isArabic
+                ? "اختر التصنيف لعرض الحقول والمواصفات الخاصة به"
+                : "Choose category to load dynamic fields"
+              : undefined
+          }
+        >
+          <MenuItem value="">{t("products.form.selectCategory")}</MenuItem>
+          {categoryOptions.map((cat) => (
+            <MenuItem key={cat.id} value={cat.id}>
+              {categoryName(cat)}
+            </MenuItem>
+          ))}
+        </TextField>
+
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+            gap: 2,
+          }}
+        >
+          <TextField
+            size="small"
+            required
+            fullWidth
+            label={t("products.form.titleAr")}
+            placeholder={isArabic ? "مثال: جرار زراعي فيات موديل 2020" : "e.g. Fiat Agricultural Tractor 2020"}
+            value={titleAr}
+            onChange={(e) => setTitleAr(e.target.value)}
+          />
+          <TextField
+            size="small"
+            fullWidth
+            label={t("products.form.titleEn")}
+            placeholder={isArabic ? "اختياري" : "Optional"}
+            value={titleEn}
+            onChange={(e) => setTitleEn(e.target.value)}
+          />
+        </Box>
+
+        <TextField
+          size="small"
+          required
+          fullWidth
+          multiline
+          minRows={3.5}
+          label={t("products.form.descriptionAr")}
+          placeholder={
+            isArabic
+              ? "اكتب وصفاً مفصلاً للمنتج، مميزاته، حالته، وأي تفاصيل تهم المشتري..."
+              : "Detailed description of the product, features, condition..."
+          }
+          value={descriptionAr}
+          onChange={(e) => setDescriptionAr(e.target.value)}
+        />
+
+        {categoryId && categoryFieldsLoading ? (
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, py: 1.5, px: 2, bgcolor: "action.hover", borderRadius: 1.5 }}>
+            <CircularProgress size={18} />
+            <Typography variant="body2" color="text.secondary">
+              {t("products.form.loadingFields")}
+            </Typography>
+          </Box>
+        ) : null}
+
+        {categoryId && !categoryFieldsLoading && categoryFields.length > 0 ? (
+          <ProductDynamicFieldsForm
+            fields={categoryFields}
+            values={dynamicValues}
+            onChange={setDynamicValues}
+            language={language}
+            disabled={saveMutation.isPending}
+            onUploadFile={async (file) => {
+              const upload = scope === "admin" ? uploadAdminProductImagesApi : uploadCompanyProductImagesApi;
+              const paths = await upload([file]);
+              return paths[0] || "";
+            }}
+            t={t}
+          />
+        ) : null}
+      </Stack>
+    </Paper>
+  );
+
+  // Section 2: Contact Information
+  const contactSection = (
+    <Paper variant="outlined" sx={sectionCardSx}>
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", mb: 2 }}>
+        <PhoneIphone color="primary" fontSize="small" />
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, color: "text.primary", lineHeight: 1.2 }}>
             {isArabic ? "بيانات صاحب الإعلان للتواصل" : "Advertiser Contact Details"}
           </Typography>
-          <Stack spacing={2}>
-            <TextField
-              size="small"
-              fullWidth
-              label={t("products.form.advertiserName")}
-              value={advertiserName}
-              onChange={(e) => setAdvertiserName(e.target.value)}
-            />
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-              <TextField
-                size="small"
-                fullWidth
-                required
-                label={t("products.form.contactPhone")}
-                value={contactPhone}
-                onChange={(e) => setContactPhone(e.target.value)}
-              />
-              <TextField
-                size="small"
-                fullWidth
-                required
-                label={t("products.form.whatsappNumber")}
-                value={whatsappNumber}
-                onChange={(e) => setWhatsappNumber(e.target.value)}
-              />
-            </Stack>
-          </Stack>
-        </Paper>
+          <Typography variant="caption" color="text.secondary">
+            {isArabic ? "أرقام التواصل التي ستظهر للمشترين" : "Contact details shown to interested buyers"}
+          </Typography>
+        </Box>
+        {contactPhone && contactPhone !== whatsappNumber ? (
+          <Button
+            size="small"
+            variant="text"
+            startIcon={<ContentCopy sx={{ fontSize: "14px !important" }} />}
+            onClick={() => setWhatsappNumber(contactPhone)}
+            sx={{ fontSize: "12px", whiteSpace: "nowrap" }}
+          >
+            {isArabic ? "نفس الرقم للواتساب" : "Same for WhatsApp"}
+          </Button>
+        ) : null}
       </Stack>
 
-      {/* Side Column */}
-      <Stack spacing={2.5} sx={{ minWidth: 0 }}>
-        {/* Images */}
-        <Paper variant="outlined" sx={sectionCardSx}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: "text.primary" }}>
+      <Stack spacing={2}>
+        <TextField
+          size="small"
+          fullWidth
+          label={t("products.form.advertiserName")}
+          placeholder={isArabic ? "اسم الشخص أو الجهة المعلنة (اختياري)" : "Name of advertiser (optional)"}
+          value={advertiserName}
+          onChange={(e) => setAdvertiserName(e.target.value)}
+        />
+
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+            gap: 2,
+          }}
+        >
+          <TextField
+            size="small"
+            required
+            fullWidth
+            label={t("products.form.contactPhone")}
+            placeholder="01XXXXXXXXX"
+            value={contactPhone}
+            onChange={(e) => setContactPhone(e.target.value)}
+            slotProps={{
+              input: {
+                startAdornment: <Call fontSize="small" sx={{ color: "text.secondary", mr: 1 }} />,
+              },
+            }}
+          />
+          <TextField
+            size="small"
+            required
+            fullWidth
+            label={t("products.form.whatsappNumber")}
+            placeholder="01XXXXXXXXX"
+            value={whatsappNumber}
+            onChange={(e) => setWhatsappNumber(e.target.value)}
+            slotProps={{
+              input: {
+                startAdornment: <WhatsApp fontSize="small" sx={{ color: "#25D366", mr: 1 }} />,
+              },
+            }}
+          />
+        </Box>
+      </Stack>
+    </Paper>
+  );
+
+  // Section 3: Product Images
+  const imagesSection = (
+    <Paper variant="outlined" sx={sectionCardSx}>
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", mb: 2 }}>
+        <PhotoCameraOutlined color="primary" fontSize="small" />
+        <Box>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, color: "text.primary", lineHeight: 1.2 }}>
             {t("products.form.images")}
           </Typography>
-          <ProductImagePicker
-            items={imageItems}
-            onChange={setImageItems}
-            label={t("products.form.images")}
-            hint={t("products.form.uploadImagesHint")}
-            addLabel={t("products.form.addImages")}
-            disabled={saveMutation.isPending}
-          />
-        </Paper>
+          <Typography variant="caption" color="text.secondary">
+            {isArabic
+              ? "أضف صور واضحة للمنتج - الصورة الأولى هي الصورة الرئيسية للغلاف"
+              : "Upload clear product photos - the first image will be the cover photo"}
+          </Typography>
+        </Box>
+      </Stack>
+      <ProductImagePicker
+        items={imageItems}
+        onChange={setImageItems}
+        addLabel={t("products.form.addImages")}
+        disabled={saveMutation.isPending}
+      />
+    </Paper>
+  );
 
-        {/* Location */}
-        <Paper variant="outlined" sx={sectionCardSx}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: "text.primary" }}>
+  // Section 4: Location & Map
+  const locationSection = (
+    <Paper variant="outlined" sx={sectionCardSx}>
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", mb: 2 }}>
+        <LocationOn color="primary" fontSize="small" />
+        <Box>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, color: "text.primary", lineHeight: 1.2 }}>
             {t("products.form.locationTitle")}
           </Typography>
-          <Stack spacing={2}>
-            {requiresGovernorate ? (
-              <TextField
-                select
-                size="small"
-                fullWidth
-                label={t("products.form.city")}
-                value={citySelectValue}
-                onChange={(e) => {
-                  const selected = governorateOpts.find((option) => option.value === e.target.value);
-                  setCity(selected?.label ?? e.target.value);
-                }}
-              >
-                <MenuItem value="">{t("categories.fields.select")}</MenuItem>
-                {governorateOpts.map((option) => (
-                  <MenuItem key={option.value} value={option.value}>
-                    {option.label}
-                  </MenuItem>
-                ))}
-              </TextField>
-            ) : null}
-
-            {latInput && lngInput ? (
-              <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-                <Button
-                  fullWidth
-                  size="small"
-                  variant="outlined"
-                  color="success"
-                  startIcon={<LocationOn />}
-                  onClick={() => setIsMapOpen(true)}
-                >
-                  {isArabic
-                    ? `الموقع المحدد: (${latInput}, ${lngInput})`
-                    : `Location Set: (${latInput}, ${lngInput})`}
-                </Button>
-                <IconButton
-                  size="small"
-                  color="error"
-                  onClick={() => {
-                    setLatInput("");
-                    setLngInput("");
-                  }}
-                  title={isArabic ? "مسح الموقع" : "Clear location"}
-                >
-                  <Clear />
-                </IconButton>
-              </Stack>
-            ) : (
-              <Button
-                fullWidth
-                size="small"
-                variant="outlined"
-                startIcon={<AddLocationAlt />}
-                onClick={() => setIsMapOpen(true)}
-              >
-                {isArabic ? "تحديد الموقع على الخريطة (اختياري)" : "Select Location on Map (Optional)"}
-              </Button>
-            )}
-          </Stack>
-        </Paper>
-
-        {/* Publishing & Owner */}
-        <Paper variant="outlined" sx={sectionCardSx}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: "text.primary" }}>
-            {isArabic ? "إعدادات النشر" : "Publishing & Options"}
+          <Typography variant="caption" color="text.secondary">
+            {isArabic ? "المحافظة وتحديد الموقع على الخريطة" : "Governorate and interactive map position"}
           </Typography>
-          <Stack spacing={2}>
-            {scope === "admin" ? (
-              <FormControlLabel
-                control={
-                  <Checkbox checked={publishActive} onChange={(e) => setPublishActive(e.target.checked)} />
-                }
-                label={t("products.form.publishActive")}
-              />
-            ) : (
-              <FormControlLabel
-                control={
-                  <Checkbox checked={saveAsDraft} onChange={(e) => setSaveAsDraft(e.target.checked)} />
-                }
-                label={t("products.form.saveDraft")}
-              />
-            )}
-          </Stack>
-        </Paper>
-
-        {/* Actions */}
-        <Paper variant="outlined" sx={{ ...sectionCardSx, p: 2 }}>
-          {showActions && !actionsSlot ? (
-            <Stack direction="row" spacing={1.5}>
-              <Button
-                variant="contained"
-                size="medium"
-                fullWidth
-                disabled={!canSave}
-                onClick={onSave}
-                sx={{ py: 1, fontWeight: 700 }}
-              >
-                {saveMutation.isPending
-                  ? t("products.form.saving")
-                  : isEdit
-                    ? t("products.form.save")
-                    : t("products.form.create")}
-              </Button>
-              <Button variant="outlined" size="medium" fullWidth onClick={onCancel} sx={{ py: 1 }}>
-                {t("products.cancel")}
-              </Button>
-            </Stack>
-          ) : null}
-          {actionsSlot
-            ? actionsSlot({ saving: saveMutation.isPending, onSave, onCancel, canSave })
-            : null}
-        </Paper>
+        </Box>
       </Stack>
+
+      <Stack spacing={2}>
+        {requiresGovernorate ? (
+          <TextField
+            select
+            size="small"
+            fullWidth
+            required
+            label={t("products.form.city")}
+            value={citySelectValue}
+            onChange={(e) => {
+              const selected = governorateOpts.find((option) => option.value === e.target.value);
+              setCity(selected?.label ?? e.target.value);
+            }}
+          >
+            <MenuItem value="">{t("categories.fields.select")}</MenuItem>
+            {governorateOpts.map((option) => (
+              <MenuItem key={option.value} value={option.value}>
+                {option.label}
+              </MenuItem>
+            ))}
+          </TextField>
+        ) : null}
+
+        {latInput && lngInput ? (
+          <Paper
+            variant="outlined"
+            sx={{
+              p: 1.5,
+              borderRadius: "8px",
+              borderColor: "success.main",
+              bgcolor: (theme) => (theme.palette.mode === "dark" ? "rgba(46,125,50,0.12)" : "rgba(46,125,50,0.06)"),
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 1.5,
+            }}
+          >
+            <Stack direction="row" spacing={1.25} sx={{ alignItems: "center", minWidth: 0 }}>
+              <LocationOn color="success" />
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="body2" sx={{ fontWeight: 700, color: "success.main" }}>
+                  {isArabic ? "تم تحديد الموقع على الخريطة" : "Location Selected"}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontFamily: "monospace" }}>
+                  ({Number(latInput).toFixed(4)}, {Number(lngInput).toFixed(4)})
+                </Typography>
+              </Box>
+            </Stack>
+            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+              <Button size="small" variant="outlined" color="success" onClick={() => setIsMapOpen(true)}>
+                {isArabic ? "تعديل" : "Edit"}
+              </Button>
+              <IconButton
+                size="small"
+                color="error"
+                onClick={() => {
+                  setLatInput("");
+                  setLngInput("");
+                }}
+                title={isArabic ? "مسح الموقع" : "Clear location"}
+              >
+                <Clear fontSize="small" />
+              </IconButton>
+            </Stack>
+          </Paper>
+        ) : (
+          <Button
+            fullWidth
+            size="medium"
+            variant="outlined"
+            startIcon={<AddLocationAlt />}
+            onClick={() => setIsMapOpen(true)}
+            sx={{ py: 1.25, borderRadius: "8px", fontWeight: 600 }}
+          >
+            {isArabic ? "تحديد الموقع على الخريطة (اختياري)" : "Select Location on Map (Optional)"}
+          </Button>
+        )}
+      </Stack>
+    </Paper>
+  );
+
+  // Section 5: Publishing Settings
+  const publishingSection = (
+    <Paper variant="outlined" sx={sectionCardSx}>
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", mb: 1.5 }}>
+        <SettingsOutlined color="primary" fontSize="small" />
+        <Box>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, color: "text.primary", lineHeight: 1.2 }}>
+            {isArabic ? "إعدادات النشر" : "Publishing & Status"}
+          </Typography>
+        </Box>
+      </Stack>
+
+      {scope === "admin" ? (
+        <Box sx={{ p: 1.5, borderRadius: "8px", bgcolor: "action.hover" }}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={publishActive}
+                onChange={(e) => setPublishActive(e.target.checked)}
+                color="success"
+              />
+            }
+            label={
+              <Box sx={{ ml: 1 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  {t("products.form.publishActive")}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {isArabic
+                    ? "تفعيل المنتج فوراً ليكون متاحاً ونشطاً في التطبيق"
+                    : "Publish product immediately as active"}
+                </Typography>
+              </Box>
+            }
+            sx={{ m: 0, width: "100%", justifyContent: "space-between" }}
+          />
+        </Box>
+      ) : (
+        <Box sx={{ p: 1.5, borderRadius: "8px", bgcolor: "action.hover" }}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={saveAsDraft}
+                onChange={(e) => setSaveAsDraft(e.target.checked)}
+                color="primary"
+              />
+            }
+            label={
+              <Box sx={{ ml: 0.5 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  {t("products.form.saveDraft")}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {isArabic
+                    ? "حفظ المنتج كمسودة للرجوع إليه وتعديله لاحقاً قبل النشر، دون استهلاك حصة الإعلانات."
+                    : "Save as draft to finish later without consuming your quota."}
+                </Typography>
+              </Box>
+            }
+            sx={{ m: 0, alignItems: "flex-start" }}
+          />
+        </Box>
+      )}
+    </Paper>
+  );
+
+  // Sticky / Standard Actions bar
+  const actionsBar = (
+    <Box
+      sx={{
+        position: inDrawer ? "sticky" : "static",
+        bottom: inDrawer ? 0 : "auto",
+        zIndex: 20,
+        bgcolor: "background.paper",
+        borderTop: 1,
+        borderColor: "divider",
+        px: { xs: 2, sm: 2.5 },
+        py: 1.75,
+        mx: inDrawer ? { xs: -2.5, sm: -2.5 } : 0,
+        mb: inDrawer ? { xs: -2, sm: -2 } : 0,
+        mt: inDrawer ? 2.5 : 1,
+        boxShadow: (theme) =>
+          theme.palette.mode === "dark" ? "0 -4px 16px rgba(0,0,0,0.4)" : "0 -4px 16px rgba(0,0,0,0.06)",
+        borderRadius: inDrawer ? 0 : "10px",
+      }}
+    >
+      {showActions && !actionsSlot ? (
+        <Stack direction="row" spacing={2} sx={{ justifyContent: "flex-end", alignItems: "center" }}>
+          <Button
+            variant="outlined"
+            color="inherit"
+            onClick={onCancel}
+            disabled={saveMutation.isPending}
+            sx={{ minWidth: 100, py: 1, borderRadius: "8px" }}
+          >
+            {t("products.cancel")}
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            disabled={!canSave}
+            onClick={onSave}
+            startIcon={saveMutation.isPending ? <CircularProgress size={16} color="inherit" /> : <Save />}
+            sx={{
+              minWidth: 160,
+              py: 1,
+              fontWeight: 700,
+              borderRadius: "8px",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {saveMutation.isPending
+              ? t("products.form.saving")
+              : isEdit
+                ? t("products.form.save")
+                : t("products.form.create")}
+          </Button>
+        </Stack>
+      ) : null}
+      {actionsSlot ? actionsSlot({ saving: saveMutation.isPending, onSave, onCancel, canSave }) : null}
+    </Box>
+  );
+
+  return (
+    <Box sx={{ width: "100%", position: "relative" }}>
+      {error ? (
+        <Alert severity="error" sx={{ mb: 2, borderRadius: "8px" }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      ) : null}
+
+      {isQuotaExceeded ? (
+        <Alert severity="warning" sx={{ mb: 2, borderRadius: "8px" }}>
+          {isArabic
+            ? "لقد استهلكت الحصة المتاحة لإضافة المنتجات في باقتك. يمكنك تفعيل خيار 'حفظ كمسودة' بالأسفل لحفظ الإعلان كمسودة دون استهلاك الحصة، أو ترقية باقتك."
+            : "You have reached your product quota. Check 'Save as draft' below to save without consuming quota."}
+        </Alert>
+      ) : null}
+
+      {/* When inside Drawer: spacious, sequential card flow with full width utilization */}
+      {inDrawer ? (
+        <Stack spacing={2.5}>
+          {basicDetailsSection}
+          {imagesSection}
+          {contactSection}
+          {locationSection}
+          {publishingSection}
+          {actionsBar}
+        </Stack>
+      ) : (
+        /* When on full page: 2-column layout */
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", lg: "1.2fr 0.8fr" },
+            gap: 2.5,
+            alignItems: "start",
+          }}
+        >
+          <Stack spacing={2.5} sx={{ minWidth: 0 }}>
+            {basicDetailsSection}
+            {contactSection}
+          </Stack>
+          <Stack spacing={2.5} sx={{ minWidth: 0 }}>
+            {imagesSection}
+            {locationSection}
+            {publishingSection}
+            {actionsBar}
+          </Stack>
+        </Box>
+      )}
 
       <LocationPickerDialog
         open={isMapOpen}
@@ -622,6 +857,4 @@ export function ProductForm({
       />
     </Box>
   );
-
-  return fields;
 }

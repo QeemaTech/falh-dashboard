@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { AttachFile } from "@mui/icons-material";
 import {
+  Box,
   Button,
   FormControl,
   FormControlLabel,
@@ -158,7 +159,7 @@ function DynamicFieldInput({
           {label}
           {requiredMark}
         </FormLabel>
-        <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap" }}>
+        <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap", gap: 1 }}>
           <Button
             variant="outlined"
             size="small"
@@ -234,24 +235,61 @@ export function ProductDynamicFieldsForm({
   if (!activeFields.length) return null;
 
   return (
-    <Paper variant="outlined" sx={{ p: 2, bgcolor: "background.default" }}>
-      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5 }}>
-        {t("products.form.categoryFields")}
-      </Typography>
-      <Stack spacing={2}>
-        {activeFields.map((field) => (
-          <DynamicFieldInput
-            key={field.id}
-            field={field}
-            value={values[field.id] || { value: "" }}
-            onChange={(next) => onChange(setFieldValue(values, field.id, next))}
-            language={language}
-            disabled={disabled}
-            onUploadFile={onUploadFile}
-            t={t}
-          />
-        ))}
-      </Stack>
+    <Paper
+      variant="outlined"
+      sx={{
+        p: 2.5,
+        borderRadius: "8px",
+        bgcolor: (theme) => (theme.palette.mode === "dark" ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.015)"),
+        borderColor: "divider",
+      }}
+    >
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "text.primary" }}>
+          {t("products.form.categoryFields")}
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          {language === "ar"
+            ? "الحقول والمواصفات الخاصة بالقسم المختار"
+            : "Specific fields and specifications for the selected category"}
+        </Typography>
+      </Box>
+
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+          gap: 2,
+          alignItems: "start",
+        }}
+      >
+        {activeFields.map((field) => {
+          const isWide =
+            field.fieldType === "TEXTAREA" ||
+            field.fieldType === "FILE" ||
+            field.fieldType === "RADIO";
+
+          return (
+            <Box
+              key={field.id}
+              sx={{
+                gridColumn: isWide ? { xs: "1", sm: "1 / -1" } : "span 1",
+                minWidth: 0,
+              }}
+            >
+              <DynamicFieldInput
+                field={field}
+                value={values[field.id] || { value: "" }}
+                onChange={(next) => onChange(setFieldValue(values, field.id, next))}
+                language={language}
+                disabled={disabled}
+                onUploadFile={onUploadFile}
+                t={t}
+              />
+            </Box>
+          );
+        })}
+      </Box>
     </Paper>
   );
 }

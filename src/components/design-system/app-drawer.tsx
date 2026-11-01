@@ -10,7 +10,7 @@ type AppDrawerProps = PropsWithChildren<{
   description?: string;
   footer?: ReactNode;
   className?: string;
-  width?: number;
+  width?: number | string | Record<string, number | string>;
 }>;
 
 export function AppDrawer({
@@ -26,11 +26,17 @@ export function AppDrawer({
   const theme = useTheme();
   const anchor = theme.direction === "rtl" ? "left" : "right";
 
+  const resolvedWidth =
+    typeof width === "object"
+      ? width
+      : { xs: "100vw", sm: typeof width === "number" ? `${width}px` : width };
+
   return (
     <Drawer anchor={anchor} open={open} onClose={onClose} className={className}>
       <Box
         sx={{
-          width: { xs: "100vw", sm: width },
+          width: resolvedWidth,
+          maxWidth: "100vw",
           p: 0,
           height: "100%",
           display: "flex",
