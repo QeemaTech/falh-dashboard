@@ -15,6 +15,7 @@ export type CompanyProfile = {
   whatsappNumber?: string | null;
   emailPublic?: string | null;
   maxProducts: number;
+  allowedCategories?: Array<{ id: string; nameAr?: string; nameEn?: string }>;
   productsCount: number;
   displayDays: number;
   listingExpiresAt?: string | null;

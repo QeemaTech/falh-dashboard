@@ -38,6 +38,7 @@ import {
   setCompanyStatusApi,
   type AdminCompany,
 } from "../../services/admin-api";
+import { CompanyCategorySelect } from "./company-category-select";
 import { getApiErrorMessage } from "../../utils/api-error";
 import { generatePassword } from "../../utils/generate-password";
 import { prefillCompanyLoginEmail } from "../../utils/company-approval-email";
@@ -107,6 +108,7 @@ export function CompanyManagementPage() {
     password: "",
     maxProducts: "10",
     displayDays: "30",
+    categoryIds: [] as string[],
   });
   const [createCredentials, setCreateCredentials] = useState<{ email: string; password: string } | null>(null);
   const [createError, setCreateError] = useState("");
@@ -264,6 +266,7 @@ export function CompanyManagementPage() {
       password: generatePassword(),
       maxProducts: "10",
       displayDays: "30",
+      categoryIds: [],
     });
   }
 
@@ -309,6 +312,10 @@ export function CompanyManagementPage() {
       setCreateError(t("companies.displayDaysMin"));
       return;
     }
+    if (createForm.categoryIds.length < 1) {
+      setCreateError(t("companies.categoriesMin"));
+      return;
+    }
     setCreateError("");
     createMutation.mutate({
       name,
@@ -318,6 +325,7 @@ export function CompanyManagementPage() {
       password,
       maxProducts: quota,
       displayDays: days,
+      categoryIds: createForm.categoryIds,
     });
   }
 
@@ -778,6 +786,10 @@ export function CompanyManagementPage() {
                   slotProps={{ htmlInput: { min: 1 } }}
                 />
               </Stack>
+              <CompanyCategorySelect
+                value={createForm.categoryIds}
+                onChange={(categoryIds) => setCreateForm((f) => ({ ...f, categoryIds }))}
+              />
             </>
           )}
         </Stack>

@@ -25,6 +25,7 @@ import { resolveAssetUrl } from "../../utils/asset-url";
 import { generatePassword } from "../../utils/generate-password";
 import { prefillCompanyLoginEmail } from "../../utils/company-approval-email";
 import { toast } from "../../components/ui/sonner";
+import { CompanyCategorySelect } from "../companies/company-category-select";
 
 function statusChipColor(status: string): "success" | "warning" | "error" | "default" {
   if (status === "APPROVED") return "success";
@@ -41,6 +42,29 @@ function AssetLink({ path, label }: { path?: string; label: string }) {
   );
 }
 
+function formatExperiencePeriod(period?: string, years?: number, lang = "ar"): string {
+  if (period === "NO_EXPERIENCE") return lang === "ar" ? "بدون خبرة سابقة (مبتدئ)" : "No prior experience (Beginner)";
+  if (period === "LESS_THAN_1_YEAR") return lang === "ar" ? "أقل من سنة" : "Less than 1 year";
+  if (period === "FROM_1_TO_3_YEARS") return lang === "ar" ? "من 1 إلى 3 سنوات" : "1 to 3 years";
+  if (period === "FROM_4_TO_7_YEARS") return lang === "ar" ? "من 4 إلى 7 سنوات" : "4 to 7 years";
+  if (period === "MORE_THAN_7_YEARS") return lang === "ar" ? "أكثر من 7 سنوات" : "More than 7 years";
+  if (years !== undefined && years !== null) return `${years} ${lang === "ar" ? "سنوات" : "years"}`;
+  return "-";
+}
+
+function formatLicense(license?: string, lang = "ar"): string {
+  if (license === "YES") return lang === "ar" ? "نعم، يوجد ترخيص سارٍ" : "Yes, valid license";
+  if (license === "NO") return lang === "ar" ? "لا يوجد" : "No";
+  if (license === "NOT_APPLICABLE") return lang === "ar" ? "المهنة لا تتطلب ترخيصاً" : "Not applicable";
+  return license || "-";
+}
+
+function formatBoolean(val?: boolean | null, lang = "ar"): string {
+  if (val === true) return lang === "ar" ? "نعم" : "Yes";
+  if (val === false) return lang === "ar" ? "لا" : "No";
+  return "-";
+}
+
 export function JoinRequestDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t, language } = useI18n();
@@ -52,6 +76,7 @@ export function JoinRequestDetailPage() {
   const [adminNote, setAdminNote] = useState("");
   const [companyEmail, setCompanyEmail] = useState("");
   const [companyPassword, setCompanyPassword] = useState("");
+  const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [formError, setFormError] = useState("");
   const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null);
 
@@ -90,6 +115,10 @@ export function JoinRequestDetailPage() {
     if (detail.applicationType === "COMPANY") {
       const suggested = prefillCompanyLoginEmail(detail.email, reviewFields.email as string | undefined);
       if (suggested) setCompanyEmail(suggested);
+      const requested = Array.isArray(reviewFields.categoryIds)
+        ? (reviewFields.categoryIds as string[])
+        : [];
+      if (requested.length) setCategoryIds(requested);
     }
   }, [detail, credentials, reviewFields.email]);
 
@@ -106,6 +135,7 @@ export function JoinRequestDetailPage() {
         password: detail.applicationType === "COMPANY" ? companyPassword : undefined,
         maxProducts: detail.applicationType === "COMPANY" ? Number(maxProducts) : undefined,
         displayDays: detail.applicationType === "COMPANY" ? Number(displayDays) : undefined,
+        categoryIds: detail.applicationType === "COMPANY" ? categoryIds : undefined,
         adminNote: adminNote.trim() || undefined,
       });
     },
@@ -164,6 +194,10 @@ export function JoinRequestDetailPage() {
       }
       if (!Number.isInteger(days) || days < 1) {
         setFormError(t("companies.displayDaysMin"));
+        return;
+      }
+      if (categoryIds.length < 1) {
+        setFormError(t("companies.categoriesMin"));
         return;
       }
     }
@@ -294,9 +328,43 @@ export function JoinRequestDetailPage() {
                     }
                   />
                   <DetailField
-                    label={t("joinUs.fieldExperience")}
-                    value={`${String(reviewFields.experience ?? detail.yearsOfExperience ?? "-")} ${t("joinUs.years")}`}
+                    label={language === "ar" ? "مدة الخبرة" : "Experience Period"}
+                    value={formatExperiencePeriod(
+                      (reviewFields.experiencePeriod as string) || detail.experiencePeriod,
+                      (reviewFields.experience as number) ?? detail.yearsOfExperience,
+                      language
+                    )}
                   />
+                  <DetailField
+                    label={language === "ar" ? "المؤهل الدراسي / الشهادات" : "Qualification / Certificate"}
+                    value={
+                      ((reviewFields.hasQualification as boolean | undefined) ?? detail.hasQualification)
+                        ? String(reviewFields.qualificationName || detail.qualificationName || (language === "ar" ? "حاصل على مؤهل" : "Qualified"))
+                        : ((reviewFields.hasQualification as boolean | undefined) ?? detail.hasQualification) === false
+                          ? (language === "ar" ? "لا يوجد مؤهل" : "No qualification")
+                          : "-"
+                    }
+                  />
+                  <DetailField
+                    label={language === "ar" ? "ترخيص مزاولة المهنة" : "Practice License"}
+                    value={formatLicense(
+                      (reviewFields.hasLicense as string) || detail.hasLicense,
+                      language
+                    )}
+                  />
+                  <DetailField
+                    label={language === "ar" ? "سابقة أعمال / نماذج سابقة" : "Work Samples Available"}
+                    value={formatBoolean(
+                      (reviewFields.hasWorkSamples as boolean | undefined) ?? detail.hasWorkSamples,
+                      language
+                    )}
+                  />
+                  {((reviewFields.serviceCoverageAreas as string) || detail.serviceCoverageAreas) ? (
+                    <DetailField
+                      label={language === "ar" ? "نطاق التغطية الجغرافية" : "Coverage Areas"}
+                      value={String(reviewFields.serviceCoverageAreas || detail.serviceCoverageAreas)}
+                    />
+                  ) : null}
                   {detail.otherTypeLabel ? (
                     <DetailField label={t("joinUs.fieldOtherType")} value={detail.otherTypeLabel} />
                   ) : null}
@@ -338,6 +406,64 @@ export function JoinRequestDetailPage() {
             </DetailGrid>
           ),
         },
+        ...(!isCompanyReview && (
+          detail.providesAtClientLocation !== undefined ||
+          detail.hasOwnPremises !== undefined ||
+          detail.providesRemoteService !== undefined
+        )
+          ? [
+              {
+                title: language === "ar" ? "طريقة تقديم الخدمة" : "Service Delivery Modes",
+                content: (
+                  <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }}>
+                    <Chip
+                      label={language === "ar" ? "بموقع العميل (مزرعة / حظيرة)" : "At Client Location"}
+                      color={detail.providesAtClientLocation ? "success" : "default"}
+                      variant={detail.providesAtClientLocation ? "filled" : "outlined"}
+                    />
+                    <Chip
+                      label={language === "ar" ? "المقر الخاص (عيادة / مكتب / مشتل)" : "Own Premises"}
+                      color={detail.hasOwnPremises ? "success" : "default"}
+                      variant={detail.hasOwnPremises ? "filled" : "outlined"}
+                    />
+                    <Chip
+                      label={language === "ar" ? "عن بُعد (استشارات هاتفية / أونلاين)" : "Remote / Online"}
+                      color={detail.providesRemoteService ? "success" : "default"}
+                      variant={detail.providesRemoteService ? "filled" : "outlined"}
+                    />
+                  </Stack>
+                ),
+              },
+            ]
+          : []),
+        ...(!isCompanyReview && (
+          (Array.isArray(detail.attachments) && detail.attachments.length > 0) ||
+          (Array.isArray(reviewFields.attachments) && (reviewFields.attachments as string[]).length > 0)
+        )
+          ? [
+              {
+                title: language === "ar" ? "المرفقات ونماذج الأعمال والشهادات" : "Attachments & Documents",
+                content: (
+                  <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }}>
+                    {(((reviewFields.attachments as string[]) || detail.attachments || []) as string[]).map((fileUrl, idx) => (
+                      <Button
+                        key={idx}
+                        variant="outlined"
+                        size="small"
+                        component="a"
+                        href={resolveAssetUrl(fileUrl)}
+                        target="_blank"
+                        rel="noreferrer"
+                        sx={{ borderRadius: "8px" }}
+                      >
+                        {language === "ar" ? `مستند / مرفق #${idx + 1}` : `Attachment #${idx + 1}`}
+                      </Button>
+                    ))}
+                  </Stack>
+                ),
+              },
+            ]
+          : []),
         ...(isCompanyReview && showReviewForm
           ? [
               {
@@ -365,6 +491,7 @@ export function JoinRequestDetailPage() {
                       onChange={(e) => setDisplayDays(e.target.value)}
                       sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
                     />
+                    <CompanyCategorySelect value={categoryIds} onChange={setCategoryIds} />
                     <TextField
                       label={t("companies.loginEmail")}
                       type="email"

@@ -368,6 +368,7 @@ export type AdminCompany = {
   productsCount: number;
   revenue: number;
   maxProducts: number;
+  allowedCategories?: Array<{ id: string; nameAr?: string; nameEn?: string; isActive?: boolean }>;
   displayDays?: number;
   listingExpiresAt?: string | null;
   isPartner?: boolean;
@@ -397,7 +398,14 @@ export async function fetchAdminCompanyDetails(companyId: string) {
 
 export async function approveCompanyWithCredentialsApi(
   companyId: string,
-  payload: { email: string; password: string; maxProducts: number; displayDays: number; adminNote?: string }
+  payload: {
+    email: string;
+    password: string;
+    maxProducts: number;
+    displayDays: number;
+    categoryIds: string[];
+    adminNote?: string;
+  }
 ) {
   const { data } = await http.patch<
     ApiResponse<{ credentials?: { email: string; password: string } }>
@@ -413,6 +421,7 @@ export type AdminCreateCompanyPayload = {
   password: string;
   maxProducts: number;
   displayDays: number;
+  categoryIds: string[];
   description?: string;
   whatsappNumber?: string;
   applicantName?: string;
@@ -446,6 +455,7 @@ export async function reviewCompanyApplicationApi(
     action: "APPROVE" | "REJECT";
     maxProducts?: number;
     displayDays?: number;
+    categoryIds?: string[];
     email?: string;
     password?: string;
     adminNote?: string;
@@ -463,6 +473,7 @@ export async function reviewCompanyApplicationApi(
     {
       maxProducts: payload.maxProducts,
       displayDays: payload.displayDays,
+      categoryIds: payload.categoryIds,
       email: payload.email,
       password: payload.password,
       adminNote: payload.adminNote,
@@ -483,7 +494,7 @@ export async function setCompanyStatusApi(
 
 export async function assignCompanyProductLimitApi(
   companyId: string,
-  payload: { maxProducts: number; displayDays?: number }
+  payload: { maxProducts: number; displayDays?: number; categoryIds?: string[] }
 ) {
   const { data } = await http.patch(`/admin/companies/${companyId}/product-limit`, payload);
   return data;
@@ -1254,6 +1265,17 @@ export type JoinUsApplicationDetail = {
   specializations?: string[];
   otherTypeLabel?: string;
   yearsOfExperience?: number;
+  experiencePeriod?: string;
+  hasQualification?: boolean;
+  qualificationName?: string;
+  hasLicense?: string;
+  hasWorkSamples?: boolean;
+  providesAtClientLocation?: boolean;
+  hasOwnPremises?: boolean;
+  providesRemoteService?: boolean;
+  serviceCoverageAreas?: string;
+  attachments?: string[];
+  answers?: Record<string, unknown>;
   adminNote?: string;
   reviewedAt?: string;
   createdAt: string;
@@ -1359,7 +1381,14 @@ export async function fetchJoinUsApplicationById(applicationId: string) {
 
 export async function approveJoinUsApplicationApi(
   applicationId: string,
-  payload: { email?: string; password?: string; maxProducts?: number; displayDays?: number; adminNote?: string }
+  payload: {
+    email?: string;
+    password?: string;
+    maxProducts?: number;
+    displayDays?: number;
+    categoryIds?: string[];
+    adminNote?: string;
+  }
 ) {
   const { data } = await http.post<
     ApiResponse<{

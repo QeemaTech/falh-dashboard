@@ -8,6 +8,7 @@ export type CompanyQuota = {
   used: number;
   remaining: number;
   canAdd: boolean;
+  allowedCategories?: Array<{ id: string; nameAr?: string; nameEn?: string }>;
   companyStatus: string;
   displayDays?: number;
   listingExpiresAt?: string | null;

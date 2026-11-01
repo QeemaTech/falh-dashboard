@@ -187,9 +187,17 @@ export function ProductForm({
     previousCategoryId.current = categoryId;
   }, [categoryId, active, isEdit]);
 
+  const categoryOptions = useMemo(() => {
+    if (scope !== "admin" || !companyId) return categories;
+    const company = (companiesData?.items || []).find((item) => item.id === companyId);
+    const allowedIds = company?.allowedCategories?.map((item) => item.id);
+    if (!allowedIds) return categories;
+    return categories.filter((cat) => allowedIds.includes(cat.id) || cat.id === categoryId);
+  }, [scope, companyId, categories, companiesData?.items, categoryId]);
+
   const selectedCategory = useMemo(
-    () => categories.find((cat) => cat.id === categoryId),
-    [categories, categoryId]
+    () => categoryOptions.find((cat) => cat.id === categoryId) || categories.find((cat) => cat.id === categoryId),
+    [categoryOptions, categories, categoryId]
   );
   const requiresGovernorate = selectedCategory?.requiresGovernorate === true;
 
@@ -384,7 +392,7 @@ export function ProductForm({
               onChange={(e) => setCategoryId(e.target.value)}
             >
               <MenuItem value="">{t("products.form.selectCategory")}</MenuItem>
-              {categories.map((cat) => (
+              {categoryOptions.map((cat) => (
                 <MenuItem key={cat.id} value={cat.id}>
                   {categoryName(cat)}
                 </MenuItem>

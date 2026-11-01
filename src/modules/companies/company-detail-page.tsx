@@ -36,6 +36,7 @@ import {
   SectionCard,
 } from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
+import { CompanyCategorySelect } from "./company-category-select";
 import {
   approveCompanyWithCredentialsApi,
   assignCompanyProductLimitApi,
@@ -138,6 +139,7 @@ export function CompanyDetailPage() {
   const [maxProducts, setMaxProducts] = useState("10");
   const [displayDays, setDisplayDays] = useState("30");
   const [editDisplayDays, setEditDisplayDays] = useState(30);
+  const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [editPartnerSortOrder, setEditPartnerSortOrder] = useState(0);
   const [companyEmail, setCompanyEmail] = useState("");
   const [companyPassword, setCompanyPassword] = useState("");
@@ -164,6 +166,7 @@ export function CompanyDetailPage() {
     setMaxProducts(String(company.maxProducts || 10));
     setDisplayDays(String(company.displayDays || 30));
     setEditDisplayDays(company.displayDays || 30);
+    setCategoryIds((company.allowedCategories || []).map((category) => category.id));
     setEditPartnerSortOrder(company.partnerSortOrder || 0);
     if (company.status === "PENDING" && !credentials) {
       setCompanyEmail(
@@ -179,6 +182,7 @@ export function CompanyDetailPage() {
       password: string;
       maxProducts: number;
       displayDays: number;
+      categoryIds: string[];
       adminNote?: string;
     }) => approveCompanyWithCredentialsApi(id!, payload),
     onSuccess: (result) => {
@@ -212,7 +216,7 @@ export function CompanyDetailPage() {
   });
 
   const limitMutation = useMutation({
-    mutationFn: (payload: { maxProducts: number; displayDays: number }) =>
+    mutationFn: (payload: { maxProducts: number; displayDays: number; categoryIds: string[] }) =>
       assignCompanyProductLimitApi(id!, payload),
     onSuccess: () => {
       invalidate();
@@ -252,12 +256,17 @@ export function CompanyDetailPage() {
       setFormError(t("companies.displayDaysMin"));
       return;
     }
+    if (categoryIds.length < 1) {
+      setFormError(t("companies.categoriesMin"));
+      return;
+    }
     setFormError("");
     approveMutation.mutate({
       email,
       password: companyPassword,
       maxProducts: quota,
       displayDays: days,
+      categoryIds,
       adminNote: adminNote.trim() || undefined,
     });
   }
@@ -470,6 +479,7 @@ export function CompanyDetailPage() {
                     onChange={(e) => setDisplayDays(e.target.value)}
                     sx={fieldSx}
                   />
+                  <CompanyCategorySelect value={categoryIds} onChange={setCategoryIds} />
                   <TextField
                     label={t("companies.loginEmail")}
                     type="email"
@@ -579,10 +589,15 @@ export function CompanyDetailPage() {
                     onChange={(e) => setEditDisplayDays(Number(e.target.value))}
                     sx={fieldSx}
                   />
+                  <CompanyCategorySelect value={categoryIds} onChange={setCategoryIds} />
                   <Button
                     variant="contained"
                     onClick={() =>
-                      limitMutation.mutate({ maxProducts: newLimit, displayDays: editDisplayDays })
+                      limitMutation.mutate({
+                        maxProducts: newLimit,
+                        displayDays: editDisplayDays,
+                        categoryIds,
+                      })
                     }
                     disabled={limitMutation.isPending}
                     sx={{ borderRadius: "8px", alignSelf: "flex-start" }}

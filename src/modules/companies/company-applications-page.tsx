@@ -27,6 +27,8 @@ import {
   reviewCompanyApplicationApi,
   type CompanyApplication,
 } from "../../services/admin-api";
+import { CompanyCategorySelect } from "./company-category-select";
+import { useI18n } from "../../hooks/use-i18n";
 
 type CompanyApplicationRow = CompanyApplication & Record<string, unknown>;
 
@@ -52,6 +54,7 @@ function openReviewForm(app: CompanyApplication) {
 }
 
 export function CompanyApplicationsPage() {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("PENDING");
@@ -63,6 +66,7 @@ export function CompanyApplicationsPage() {
   const [adminNote, setAdminNote] = useState("");
   const [companyEmail, setCompanyEmail] = useState("");
   const [companyPassword, setCompanyPassword] = useState("");
+  const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [formError, setFormError] = useState("");
 
   useEffect(() => {
@@ -92,12 +96,14 @@ export function CompanyApplicationsPage() {
       displayDays?: number;
       email?: string;
       password?: string;
+      categoryIds?: string[];
       adminNote?: string;
     }) =>
       reviewCompanyApplicationApi(payload.applicationId, {
         action: payload.action,
         maxProducts: payload.maxProducts,
         displayDays: payload.displayDays,
+        categoryIds: payload.categoryIds,
         email: payload.email,
         password: payload.password,
         adminNote: payload.adminNote,
@@ -127,6 +133,7 @@ export function CompanyApplicationsPage() {
     setAdminNote(form.adminNote);
     setCompanyEmail(form.companyEmail);
     setCompanyPassword(form.companyPassword);
+    setCategoryIds([]);
     setFormError("");
   }
 
@@ -157,6 +164,10 @@ export function CompanyApplicationsPage() {
       setFormError("Listing duration must be at least 1 day");
       return;
     }
+    if (categoryIds.length < 1) {
+      setFormError(t("companies.categoriesMin"));
+      return;
+    }
 
     setFormError("");
     reviewMutation.mutate({
@@ -164,6 +175,7 @@ export function CompanyApplicationsPage() {
       action: "APPROVE",
       maxProducts: quota,
       displayDays: days,
+      categoryIds,
       email,
       password,
       adminNote: adminNote.trim() || undefined,
@@ -293,6 +305,8 @@ export function CompanyApplicationsPage() {
               value={displayDays}
               onChange={(e) => setDisplayDays(e.target.value)}
             />
+
+            <CompanyCategorySelect value={categoryIds} onChange={setCategoryIds} />
 
             <TextField
               label="Company login email"

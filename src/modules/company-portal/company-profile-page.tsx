@@ -44,7 +44,7 @@ function InfoRow({ label, value }: { label: string; value?: string | null }) {
 }
 
 export function CompanyProfilePage() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -200,6 +200,24 @@ export function CompanyProfilePage() {
                 label={t("company.profile.quota")}
                 value={`${data.productsCount} / ${data.maxProducts}`}
               />
+              <Stack spacing={1}>
+                <Typography variant="caption" color="text.secondary">
+                  {t("companies.allowedCategories")}
+                </Typography>
+                <Stack direction="row" spacing={0.75} useFlexGap sx={{ flexWrap: "wrap" }}>
+                  {(data.allowedCategories || []).length ? (
+                    data.allowedCategories!.map((category) => (
+                      <Chip
+                        key={category.id}
+                        size="small"
+                        label={language === "ar" ? category.nameAr || category.nameEn : category.nameEn || category.nameAr}
+                      />
+                    ))
+                  ) : (
+                    <Typography variant="body2">—</Typography>
+                  )}
+                </Stack>
+              </Stack>
               <InfoRow
                 label={t("company.profile.listingPeriod")}
                 value={
