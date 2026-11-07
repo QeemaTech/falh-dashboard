@@ -533,7 +533,7 @@ export function CompanyManagementPage() {
                       onEdit={() => navigate(`/companies/${company.id}`)}
                     />
                   <Box sx={companyActionsGridSx(language)}>
-                    {company.status === "PENDING" ? (
+                    {company.status === "PENDING" || company.status === "REJECTED" ? (
                       <>
                         <Button
                           size="small"
@@ -541,9 +541,10 @@ export function CompanyManagementPage() {
                           sx={companyActionPrimaryBtnSx}
                           onClick={() => navigate(`/companies/${company.id}`)}
                         >
-                          {t("companies.review")}
+                          {company.status === "REJECTED" ? t("companies.reapprove") : t("companies.review")}
                         </Button>
                         <Box aria-hidden sx={companyActionKeySlotSx} />
+                        {company.status === "PENDING" ? (
                         <Button
                           size="small"
                           variant="outlined"
@@ -555,6 +556,9 @@ export function CompanyManagementPage() {
                         >
                           {t("companies.reject")}
                         </Button>
+                        ) : (
+                          <Box aria-hidden />
+                        )}
                       </>
                     ) : null}
                     {company.status === "APPROVED" ? (

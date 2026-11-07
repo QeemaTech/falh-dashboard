@@ -343,10 +343,12 @@ export function CompanyApplicationsPage() {
             <Stack direction="row" spacing={1} sx={{ pt: 1 }}>
               <Button
                 variant="contained"
-                disabled={selected.status !== "PENDING" || reviewMutation.isPending}
+                disabled={
+                  (selected.status !== "PENDING" && selected.status !== "REJECTED") || reviewMutation.isPending
+                }
                 onClick={handleApprove}
               >
-                Approve & Create Login
+                {selected.status === "REJECTED" ? t("companies.reapprove") : "Approve & Create Login"}
               </Button>
               <Button
                 variant="outlined"

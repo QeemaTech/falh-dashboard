@@ -168,7 +168,7 @@ export function CompanyDetailPage() {
     setEditDisplayDays(company.displayDays || 30);
     setCategoryIds((company.allowedCategories || []).map((category) => category.id));
     setEditPartnerSortOrder(company.partnerSortOrder || 0);
-    if (company.status === "PENDING" && !credentials) {
+    if ((company.status === "PENDING" || company.status === "REJECTED") && !credentials) {
       setCompanyEmail(
         prefillCompanyLoginEmail(company.email_public, company.user?.email, company.joinApplication?.email)
       );
@@ -294,13 +294,15 @@ export function CompanyDetailPage() {
   }
 
   const isPending = company.status === "PENDING";
+  const isRejected = company.status === "REJECTED";
+  const canApprove = isPending || isRejected;
   const email = company.email_public || company.joinApplication?.email;
   const description = company.description || company.joinApplication?.description;
   const licensePath = company.businessLicense || company.joinApplication?.businessLicense;
   const commercialPath = company.commercialReg || company.joinApplication?.commercialReg;
 
   const heroActions =
-    isPending && !credentials ? (
+    canApprove && !credentials ? (
       <>
         <Button
           variant="contained"
@@ -308,8 +310,9 @@ export function CompanyDetailPage() {
           onClick={handleApprove}
           sx={{ borderRadius: "8px", px: 2.5 }}
         >
-          {t("companies.approve")}
+          {isRejected ? t("companies.reapprove") : t("companies.approve")}
         </Button>
+        {isPending ? (
         <Button
           variant="outlined"
           color="error"
@@ -319,6 +322,7 @@ export function CompanyDetailPage() {
         >
           {t("companies.reject")}
         </Button>
+        ) : null}
       </>
     ) : undefined;
 
@@ -455,7 +459,7 @@ export function CompanyDetailPage() {
         }
         side={
           <>
-            {isPending && !credentials ? (
+            {canApprove && !credentials ? (
               <SectionCard title={t("companies.reviewTitle")}>
                 <Stack spacing={2}>
                   <TextField
@@ -530,8 +534,9 @@ export function CompanyDetailPage() {
                       onClick={handleApprove}
                       sx={{ borderRadius: "8px" }}
                     >
-                      {t("companies.approve")}
+                      {isRejected ? t("companies.reapprove") : t("companies.approve")}
                     </Button>
+                    {isPending ? (
                     <Button
                       variant="outlined"
                       color="error"
@@ -541,6 +546,7 @@ export function CompanyDetailPage() {
                     >
                       {t("companies.reject")}
                     </Button>
+                    ) : null}
                   </Stack>
                 </Stack>
               </SectionCard>
@@ -565,7 +571,7 @@ export function CompanyDetailPage() {
               </SectionCard>
             ) : null}
 
-            {!isPending ? (
+            {!canApprove ? (
               <SectionCard title={t("companies.setLimit")}>
                 <Stack spacing={2}>
                   <TextField
