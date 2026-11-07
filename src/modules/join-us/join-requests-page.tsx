@@ -14,16 +14,14 @@ import {
 import { useNavigate } from "react-router-dom";
 import { DataTable, EmptyState, FilterBar, PageHeader, TablePaginationBar, TableRowActions, resolveTotalPages } from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
-import {
-  fetchJoinUsApplications,
-  fetchJoinApplicationTypes,
-  type JoinUsApplicationListItem,
-  type JoinApplicationType,
-  type JoinUsTab,
-} from "../../services/admin-api";
-import { JoinApplicationTypesDrawer } from "./join-application-types-drawer";
+import { fetchJoinUsApplications, type JoinUsApplicationListItem, type JoinUsTab } from "../../services/admin-api";
+import { fetchApplicationFilterTypes } from "../../services/provider-forms-api";
+import { PermissionGate } from "../../components/permission-gate";
+import { usePermission } from "../../store/permission-context";
+import { buildTypeFilterOptions, filterOptionLabel } from "../provider-forms/form-logic";
 
 const TAB_ALL = "ALL" as const;
+const TAB_COMPANY = "COMPANY" as const;
 
 type JoinRequestRow = JoinUsApplicationListItem & Record<string, unknown>;
 
@@ -40,7 +38,7 @@ export function JoinRequestsPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("PENDING");
   const [tab, setTab] = useState<JoinUsTab>(TAB_ALL);
-  const [typesDrawerOpen, setTypesDrawerOpen] = useState(false);
+  const { hasPermission } = usePermission();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
@@ -48,33 +46,31 @@ export function JoinRequestsPage() {
     setPage(1);
   }, [search, status, tab, pageSize]);
 
-  const { data: joinTypes = [] } = useQuery({
-    queryKey: ["join-application-types"],
-    queryFn: fetchJoinApplicationTypes,
+  // Provider filters come from the backend (active types + any type that has applications, archived included).
+  // COMPANY is a separate fixed tab and is never mixed into the provider type filters.
+  const { data: filterTypes = [] } = useQuery({
+    queryKey: ["application-filter-types"],
+    queryFn: fetchApplicationFilterTypes,
   });
-
-  const typesByCode = useMemo(() => {
-    const map = new Map<string, JoinApplicationType>();
-    joinTypes.forEach((type) => map.set(type.code, type));
-    return map;
-  }, [joinTypes]);
+  const providerOptions = useMemo(() => buildTypeFilterOptions(filterTypes, language), [filterTypes, language]);
 
   const typeLabel = (type: string) => {
-    const row = typesByCode.get(type);
-    if (row) return language === "ar" ? row.nameAr || row.nameEn : row.nameEn || row.nameAr;
-    return t(`joinUs.type.${type}` as "joinUs.type.COMPANY") || type;
+    if (type === TAB_COMPANY) return t("joinUs.type.COMPANY");
+    const option = providerOptions.find((o) => o.code === type);
+    return option ? option.label : type;
   };
 
-  const tabItems = useMemo(() => {
-    const active = joinTypes.filter((type) => type.isActive);
-    return [
-      { code: TAB_ALL, label: t("joinUs.tab.all") },
-      ...active.map((type) => ({
-        code: type.code,
-        label: language === "ar" ? type.nameAr || type.nameEn : type.nameEn || type.nameAr,
+  const tabItems = useMemo(
+    () => [
+      { code: TAB_ALL as string, label: t("joinUs.tab.all") },
+      ...(hasPermission("companies.view") ? [{ code: TAB_COMPANY as string, label: t("joinUs.tab.company") }] : []),
+      ...providerOptions.map((option) => ({
+        code: option.code,
+        label: filterOptionLabel(option, { archived: t("joinUs.suffix.archived"), inactive: t("joinUs.suffix.inactive") }),
       })),
-    ];
-  }, [joinTypes, language, t]);
+    ],
+    [providerOptions, hasPermission, t]
+  );
 
   const statusLabel = (value: string) =>
     t(`joinUs.status.${value}` as "joinUs.status.PENDING") || value;
@@ -88,6 +84,7 @@ export function JoinRequestsPage() {
         search: search || undefined,
         status: status || undefined,
         tab,
+        applicationType: tab === TAB_ALL ? undefined : tab,
       }),
     placeholderData: (previousData) => previousData,
   });
@@ -105,9 +102,11 @@ export function JoinRequestsPage() {
         title={t("joinUs.title")}
         subtitle={t("joinUs.subtitle")}
         action={
-          <Button variant="outlined" startIcon={<Settings />} onClick={() => setTypesDrawerOpen(true)}>
-            {t("joinUs.types.manage")}
-          </Button>
+          <PermissionGate permission={["provider_types.view", "provider_forms.view"]}>
+            <Button variant="outlined" startIcon={<Settings />} onClick={() => navigate("/provider-types")}>
+              {t("joinUs.manageProviderTypes")}
+            </Button>
+          </PermissionGate>
         }
       />
 
@@ -218,7 +217,6 @@ export function JoinRequestsPage() {
         />
       ) : null}
 
-      <JoinApplicationTypesDrawer open={typesDrawerOpen} onClose={() => setTypesDrawerOpen(false)} />
     </Stack>
   );
 }

@@ -45,6 +45,7 @@ import {
   setCompanyStatusApi,
   type AdminCompany,
 } from "../../services/admin-api";
+import { openStoredFile } from "../../utils/open-stored-file";
 import { resolveAssetUrl } from "../../utils/asset-url";
 import { generatePassword } from "../../utils/generate-password";
 import { prefillCompanyLoginEmail } from "../../utils/company-approval-email";
@@ -112,9 +113,7 @@ function DocumentCard({
         </Box>
         {href ? (
           <Button
-            href={href}
-            target="_blank"
-            rel="noreferrer"
+            onClick={() => void openStoredFile(path!)}
             size="small"
             variant="outlined"
             endIcon={<OpenInNew sx={{ fontSize: 14 }} />}

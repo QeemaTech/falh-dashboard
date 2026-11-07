@@ -7,7 +7,6 @@ import {
   Button,
   Chip,
   CircularProgress,
-  Link,
   Stack,
   TextField,
   Typography,
@@ -17,11 +16,13 @@ import { useI18n } from "../../hooks/use-i18n";
 import {
   approveJoinUsApplicationApi,
   fetchJoinUsApplicationById,
-  fetchJoinApplicationTypes,
   rejectJoinUsApplicationApi,
-  type JoinApplicationType,
 } from "../../services/admin-api";
-import { resolveAssetUrl } from "../../utils/asset-url";
+import { fetchApplicationFilterTypes } from "../../services/provider-forms-api";
+import { DynamicAnswers } from "../provider-forms/dynamic-answers";
+import { buildTypeFilterOptions } from "../provider-forms/form-logic";
+import { PrivateFileLink } from "../../components/private-file-link";
+import { openStoredFile } from "../../utils/open-stored-file";
 import { generatePassword } from "../../utils/generate-password";
 import { prefillCompanyLoginEmail } from "../../utils/company-approval-email";
 import { toast } from "../../components/ui/sonner";
@@ -34,12 +35,7 @@ function statusChipColor(status: string): "success" | "warning" | "error" | "def
 }
 
 function AssetLink({ path, label }: { path?: string; label: string }) {
-  if (!path) return <span>-</span>;
-  return (
-    <Link href={resolveAssetUrl(path)} target="_blank" rel="noreferrer">
-      {label}
-    </Link>
-  );
+  return <PrivateFileLink path={path} label={label} />;
 }
 
 function formatExperiencePeriod(period?: string, years?: number, lang = "ar"): string {
@@ -80,21 +76,15 @@ export function JoinRequestDetailPage() {
   const [formError, setFormError] = useState("");
   const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null);
 
-  const { data: joinTypes = [] } = useQuery({
-    queryKey: ["join-application-types"],
-    queryFn: fetchJoinApplicationTypes,
+  const { data: filterTypes = [] } = useQuery({
+    queryKey: ["application-filter-types"],
+    queryFn: fetchApplicationFilterTypes,
   });
-
-  const typesByCode = useMemo(() => {
-    const map = new Map<string, JoinApplicationType>();
-    joinTypes.forEach((type) => map.set(type.code, type));
-    return map;
-  }, [joinTypes]);
+  const providerOptions = useMemo(() => buildTypeFilterOptions(filterTypes, language), [filterTypes, language]);
 
   const typeLabel = (type: string) => {
-    const row = typesByCode.get(type);
-    if (row) return language === "ar" ? row.nameAr || row.nameEn : row.nameEn || row.nameAr;
-    return t(`joinUs.type.${type}` as "joinUs.type.COMPANY") || type;
+    if (type === "COMPANY") return t("joinUs.type.COMPANY");
+    return providerOptions.find((o) => o.code === type)?.label || type;
   };
 
   const statusLabel = (value: string) =>
@@ -324,6 +314,7 @@ export function JoinRequestDetailPage() {
                     label={t("joinUs.fieldPhone")}
                     value={String(reviewFields.phone || detail.phone)}
                   />
+                  {detail.form ? null : (<>
                   <DetailField
                     label={t("joinUs.fieldSpecializations")}
                     value={
@@ -391,11 +382,26 @@ export function JoinRequestDetailPage() {
                       />
                     }
                   />
+                  </>)}
                 </>
               )}
             </DetailGrid>
           ),
         },
+        ...(detail.form
+          ? [
+              {
+                title: `${t("providerForms.answers")} · ${t("providerForms.formVersion")} v${detail.form.version}`,
+                content: (
+                  <DynamicAnswers
+                    questions={detail.form.questions}
+                    answers={(detail.answers || {}) as Record<string, unknown>}
+                    renderFile={(path) => <AssetLink path={path} label={t("joinUs.viewFile")} />}
+                  />
+                ),
+              },
+            ]
+          : []),
         {
           title: isCompanyReview ? t("joinUs.fieldDescription") : t("joinUs.fieldBio"),
           content: (
@@ -455,10 +461,7 @@ export function JoinRequestDetailPage() {
                         key={idx}
                         variant="outlined"
                         size="small"
-                        component="a"
-                        href={resolveAssetUrl(fileUrl)}
-                        target="_blank"
-                        rel="noreferrer"
+                        onClick={() => void openStoredFile(fileUrl)}
                         sx={{ borderRadius: "8px" }}
                       >
                         {language === "ar" ? `مستند / مرفق #${idx + 1}` : `Attachment #${idx + 1}`}

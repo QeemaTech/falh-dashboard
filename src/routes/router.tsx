@@ -17,7 +17,6 @@ import { AppearanceSettingsPage } from "../modules/appearance/appearance-setting
 import { OrdersPage } from "../modules/orders/orders-page";
 import { OrderDetailPage } from "../modules/orders/order-detail-page";
 import { CategoriesPage } from "../modules/categories/categories-page";
-import { UnitsPage } from "../modules/units/units-page";
 import { BannersPage } from "../modules/banners/banners-page";
 import { BannerCreatePage } from "../modules/banners/banner-form-page";
 import { NotificationsPage } from "../modules/notifications/notifications-page";
@@ -37,6 +36,8 @@ import { CompanyProtectedRoute } from "./company-protected-route";
 import { CompanyLayout } from "../layouts/company-layout";
 import { JoinRequestsPage } from "../modules/join-us/join-requests-page";
 import { JoinRequestDetailPage } from "../modules/join-us/join-request-detail-page";
+import { ProviderTypesPage } from "../modules/provider-forms/provider-types-page";
+import { ProviderFormBuilderPage } from "../modules/provider-forms/provider-form-builder-page";
 import { CompanyProductsPage } from "../modules/company-portal/company-products-page";
 import { CompanyDashboardPage } from "../modules/company-portal/company-dashboard-page";
 import { CompanyProfilePage } from "../modules/company-portal/company-profile-page";
@@ -93,6 +94,8 @@ export const router = createBrowserRouter([
           { path: "companies/:id", element: <CompanyDetailPage /> },
           { path: "join-requests", element: <JoinRequestsPage /> },
           { path: "join-requests/:id", element: <JoinRequestDetailPage /> },
+          { path: "provider-types", element: <ProviderTypesPage /> },
+          { path: "provider-types/:typeId/form", element: <ProviderFormBuilderPage /> },
           { path: "company-applications", element: <Navigate to="/companies" replace /> },
           { path: "pending-products", element: <PendingProductsPage /> },
           { path: "pending-products/:id", element: <PendingProductDetailPage /> },
@@ -105,7 +108,7 @@ export const router = createBrowserRouter([
           { path: "finance", element: <FinancePage /> },
           { path: "finance/:companyId", element: <FinanceDetailPage /> },
           { path: "categories", element: <CategoriesPage /> },
-          { path: "units", element: <UnitsPage /> },
+          { path: "units", element: <Navigate to="/categories" replace /> },
           { path: "banners", element: <BannersPage /> },
           { path: "banners/new", element: <BannerCreatePage /> },
           { path: "onboarding", element: <Navigate to="/banners" replace /> },

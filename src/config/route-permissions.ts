@@ -1,19 +1,19 @@
 /** Minimum permission required to open a dashboard route. */
-export const ROUTE_PERMISSIONS: Record<string, string> = {
+export const ROUTE_PERMISSIONS: Record<string, string | string[]> = {
   "/": "dashboard.view",
   "/users": "users.view",
   "/companies": "companies.view",
-  "/join-requests": "companies.view",
+  "/join-requests": ["companies.view", "provider_applications.view"],
+  "/provider-types": ["provider_types.view", "provider_forms.view"],
   "/products": "products.view",
   "/pending-products": "products.view",
   "/categories": "categories.view",
-  "/units": "categories.view",
   "/orders": "orders.view",
   "/finance": "finance.view",
   "/banners": "banners.view",
   "/onboarding": "banners.view",
   "/notifications": "notifications.view",
-  "/consultants": "consultants.view",
+  "/consultants": ["consultants.view", "provider_listings.view"],
   "/ai-settings": "settings.view",
   "/market": "settings.view",
   "/crop-prices": "settings.view",
@@ -29,7 +29,7 @@ export const ROUTE_PERMISSIONS: Record<string, string> = {
   "/reports": "reports.view",
 };
 
-export function permissionForPath(pathname: string) {
+export function permissionForPath(pathname: string): string | string[] | null {
   if (ROUTE_PERMISSIONS[pathname]) return ROUTE_PERMISSIONS[pathname];
   const match = Object.keys(ROUTE_PERMISSIONS)
     .filter((route) => route !== "/")

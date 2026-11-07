@@ -1,3 +1,4 @@
+import { providerFormsAr, providerFormsEn } from "./provider-forms";
 export type TranslationLanguage = "ar" | "en";
 
 const en = {
@@ -2346,7 +2347,10 @@ const ar: typeof en = {
   "company.profile.logoTooLarge": "الشعار يجب ألا يتجاوز 5 ميجابايت",
 };
 
-const translations: Record<TranslationLanguage, Record<string, string>> = { en, ar };
+const translations: Record<TranslationLanguage, Record<string, string>> = {
+  en: { ...en, ...providerFormsEn },
+  ar: { ...ar, ...providerFormsAr },
+};
 
 export function translate(language: TranslationLanguage, key: string, fallback?: string) {
   return translations[language][key] || fallback || key;

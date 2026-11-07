@@ -6,11 +6,11 @@ import {
   CorporateFare,
   Dashboard,
   HowToReg,
+  AssignmentTurnedIn,
   Inventory2,
   Notifications,
   PendingActions,
   People,
-  Scale,
   Settings,
   ShoppingCart,
   ShowChart,
@@ -40,7 +40,7 @@ import { usePermission } from "../store/permission-context";
 export const SIDEBAR_WIDTH_OPEN = 248;
 export const SIDEBAR_WIDTH_COLLAPSED = 68;
 
-type NavItem = { to: string; labelKey: string; icon: SvgIconComponent; permission?: string };
+type NavItem = { to: string; labelKey: string; icon: SvgIconComponent; permission?: string | string[] };
 
 const sections: Array<{ titleKey: string; items: NavItem[] }> = [
   {
@@ -52,11 +52,11 @@ const sections: Array<{ titleKey: string; items: NavItem[] }> = [
     items: [
       { to: "/users", labelKey: "nav.users", icon: People, permission: "users.view" },
       { to: "/companies", labelKey: "nav.companies", icon: CorporateFare, permission: "companies.view" },
-      { to: "/join-requests", labelKey: "nav.joinRequests", icon: HowToReg, permission: "companies.view" },
+      { to: "/join-requests", labelKey: "nav.joinRequests", icon: HowToReg, permission: ["companies.view", "provider_applications.view"] },
+      { to: "/provider-types", labelKey: "nav.providerTypes", icon: AssignmentTurnedIn, permission: ["provider_types.view", "provider_forms.view"] },
       { to: "/products", labelKey: "nav.products", icon: Inventory2, permission: "products.view" },
       { to: "/pending-products", labelKey: "nav.pendingProducts", icon: PendingActions, permission: "products.view" },
       { to: "/categories", labelKey: "nav.categories", icon: Category, permission: "categories.view" },
-      { to: "/units", labelKey: "nav.units", icon: Scale, permission: "categories.view" },
       { to: "/orders", labelKey: "nav.orders", icon: ShoppingCart, permission: "orders.view" },
       { to: "/finance", labelKey: "nav.finance", icon: AccountBalance, permission: "finance.view" },
     ],
@@ -72,7 +72,7 @@ const sections: Array<{ titleKey: string; items: NavItem[] }> = [
   {
     titleKey: "nav.section.services",
     items: [
-      { to: "/consultants", labelKey: "nav.consultants", icon: People, permission: "consultants.view" },
+      { to: "/consultants", labelKey: "nav.consultants", icon: People, permission: ["consultants.view", "provider_listings.view"] },
       { to: "/ai-settings", labelKey: "nav.aiSettings", icon: SmartToy, permission: "settings.view" },
       { to: "/market", labelKey: "nav.market", icon: ShowChart, permission: "settings.view" },
       { to: "/weather-settings", labelKey: "nav.weatherSettings", icon: WbSunny, permission: "settings.view" },

@@ -3,7 +3,7 @@ import { ROUTE_PERMISSIONS, permissionForPath } from "../config/route-permission
 import { useAuth } from "../store/auth-store";
 import { usePermission } from "../store/permission-context";
 
-function firstAllowedPath(hasPermission: (code: string) => boolean) {
+function firstAllowedPath(hasPermission: (code: string | string[]) => boolean) {
   const entry = Object.entries(ROUTE_PERMISSIONS).find(([, code]) => hasPermission(code));
   return entry?.[0] || "/";
 }

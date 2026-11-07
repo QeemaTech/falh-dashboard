@@ -4,12 +4,11 @@ import { useParams } from "react-router-dom";
 import { Chip, CircularProgress, Link, Stack } from "@mui/material";
 import { DetailField, DetailGrid, DetailPageShell, EmptyState } from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
-import {
-  fetchJoinApplicationTypes,
-  fetchServiceProviderById,
-  type AdminServiceProvider,
-  type JoinApplicationType,
-} from "../../services/admin-api";
+import { fetchServiceProviderById, type AdminServiceProvider } from "../../services/admin-api";
+import { fetchProviderFilterTypes } from "../../services/provider-forms-api";
+import { PrivateFileLink } from "../../components/private-file-link";
+import { DynamicAnswers } from "../provider-forms/dynamic-answers";
+import { buildTypeFilterOptions } from "../provider-forms/form-logic";
 
 function providerName(provider: AdminServiceProvider) {
   return provider.name || provider.displayName || provider.user?.name || "-";
@@ -26,34 +25,32 @@ export function ConsultantDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t, language } = useI18n();
 
-  const { data: joinTypes = [] } = useQuery({
-    queryKey: ["join-application-types"],
-    queryFn: fetchJoinApplicationTypes,
-  });
-
-  const typesByCode = useMemo(() => {
-    const map = new Map<string, JoinApplicationType>();
-    joinTypes.forEach((type) => map.set(type.code, type));
-    return map;
-  }, [joinTypes]);
-
-  const resolveTypeKey = (provider: AdminServiceProvider) =>
-    provider.applicationType || provider.type;
-
-  const typeLabel = (typeKey: string, otherTypeLabel?: string | null) => {
-    const row = typesByCode.get(typeKey);
-    if (row) {
-      return language === "ar" ? row.nameAr || row.nameEn : row.nameEn || row.nameAr;
-    }
-    if (typeKey === "OTHER" && otherTypeLabel) return otherTypeLabel;
-    return t(`consultants.type.${typeKey}`, typeKey);
-  };
-
   const { data: detail, isLoading, isError, error } = useQuery({
     queryKey: ["admin-consultant", id],
     queryFn: () => fetchServiceProviderById(id!),
     enabled: Boolean(id),
   });
+
+  const { data: filterTypes = [] } = useQuery({
+    queryKey: ["provider-filter-types"],
+    queryFn: fetchProviderFilterTypes,
+  });
+  const options = useMemo(() => buildTypeFilterOptions(filterTypes, language), [filterTypes, language]);
+
+  // The referential type is authoritative; the legacy `type` enum is only a fallback for unlinked legacy rows.
+  const resolveTypeKey = (provider: AdminServiceProvider) =>
+    provider.providerType?.code || provider.applicationType || provider.type;
+
+  const typeLabel = (typeKey: string, otherTypeLabel?: string | null) => {
+    const fromType = detail?.providerType;
+    if (fromType && fromType.code === typeKey) {
+      return (language === "ar" ? fromType.nameAr || fromType.nameEn : fromType.nameEn || fromType.nameAr) || typeKey;
+    }
+    const option = options.find((o) => o.code === typeKey);
+    if (option) return option.label;
+    if (typeKey === "OTHER" && otherTypeLabel) return otherTypeLabel;
+    return t(`consultants.type.${typeKey}`, typeKey);
+  };
 
   const statusLabel = (status: string) => t(`consultants.status.${status}`, status);
 
@@ -143,6 +140,32 @@ export function ConsultantDetailPage() {
             </Stack>
           ),
         },
+        ...(detail.dynamicAnswers?.items.length
+          ? [
+              {
+                title: `${t("providerForms.answers")} · ${t("providerForms.formVersion")} v${detail.dynamicAnswers.formVersion}`,
+                content: (
+                  <DynamicAnswers
+                    questions={detail.dynamicAnswers.items.map((item, index) => ({
+                      key: item.key,
+                      labelAr: item.labelAr,
+                      labelEn: item.labelEn,
+                      fieldType: item.fieldType as never,
+                      required: false,
+                      sortOrder: index,
+                      options: item.options,
+                      validation: {},
+                      visibleWhen: null,
+                      mapsTo: null,
+                      isPublic: false,
+                    }))}
+                    answers={Object.fromEntries(detail.dynamicAnswers.items.map((item) => [item.key, item.value]))}
+                    renderFile={(path) => <PrivateFileLink path={path} label={t("joinUs.viewFile")} />}
+                  />
+                ),
+              },
+            ]
+          : []),
       ]}
     />
   );

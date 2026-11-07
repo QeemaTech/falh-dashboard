@@ -1,5 +1,4 @@
 import { http } from "./http";
-import { FALLBACK_JOIN_APPLICATION_TYPES } from "../constants/join-application-types";
 import type { AiSettings, AiSettingsPayload } from "../types/ai";
 import type { DashboardStats, User, UserAdminDetails } from "../types/dashboard";
 import type { LatestMarketData, LivestockCategory, MarketItem, MarketPagination, MarketTrend } from "../types/market";
@@ -335,6 +334,20 @@ export type AdminServiceProvider = {
   licensePath?: string | null;
   applicationType?: string | null;
   otherTypeLabel?: string | null;
+  /** Referential provider type (source of truth). `type` is the deprecated legacy value. */
+  providerType?: { id: string; code: string; nameAr: string; nameEn: string; isActive: boolean; archived: boolean } | null;
+  dynamicAnswers?: {
+    formVersionId: string;
+    formVersion: number;
+    items: Array<{
+      key: string;
+      labelAr: string;
+      labelEn: string;
+      fieldType: string;
+      options: Array<{ value: string; labelAr: string; labelEn: string }>;
+      value: unknown;
+    }>;
+  } | null;
   user?: { id: string; name?: string; profileImage?: string | null };
 };
 
@@ -343,6 +356,7 @@ export async function fetchAdminServiceProviders(params: {
   limit: number;
   status?: string;
   applicationType?: string;
+  providerTypeId?: string;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
 }) {
@@ -1236,6 +1250,7 @@ export async function assignUserAdminRoleApi(userId: string, roleId: string) {
 export type JoinUsApplicationListItem = {
   id: string;
   applicationType: string;
+  joinApplicationTypeId?: string | null;
   applicantName: string;
   companyName?: string;
   phone: string;
@@ -1248,6 +1263,10 @@ export type JoinUsApplicationListItem = {
 export type JoinUsApplicationDetail = {
   id: string;
   applicationType: string;
+  joinApplicationTypeId?: string | null;
+  formVersionId?: string | null;
+  /** The exact question set the answers were submitted against (null for legacy/company applications). */
+  form?: { id: string; version: number; status?: string; questions: import("./provider-forms-api").FormQuestion[] } | null;
   status: string;
   fullName: string;
   companyName?: string;
@@ -1288,74 +1307,14 @@ export type JoinUsApplicationDetail = {
 
 export type JoinUsTab = "ALL" | string;
 
-export type JoinApplicationType = {
-  id: string;
-  code: string;
-  nameAr: string;
-  nameEn: string;
-  category: "COMPANY" | "PROVIDER";
-  serviceProviderType?: string | null;
-  isSystem: boolean;
-  isActive: boolean;
-  sortOrder: number;
-  createdAt?: string;
-  updatedAt?: string;
-};
-
-export async function fetchJoinApplicationTypes() {
-  try {
-    const { data } = await http.get<ApiResponse<JoinApplicationType[]>>("/admin/join-us/types");
-    if (Array.isArray(data.data) && data.data.length > 0) {
-      return data.data;
-    }
-  } catch {
-    // Admin route may be missing on older backends — try public endpoint next.
-  }
-
-  try {
-    const { data } = await http.get<ApiResponse<JoinApplicationType[]>>("/join-us/types");
-    if (Array.isArray(data.data) && data.data.length > 0) {
-      return data.data.map((type) => ({ ...type, isActive: type.isActive ?? true }));
-    }
-  } catch {
-    // Public route also unavailable — use built-in defaults below.
-  }
-
-  return FALLBACK_JOIN_APPLICATION_TYPES as JoinApplicationType[];
-}
-
-export async function createJoinApplicationTypeApi(payload: {
-  nameAr: string;
-  nameEn: string;
-  code?: string;
-  serviceProviderType?: string;
-  sortOrder?: number;
-}) {
-  const { data } = await http.post<ApiResponse<JoinApplicationType>>("/admin/join-us/types", payload);
-  return data.data;
-}
-
-export async function updateJoinApplicationTypeApi(
-  typeId: string,
-  payload: Partial<{ nameAr: string; nameEn: string; isActive: boolean; sortOrder: number; serviceProviderType: string }>
-) {
-  const { data } = await http.patch<ApiResponse<JoinApplicationType>>(`/admin/join-us/types/${typeId}`, payload);
-  return data.data;
-}
-
-export async function deleteJoinApplicationTypeApi(typeId: string) {
-  const { data } = await http.delete<ApiResponse<JoinApplicationType | { id: string; deleted: boolean }>>(
-    `/admin/join-us/types/${typeId}`
-  );
-  return data.data;
-}
-
 export async function fetchJoinUsApplications(params: {
   page: number;
   limit: number;
   search?: string;
   status?: string;
   tab?: JoinUsTab;
+  /** Provider type code (from the backend filter source) or COMPANY. */
+  applicationType?: string;
 }) {
   const { data } = await http.get<ApiResponse<JoinUsApplicationListItem[]>>("/admin/join-us", {
     params: {
@@ -1363,7 +1322,8 @@ export async function fetchJoinUsApplications(params: {
       limit: params.limit,
       search: params.search,
       status: params.status,
-      tab: params.tab || "ALL",
+      tab: params.applicationType ? undefined : params.tab || "ALL",
+      applicationType: params.applicationType,
     },
   });
   return {

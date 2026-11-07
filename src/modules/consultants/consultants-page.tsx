@@ -11,12 +11,9 @@ import {
   resolveTotalPages,
 } from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
-import {
-  fetchAdminServiceProviders,
-  fetchJoinApplicationTypes,
-  type AdminServiceProvider,
-  type JoinApplicationType,
-} from "../../services/admin-api";
+import { fetchAdminServiceProviders, type AdminServiceProvider } from "../../services/admin-api";
+import { fetchProviderFilterTypes } from "../../services/provider-forms-api";
+import { buildTypeFilterOptions, filterOptionLabel } from "../provider-forms/form-logic";
 
 const TAB_ALL = "ALL" as const;
 type ConsultantTab = typeof TAB_ALL | string;
@@ -52,38 +49,32 @@ export function ConsultantsPage() {
     setPage(1);
   }, [tab, pageSize]);
 
-  const { data: joinTypes = [] } = useQuery({
-    queryKey: ["join-application-types"],
-    queryFn: fetchJoinApplicationTypes,
+  // One backend source for every provider-type filter; archived/inactive types stay while they have providers.
+  const { data: filterTypes = [] } = useQuery({
+    queryKey: ["provider-filter-types"],
+    queryFn: fetchProviderFilterTypes,
   });
+  const options = useMemo(() => buildTypeFilterOptions(filterTypes, language), [filterTypes, language]);
 
-  const typesByCode = useMemo(() => {
-    const map = new Map<string, JoinApplicationType>();
-    joinTypes.forEach((type) => map.set(type.code, type));
-    return map;
-  }, [joinTypes]);
-
+  // The referential type is authoritative; the legacy `type` enum is only a last-resort label.
   const resolveTypeKey = (provider: AdminServiceProvider) =>
-    provider.applicationType || provider.type;
+    provider.providerType?.code || provider.applicationType || provider.type;
 
   const typeLabel = (typeKey: string) => {
-    const row = typesByCode.get(typeKey);
-    if (row) {
-      return language === "ar" ? row.nameAr || row.nameEn : row.nameEn || row.nameAr;
-    }
-    return t(`consultants.type.${typeKey}`, typeKey);
+    const option = options.find((o) => o.code === typeKey);
+    return option ? option.label : t(`consultants.type.${typeKey}`, typeKey);
   };
 
-  const tabItems = useMemo(() => {
-    const active = joinTypes.filter((type) => type.isActive && type.category === "PROVIDER");
-    return [
-      { code: TAB_ALL, label: t("joinUs.tab.all") },
-      ...active.map((type) => ({
-        code: type.code,
-        label: language === "ar" ? type.nameAr || type.nameEn : type.nameEn || type.nameAr,
+  const tabItems = useMemo(
+    () => [
+      { code: TAB_ALL as string, label: t("joinUs.tab.all") },
+      ...options.map((option) => ({
+        code: option.code,
+        label: filterOptionLabel(option, { archived: t("joinUs.suffix.archived"), inactive: t("joinUs.suffix.inactive") }),
       })),
-    ];
-  }, [joinTypes, language, t]);
+    ],
+    [options, t]
+  );
 
   const { data, isLoading, isError, error, isFetching } = useQuery({
     queryKey: ["admin-consultants", tab, page, pageSize],
