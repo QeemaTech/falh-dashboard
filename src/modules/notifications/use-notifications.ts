@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useUiStore } from "../../store/ui-store";
 import {
   fetchMyNotifications,
   markAllNotificationsAsReadApi,
@@ -9,9 +10,10 @@ export const NOTIFICATIONS_QUERY_KEY = ["my-notifications"] as const;
 
 export function useNotifications(limit = 20, page = 1) {
   const queryClient = useQueryClient();
+  const { language } = useUiStore();
 
   const query = useQuery({
-    queryKey: [...NOTIFICATIONS_QUERY_KEY, page, limit],
+    queryKey: [...NOTIFICATIONS_QUERY_KEY, language, page, limit],
     queryFn: () => fetchMyNotifications({ page, limit }),
     refetchInterval: 60_000,
     placeholderData: (previousData) => previousData,

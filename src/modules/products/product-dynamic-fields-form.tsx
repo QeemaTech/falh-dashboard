@@ -20,6 +20,7 @@ import type { DynamicField } from "../../services/admin-api";
 import { resolveAssetUrl } from "../../utils/asset-url";
 import {
   dynamicFieldLabel,
+  dynamicFieldHelpText,
   dynamicFieldPlaceholder,
   getDynamicFieldOptionItems,
   isOptionsInputMode,
@@ -70,6 +71,7 @@ function DynamicFieldInput({
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const label = dynamicFieldLabel(field, language);
+  const helpText = dynamicFieldHelpText(field, language);
   const requiredMark = field.isRequired ? " *" : "";
 
   if (field.fieldType === "BOOLEAN") {
@@ -85,7 +87,7 @@ function DynamicFieldInput({
           }
           label={`${label}${requiredMark}`}
         />
-        {field.helpText ? <FormHelperText>{field.helpText}</FormHelperText> : null}
+        {helpText ? <FormHelperText>{helpText}</FormHelperText> : null}
       </FormControl>
     );
   }
@@ -95,7 +97,7 @@ function DynamicFieldInput({
       <TextField
         label={`${label}${requiredMark}`}
         placeholder={dynamicFieldPlaceholder(field, language)}
-        helperText={field.helpText}
+        helperText={helpText || undefined}
         size="small"
         fullWidth
         multiline
@@ -126,7 +128,7 @@ function DynamicFieldInput({
               />
             ))}
           </RadioGroup>
-          {field.helpText ? <FormHelperText>{field.helpText}</FormHelperText> : null}
+          {helpText ? <FormHelperText>{helpText}</FormHelperText> : null}
         </FormControl>
       );
     }
@@ -135,7 +137,7 @@ function DynamicFieldInput({
       <TextField
         select
         label={`${label}${requiredMark}`}
-        helperText={field.helpText}
+        helperText={helpText || undefined}
         size="small"
         fullWidth
         disabled={disabled}
@@ -198,7 +200,7 @@ function DynamicFieldInput({
             e.target.value = "";
           }}
         />
-        {field.helpText ? <FormHelperText>{field.helpText}</FormHelperText> : null}
+        {helpText ? <FormHelperText>{helpText}</FormHelperText> : null}
       </FormControl>
     );
   }
@@ -211,7 +213,7 @@ function DynamicFieldInput({
       type={inputType}
       label={`${label}${requiredMark}`}
       placeholder={dynamicFieldPlaceholder(field, language)}
-      helperText={field.helpText}
+      helperText={helpText || undefined}
       size="small"
       fullWidth
       disabled={disabled}

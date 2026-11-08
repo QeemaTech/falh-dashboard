@@ -646,13 +646,18 @@ export type DynamicField = {
   id: string;
   categoryId: string;
   label: string;
+  labelAr?: string;
   labelEn?: string;
   fieldKey: string;
   fieldType: DynamicFieldType;
   /** OPTIONS = choose from options; VALUE = free typed input */
   inputMode?: DynamicFieldInputMode;
   placeholder?: string;
+  placeholderAr?: string;
+  placeholderEn?: string;
   helpText?: string;
+  helpTextAr?: string;
+  helpTextEn?: string;
   isRequired: boolean;
   isActive: boolean;
   showInFilter?: boolean;

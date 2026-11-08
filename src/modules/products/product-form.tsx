@@ -134,7 +134,7 @@ export function ProductForm({
   const effectiveProduct = productDetails || product;
 
   const { data: categoryFields = [], isLoading: categoryFieldsLoading } = useQuery({
-    queryKey: ["category-form-fields", categoryId, scope],
+    queryKey: ["category-form-fields", categoryId, scope, language],
     queryFn: () =>
       scope === "admin" ? fetchCategoryDynamicFields(categoryId, false) : fetchCategoryFormFields(categoryId),
     enabled: active && Boolean(categoryId),

@@ -10,9 +10,17 @@ export const http = axios.create({
   timeout: 20_000,
 });
 
+function getAppLanguage(): "ar" | "en" {
+  if (typeof window === "undefined") return "ar";
+  return window.localStorage.getItem("app-language") === "en" ? "en" : "ar";
+}
+
 http.interceptors.request.use((config) => {
   const token = getAccessToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  const lang = getAppLanguage();
+  config.headers["Accept-Language"] = lang;
+  config.params = { lang, ...(config.params || {}) };
   return config;
 });
 

@@ -11,14 +11,46 @@ export type DynamicFieldOptionItem = {
 
 export type DynamicFieldValuesMap = Record<string, DynamicFieldEntry>;
 
+const FIELD_KEY_AR: Record<string, string> = {
+  area: "المساحة",
+  units: "الوحدة",
+  unit: "الوحدة",
+  price: "السعر",
+  soil_type: "نوع التربة",
+  water_source: "مصدر المياه",
+};
+
+function hasArabic(value?: string | null) {
+  return Boolean(value && /[\u0600-\u06FF]/.test(value));
+}
+
+function pickFieldText(language: "ar" | "en", ar?: string, en?: string, fallback = "") {
+  const arVal = (ar || "").trim();
+  const enVal = (en || "").trim();
+  if (language === "en") return enVal || arVal || fallback;
+  return arVal || fallback || enVal;
+}
+
 export function dynamicFieldLabel(field: DynamicField, language: "ar" | "en") {
-  if (language === "ar") return field.label || field.labelEn || field.fieldKey;
-  return field.labelEn || field.label || field.fieldKey;
+  const rawAr = (field.labelAr || "").trim();
+  const rawLabel = (field.label || "").trim();
+  const rawEn = (field.labelEn || "").trim();
+  const arabic = hasArabic(rawAr) ? rawAr : hasArabic(rawLabel) ? rawLabel : "";
+  const english = rawEn || (!hasArabic(rawLabel) ? rawLabel : "");
+  return pickFieldText(language, arabic, english, FIELD_KEY_AR[field.fieldKey] || field.fieldKey);
 }
 
 export function dynamicFieldPlaceholder(field: DynamicField, language: "ar" | "en") {
-  if (field.placeholder) return field.placeholder;
-  return dynamicFieldLabel(field, language);
+  const arabic = hasArabic(field.placeholderAr) ? field.placeholderAr : hasArabic(field.placeholder) ? field.placeholder : "";
+  const english = field.placeholderEn || (!hasArabic(field.placeholder) ? field.placeholder : "");
+  return pickFieldText(language, arabic, english) || dynamicFieldLabel(field, language);
+}
+
+export function dynamicFieldHelpText(field: DynamicField, language: "ar" | "en") {
+  const arabic = hasArabic(field.helpTextAr) ? field.helpTextAr : hasArabic(field.helpText) ? field.helpText : "";
+  const english = field.helpTextEn || (!hasArabic(field.helpText) ? field.helpText : "");
+  if (language === "ar" && !arabic) return "";
+  return pickFieldText(language, arabic, english);
 }
 
 export function resolveFieldInputMode(field: DynamicField): DynamicFieldInputMode {
@@ -33,8 +65,8 @@ export function isOptionsInputMode(field: DynamicField) {
 
 export function getDynamicFieldOptionItems(field: DynamicField, language: "ar" | "en" = "ar"): DynamicFieldOptionItem[] {
   const options = field.options as
-    | Array<string | { value?: string; label?: string; labelEn?: string }>
-    | { items?: Array<string | { value?: string; label?: string; labelEn?: string }> }
+    | Array<string | { value?: string; label?: string; labelAr?: string; labelEn?: string }>
+    | { items?: Array<string | { value?: string; label?: string; labelAr?: string; labelEn?: string }> }
     | null
     | undefined;
 
@@ -53,8 +85,11 @@ export function getDynamicFieldOptionItems(field: DynamicField, language: "ar" |
       if (!item || typeof item !== "object") return null;
       const value = String(item.value ?? item.label ?? "").trim();
       if (!value) return null;
-      const labelAr = String(item.label ?? value).trim() || value;
-      const labelEn = String(item.labelEn ?? "").trim();
+      const rawLabel = String(item.label ?? "").trim();
+      const rawAr = String(item.labelAr ?? "").trim();
+      const rawEn = String(item.labelEn ?? "").trim();
+      const labelAr = hasArabic(rawAr) ? rawAr : hasArabic(rawLabel) ? rawLabel : rawAr || rawLabel || value;
+      const labelEn = rawEn || (!hasArabic(rawLabel) ? rawLabel : "");
       const label = language === "en" ? labelEn || labelAr : labelAr || labelEn;
       return { value, label };
     })
