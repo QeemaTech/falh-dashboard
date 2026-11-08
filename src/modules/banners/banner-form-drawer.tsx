@@ -1,19 +1,6 @@
-import { useEffect, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import {
-  Box,
-  Button,
-  Checkbox,
-  FormControlLabel,
-  Stack,
-  TextField,
-  Typography,
-} from "@mui/material";
 import { AppDrawer } from "../../components/design-system";
-import { createAdminBannerApi, fetchAdminCompanies, fetchAdminProducts } from "../../services/admin-api";
-import { getApiErrorMessage } from "../../utils/api-error";
 import { useI18n } from "../../hooks/use-i18n";
-import { BannerTargetFields, type BannerTargetType } from "./banner-target-fields";
+import { BannerForm } from "./banner-form";
 
 type Props = {
   open: boolean;
@@ -23,176 +10,16 @@ type Props = {
 
 export function BannerFormDrawer({ open, onClose, onSuccess }: Props) {
   const { t } = useI18n();
-  const [titleAr, setTitleAr] = useState("");
-  const [titleEn, setTitleEn] = useState("");
-  const [targetType, setTargetType] = useState<BannerTargetType>("company");
-  const [companyId, setCompanyId] = useState("");
-  const [productId, setProductId] = useState("");
-  const [externalUrl, setExternalUrl] = useState("");
-  const [sortOrder, setSortOrder] = useState(0);
-  const [displayDays, setDisplayDays] = useState<number | "">(7);
-  const [isActive, setIsActive] = useState(true);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const { data: companiesData, isLoading: companiesLoading } = useQuery({
-    queryKey: ["admin-companies-approved-banners"],
-    queryFn: () => fetchAdminCompanies({ page: 1, limit: 100, status: "APPROVED" }),
-    enabled: open,
-  });
-  const companies = companiesData?.items || [];
-  const { data: productsData, isLoading: productsLoading } = useQuery({
-    queryKey: ["admin-products-banner-target"],
-    queryFn: () => fetchAdminProducts({ page: 1, limit: 100, status: "ACTIVE", sortBy: "createdAt", sortOrder: "desc" }),
-    enabled: open,
-  });
-  const products = productsData?.items || [];
-
-  useEffect(() => {
-    if (!open) return;
-    setTitleAr("");
-    setTitleEn("");
-    setTargetType("company");
-    setCompanyId("");
-    setProductId("");
-    setExternalUrl("");
-    setSortOrder(0);
-    setDisplayDays(7);
-    setIsActive(true);
-    setImageFile(null);
-    setPreviewUrl(null);
-    setError(null);
-  }, [open]);
-
-  useEffect(() => {
-    if (!imageFile) {
-      setPreviewUrl(null);
-      return;
-    }
-    const url = URL.createObjectURL(imageFile);
-    setPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [imageFile]);
-
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      if (!titleAr.trim()) throw new Error(t("banners.titleRequired"));
-      if (!titleEn.trim()) throw new Error(t("banners.errorTitleEn"));
-      if (!imageFile) throw new Error(t("banners.imageRequired"));
-      if (displayDays !== "" && (Number.isNaN(Number(displayDays)) || Number(displayDays) < 1)) {
-        throw new Error(t("banners.errorDisplayDays"));
-      }
-      if (targetType === "company" && !companyId) throw new Error(t("banners.companyRequired"));
-      if (targetType === "product" && !productId) throw new Error(t("banners.productRequired"));
-      if (targetType === "url" && !externalUrl.trim()) throw new Error(t("banners.urlRequired"));
-      return createAdminBannerApi({
-        titleAr: titleAr.trim(),
-        titleEn: titleEn.trim(),
-        image: imageFile,
-        linkType: targetType,
-        companyId: targetType === "company" ? companyId : undefined,
-        productId: targetType === "product" ? productId : undefined,
-        linkValue: targetType === "url" ? externalUrl.trim() : undefined,
-        sortOrder: Number(sortOrder),
-        displayDays: displayDays === "" ? null : Number(displayDays),
-        isActive,
-      });
-    },
-    onSuccess: () => {
-      onSuccess();
-      onClose();
-    },
-    onError: (err: unknown) => setError(getApiErrorMessage(err, t("banners.saveFailed"))),
-  });
 
   return (
-    <AppDrawer
-      open={open}
-      onClose={onClose}
-      title={t("banners.addTitle")}
-      description={t("banners.addDescription")}
-      footer={
-        <Stack direction="row" spacing={1}>
-          <Button variant="contained" disabled={saveMutation.isPending} onClick={() => saveMutation.mutate()}>
-            {saveMutation.isPending ? t("common.loading") : t("banners.save")}
-          </Button>
-          <Button onClick={onClose}>{t("banners.cancel")}</Button>
-        </Stack>
-      }
-    >
-      <Stack spacing={2}>
-        {error ? (
-          <Typography variant="body2" color="error">
-            {error}
-          </Typography>
-        ) : null}
-        <TextField
-          size="small"
-          fullWidth
-          label={t("banners.fieldTitleAr")}
-          value={titleAr}
-          onChange={(e) => setTitleAr(e.target.value)}
-        />
-        <TextField
-          size="small"
-          fullWidth
-          label={t("banners.fieldTitleEn")}
-          value={titleEn}
-          onChange={(e) => setTitleEn(e.target.value)}
-        />
-        <Button component="label" variant="outlined" fullWidth>
-          {t("banners.fieldImage")}
-          <input hidden type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
-        </Button>
-        {previewUrl ? (
-          <Box component="img" src={previewUrl} alt="" sx={{ height: 128, width: "100%", borderRadius: "8px", objectFit: "cover" }} />
-        ) : null}
-
-        <BannerTargetFields
-          targetType={targetType}
-          onTargetType={setTargetType}
-          companyId={companyId}
-          onCompanyId={setCompanyId}
-          productId={productId}
-          onProductId={setProductId}
-          externalUrl={externalUrl}
-          onExternalUrl={setExternalUrl}
-          companies={companies}
-          companiesLoading={companiesLoading}
-          products={products}
-          productsLoading={productsLoading}
-          t={t}
-        />
-
-        <TextField
-          size="small"
-          fullWidth
-          type="number"
-          label={t("banners.fieldDisplayDays")}
-          value={displayDays}
-          onChange={(e) => {
-            const raw = e.target.value;
-            setDisplayDays(raw === "" ? "" : Number(raw));
-          }}
-          placeholder={t("banners.fieldDisplayDaysHint")}
-          helperText={t("banners.fieldDisplayDaysHelp")}
-          slotProps={{ htmlInput: { min: 1 } }}
-        />
-        <TextField
-          size="small"
-          fullWidth
-          type="number"
-          label={t("banners.fieldSortOrder")}
-          value={sortOrder}
-          onChange={(e) => setSortOrder(Number(e.target.value))}
-          slotProps={{ htmlInput: { min: 0 } }}
-        />
-        <FormControlLabel
-          control={<Checkbox checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />}
-          label={t("banners.fieldActive")}
-        />
-      </Stack>
+    <AppDrawer open={open} onClose={onClose} title={t("banners.addTitle")} width={560}>
+      <BannerForm
+        onSuccess={() => {
+          onSuccess();
+          onClose();
+        }}
+        onCancel={onClose}
+      />
     </AppDrawer>
   );
 }

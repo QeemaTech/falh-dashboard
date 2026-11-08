@@ -1,13 +1,22 @@
 import { useMemo, useState } from "react";
-import { Autocomplete, CircularProgress, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
+import {
+  Autocomplete,
+  Box,
+  CircularProgress,
+  Stack,
+  TextField,
+  ToggleButton,
+  ToggleButtonGroup,
+  Typography,
+} from "@mui/material";
 import type { AdminCompany, AdminProduct } from "../../services/admin-api";
 import { BannerCompanyPicker } from "./banner-company-picker";
 
 export type BannerTargetType = "company" | "product" | "url";
 
 type Props = {
-  targetType: BannerTargetType;
-  onTargetType: (value: BannerTargetType) => void;
+  selectedTargets: BannerTargetType[];
+  onSelectedTargets: (targets: BannerTargetType[]) => void;
   companyId: string;
   onCompanyId: (companyId: string) => void;
   productId: string;
@@ -26,8 +35,8 @@ function productLabel(product: AdminProduct) {
 }
 
 export function BannerTargetFields({
-  targetType,
-  onTargetType,
+  selectedTargets,
+  onSelectedTargets,
   companyId,
   onCompanyId,
   productId,
@@ -46,35 +55,41 @@ export function BannerTargetFields({
     [products, productId]
   );
 
+  const hasCompany = selectedTargets.includes("company");
+  const hasProduct = selectedTargets.includes("product");
+  const hasUrl = selectedTargets.includes("url");
+
   return (
-    <Stack spacing={1.5}>
-      <Typography variant="body2" sx={{ fontWeight: 600 }}>
-        {t("banners.fieldTarget")}
-      </Typography>
+    <Stack spacing={2}>
+      <Box>
+        <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+          {t("banners.fieldTargetsSection")}
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          {t("banners.fieldTargetHint")}
+        </Typography>
+      </Box>
+
       <ToggleButtonGroup
-        exclusive
         fullWidth
         size="small"
-        value={targetType}
-        onChange={(_event, value: BannerTargetType | null) => {
-          if (value) onTargetType(value);
+        value={selectedTargets}
+        onChange={(_event, values: BannerTargetType[]) => {
+          onSelectedTargets(values || []);
         }}
       >
-        <ToggleButton value="company" sx={{ textTransform: "none" }}>
+        <ToggleButton value="company" sx={{ textTransform: "none", fontWeight: hasCompany ? 600 : 400 }}>
           {t("banners.linkCompany")}
         </ToggleButton>
-        <ToggleButton value="product" sx={{ textTransform: "none" }}>
+        <ToggleButton value="product" sx={{ textTransform: "none", fontWeight: hasProduct ? 600 : 400 }}>
           {t("banners.linkProduct")}
         </ToggleButton>
-        <ToggleButton value="url" sx={{ textTransform: "none" }}>
+        <ToggleButton value="url" sx={{ textTransform: "none", fontWeight: hasUrl ? 600 : 400 }}>
           {t("banners.linkUrl")}
         </ToggleButton>
       </ToggleButtonGroup>
-      <Typography variant="caption" color="text.secondary">
-        {t("banners.fieldTargetHint")}
-      </Typography>
 
-      {targetType === "company" ? (
+      {hasCompany ? (
         <BannerCompanyPicker
           companies={companies}
           loading={companiesLoading}
@@ -87,7 +102,7 @@ export function BannerTargetFields({
         />
       ) : null}
 
-      {targetType === "product" ? (
+      {hasProduct ? (
         <Autocomplete
           options={products}
           loading={productsLoading}
@@ -122,7 +137,7 @@ export function BannerTargetFields({
         />
       ) : null}
 
-      {targetType === "url" ? (
+      {hasUrl ? (
         <TextField
           size="small"
           fullWidth

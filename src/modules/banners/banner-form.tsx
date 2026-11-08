@@ -34,7 +34,9 @@ export function BannerForm({
   const { t } = useI18n();
   const [titleAr, setTitleAr] = useState("");
   const [titleEn, setTitleEn] = useState("");
-  const [targetType, setTargetType] = useState<BannerTargetType>("company");
+  const [badgeTextAr, setBadgeTextAr] = useState("");
+  const [badgeTextEn, setBadgeTextEn] = useState("");
+  const [selectedTargets, setSelectedTargets] = useState<BannerTargetType[]>(["company"]);
   const [companyId, setCompanyId] = useState("");
   const [productId, setProductId] = useState("");
   const [externalUrl, setExternalUrl] = useState("");
@@ -74,17 +76,27 @@ export function BannerForm({
       if (displayDays !== "" && (Number.isNaN(Number(displayDays)) || Number(displayDays) < 1)) {
         throw new Error(t("banners.errorDisplayDays"));
       }
-      if (targetType === "company" && !companyId) throw new Error(t("banners.companyRequired"));
-      if (targetType === "product" && !productId) throw new Error(t("banners.productRequired"));
-      if (targetType === "url" && !externalUrl.trim()) throw new Error(t("banners.urlRequired"));
+      if (selectedTargets.includes("company") && !companyId) {
+        throw new Error(t("banners.companyRequired"));
+      }
+      if (selectedTargets.includes("product") && !productId) {
+        throw new Error(t("banners.productRequired"));
+      }
+      if (selectedTargets.includes("url") && !externalUrl.trim()) {
+        throw new Error(t("banners.urlRequired"));
+      }
       return createAdminBannerApi({
         titleAr: titleAr.trim(),
         titleEn: titleEn.trim(),
+        badgeTextAr: badgeTextAr.trim() || undefined,
+        badgeTextEn: badgeTextEn.trim() || undefined,
+        badgeText: badgeTextAr.trim() || badgeTextEn.trim() || undefined,
         image: imageFile,
-        linkType: targetType,
-        companyId: targetType === "company" ? companyId : undefined,
-        productId: targetType === "product" ? productId : undefined,
-        linkValue: targetType === "url" ? externalUrl.trim() : undefined,
+        linkType: selectedTargets.length > 1 ? "multi" : (selectedTargets[0] || undefined),
+        companyId: selectedTargets.includes("company") ? companyId : undefined,
+        productId: selectedTargets.includes("product") ? productId : undefined,
+        externalUrl: selectedTargets.includes("url") ? externalUrl.trim() : undefined,
+        linkValue: selectedTargets.includes("url") ? externalUrl.trim() : undefined,
         sortOrder: Number(sortOrder),
         displayDays: displayDays === "" ? null : Number(displayDays),
         isActive,
@@ -121,6 +133,27 @@ export function BannerForm({
         value={titleEn}
         onChange={(e) => setTitleEn(e.target.value)}
       />
+
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+        <TextField
+          size="small"
+          fullWidth
+          label={t("banners.fieldBadgeTextAr")}
+          value={badgeTextAr}
+          onChange={(e) => setBadgeTextAr(e.target.value)}
+          placeholder="مثال: خصم 50% أو Flash sale أو عروض الجمعة البيضاء"
+          helperText={t("banners.fieldBadgeTextHint")}
+        />
+        <TextField
+          size="small"
+          fullWidth
+          label={t("banners.fieldBadgeTextEn")}
+          value={badgeTextEn}
+          onChange={(e) => setBadgeTextEn(e.target.value)}
+          placeholder="e.g. 50% Off or Flash sale"
+        />
+      </Stack>
+
       <Button component="label" variant="outlined" fullWidth sx={{ borderRadius: "8px" }}>
         {t("banners.fieldImage")}
         <input hidden type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
@@ -135,8 +168,8 @@ export function BannerForm({
       ) : null}
 
       <BannerTargetFields
-        targetType={targetType}
-        onTargetType={setTargetType}
+        selectedTargets={selectedTargets}
+        onSelectedTargets={setSelectedTargets}
         companyId={companyId}
         onCompanyId={setCompanyId}
         productId={productId}

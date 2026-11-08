@@ -88,17 +88,25 @@ export type AdminBanner = {
   title: string;
   titleAr?: string;
   titleEn?: string;
+  badgeText?: string | null;
+  badgeTextAr?: string | null;
+  badgeTextEn?: string | null;
   imagePath: string;
   companyId?: string | null;
+  productId?: string | null;
+  externalUrl?: string | null;
   company?: { id: string; name?: string; city?: string; status?: string; logo?: string | null } | null;
-  linkType?: "company" | "product" | "url" | string | null;
+  linkType?: "company" | "product" | "url" | "multi" | string | null;
   linkValue?: string | null;
   product?: { id: string; title?: string; titleAr?: string; titleEn?: string; status?: string } | null;
   navigation?: {
-    type: "company" | "product" | "url" | null;
+    type: "company" | "product" | "url" | "multi" | "none" | string | null;
+    targets?: string[];
     companyId?: string | null;
     productId?: string | null;
     url?: string | null;
+    company?: { id: string; name?: string; city?: string; status?: string; logo?: string | null } | null;
+    product?: { id: string; title?: string; titleAr?: string; titleEn?: string; status?: string } | null;
   };
   sortOrder: number;
   isActive: boolean;
@@ -906,10 +914,14 @@ export async function fetchAdminBanners() {
 export type BannerFormPayload = {
   titleAr: string;
   titleEn: string;
+  badgeTextAr?: string | null;
+  badgeTextEn?: string | null;
+  badgeText?: string | null;
   image: File;
-  linkType: "company" | "product" | "url";
+  linkType?: "company" | "product" | "url" | "multi" | string;
   companyId?: string | null;
   productId?: string | null;
+  externalUrl?: string | null;
   linkValue?: string | null;
   sortOrder?: number;
   isActive?: boolean;
@@ -921,12 +933,26 @@ export async function createAdminBannerApi(payload: BannerFormPayload) {
   formData.append("titleAr", payload.titleAr);
   formData.append("titleEn", payload.titleEn);
   formData.append("image", payload.image);
-  formData.append("linkType", payload.linkType);
+  if (payload.badgeTextAr) {
+    formData.append("badgeTextAr", payload.badgeTextAr);
+  }
+  if (payload.badgeTextEn) {
+    formData.append("badgeTextEn", payload.badgeTextEn);
+  }
+  if (payload.badgeText) {
+    formData.append("badgeText", payload.badgeText);
+  }
+  if (payload.linkType) {
+    formData.append("linkType", payload.linkType);
+  }
   if (payload.companyId) {
     formData.append("companyId", payload.companyId);
   }
   if (payload.productId) {
     formData.append("productId", payload.productId);
+  }
+  if (payload.externalUrl) {
+    formData.append("externalUrl", payload.externalUrl);
   }
   if (payload.linkValue) {
     formData.append("linkValue", payload.linkValue);

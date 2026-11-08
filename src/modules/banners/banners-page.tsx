@@ -30,22 +30,53 @@ export function BannersPage() {
       ? banner.titleAr || banner.title
       : banner.titleEn || banner.titleAr || banner.title;
 
-  const bannerTargetLabel = (banner: AdminBanner) => {
-    const type = banner.navigation?.type || banner.linkType;
-    if (type === "company") return `${t("banners.linkCompany")}: ${banner.company?.name || "—"}`;
-    if (type === "product") {
+  const bannerTargetsView = (banner: AdminBanner) => {
+    const targets: { label: string; key: string }[] = [];
+    if (banner.company?.name || banner.companyId) {
+      targets.push({
+        key: "company",
+        label: `${t("banners.linkCompany")}: ${banner.company?.name || banner.companyId}`,
+      });
+    }
+    if (banner.product || banner.productId) {
       const name =
         language === "ar"
           ? banner.product?.titleAr || banner.product?.title
           : banner.product?.titleEn || banner.product?.titleAr || banner.product?.title;
-      return `${t("banners.linkProduct")}: ${name || "—"}`;
+      targets.push({
+        key: "product",
+        label: `${t("banners.linkProduct")}: ${name || banner.productId}`,
+      });
     }
-    if (type === "url") {
-      const url = banner.navigation?.url || banner.linkValue || "";
-      if (!url) return t("banners.linkUrl");
-      return url.length > 48 ? `${url.slice(0, 48)}…` : url;
+    const url =
+      banner.externalUrl ||
+      banner.navigation?.url ||
+      (banner.linkType === "url" ? banner.linkValue : null);
+    if (url) {
+      const shortUrl = url.length > 30 ? `${url.slice(0, 30)}…` : url;
+      targets.push({
+        key: "url",
+        label: `${t("banners.linkUrl")}: ${shortUrl}`,
+      });
     }
-    return banner.company?.name || "—";
+
+    if (targets.length === 0) {
+      return (
+        <Typography variant="caption" color="text.secondary">
+          {t("banners.linkNone", "—")}
+        </Typography>
+      );
+    }
+
+    return (
+      <Stack spacing={0.5} sx={{ alignItems: "flex-start" }}>
+        {targets.map((tgt) => (
+          <AppBadge key={tgt.key} variant="neutral">
+            {tgt.label}
+          </AppBadge>
+        ))}
+      </Stack>
+    );
   };
 
   const bannerDisplayLabel = (banner: AdminBanner) => {
@@ -123,6 +154,7 @@ export function BannersPage() {
             <tr>
               <AppTableHeaderCell>{t("banners.colImage")}</AppTableHeaderCell>
               <AppTableHeaderCell>{t("banners.colTitle")}</AppTableHeaderCell>
+              <AppTableHeaderCell>{t("banners.colBadge")}</AppTableHeaderCell>
               <AppTableHeaderCell>{t("banners.colTarget")}</AppTableHeaderCell>
               <AppTableHeaderCell>{t("banners.colSortOrder")}</AppTableHeaderCell>
               <AppTableHeaderCell>{t("banners.colDisplay")}</AppTableHeaderCell>
@@ -146,7 +178,14 @@ export function BannersPage() {
                   )}
                 </AppTableCell>
                 <AppTableCell>{bannerTitle(banner)}</AppTableCell>
-                <AppTableCell>{bannerTargetLabel(banner)}</AppTableCell>
+                <AppTableCell>
+                  <AppBadge variant="default">
+                    {banner.badgeText ||
+                      (language === "ar" ? banner.badgeTextAr : banner.badgeTextEn) ||
+                      (language === "ar" ? "عروض خاصة" : "Special Offers")}
+                  </AppBadge>
+                </AppTableCell>
+                <AppTableCell>{bannerTargetsView(banner)}</AppTableCell>
                 <AppTableCell>{banner.sortOrder ?? 0}</AppTableCell>
                 <AppTableCell>{bannerDisplayLabel(banner)}</AppTableCell>
                 <AppTableCell>
