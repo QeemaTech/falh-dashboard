@@ -98,6 +98,8 @@ export function ProductForm({
   const [titleAr, setTitleAr] = useState("");
   const [titleEn, setTitleEn] = useState("");
   const [descriptionAr, setDescriptionAr] = useState("");
+  const [price, setPrice] = useState("");
+  const [discountPrice, setDiscountPrice] = useState("");
   const [advertiserName, setAdvertiserName] = useState("");
   const [contactPhone, setContactPhone] = useState("");
   const [whatsappNumber, setWhatsappNumber] = useState("");
@@ -163,6 +165,19 @@ export function ProductForm({
       setTitleAr(source.titleAr || source.title);
       setTitleEn(source.titleEn || "");
       setDescriptionAr(source.descriptionAr || source.description || "");
+      const selling = source.price;
+      const listed = source.originalPrice;
+      if (listed != null && selling != null && listed > selling) {
+        setPrice(String(listed));
+        setDiscountPrice(String(selling));
+      } else {
+        setPrice(selling != null && selling !== "" ? String(selling) : "");
+        setDiscountPrice(
+          source.discountPrice != null && source.discountPrice !== selling
+            ? String(source.discountPrice)
+            : ""
+        );
+      }
       setAdvertiserName(source.advertiserName || "");
       setContactPhone(source.contactPhone || "");
       setWhatsappNumber(source.whatsappNumber || "");
@@ -180,6 +195,8 @@ export function ProductForm({
       setTitleAr("");
       setTitleEn("");
       setDescriptionAr("");
+      setPrice("");
+      setDiscountPrice("");
       setAdvertiserName("");
       setContactPhone("");
       setWhatsappNumber("");
@@ -287,6 +304,8 @@ export function ProductForm({
             : undefined,
         ...(requiresCityAndCenter ? { cityId, centerId } : {}),
         ...(parsedLat !== undefined && parsedLng !== undefined ? { lat: parsedLat, lng: parsedLng } : {}),
+        price: price.trim() === "" ? null : Number(price),
+        discountPrice: discountPrice.trim() === "" ? null : Number(discountPrice),
         images,
         dynamicFields: buildDynamicFieldsPayload(categoryFields, dynamicValues),
       };
@@ -474,6 +493,33 @@ export function ProductForm({
           value={descriptionAr}
           onChange={(e) => setDescriptionAr(e.target.value)}
         />
+
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+            gap: 2,
+          }}
+        >
+          <TextField
+            size="small"
+            fullWidth
+            type="number"
+            inputProps={{ min: 0, step: "0.01" }}
+            label={t("products.form.price")}
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+          />
+          <TextField
+            size="small"
+            fullWidth
+            type="number"
+            inputProps={{ min: 0, step: "0.01" }}
+            label={t("products.form.discountPrice")}
+            value={discountPrice}
+            onChange={(e) => setDiscountPrice(e.target.value)}
+          />
+        </Box>
 
         {categoryId && categoryFieldsLoading ? (
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, py: 1.5, px: 2, bgcolor: "action.hover", borderRadius: 1.5 }}>

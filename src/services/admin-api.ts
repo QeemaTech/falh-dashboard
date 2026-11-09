@@ -129,7 +129,8 @@ export type AdminProduct = {
   isFeaturedMostRequested?: boolean;
   mostRequestedSortOrder?: number;
   status: string;
-  price?: number;
+  price?: number | null;
+  discountPrice?: number | null;
   originalPrice?: number | null;
   quantity?: number;
   unit?: string;
@@ -251,6 +252,9 @@ export type ProductFormPayload = {
   categoryId: string;
   quantity?: number;
   unit?: string;
+  price?: number | null;
+  discountPrice?: number | null;
+  originalPrice?: number | null;
   city?: string;
   cityId?: string;
   centerId?: string;

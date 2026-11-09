@@ -110,7 +110,7 @@ export function ProductDetailPage({ backTo = "/products", allowModerate = true }
   const coverPath = primaryProductImagePath(product);
   const owner = product.company?.name || product.user?.name || t("products.globalOwner");
   const category = categoryLabel(product, language);
-  const priceLabel = product.price
+  const priceLabel = product.price != null
     ? `${t("market.currency")} ${Number(product.price).toLocaleString(locale)}`
     : "—";
 

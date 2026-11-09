@@ -408,7 +408,7 @@ export function ProductManagementPage() {
                     />
                   </AppTableCell>
                   <AppTableCell>
-                    {product.price !== undefined ? (
+                    {product.price != null ? (
                       <Stack direction="row" spacing={0.75} sx={{ alignItems: "center", flexWrap: "wrap" }}>
                         {product.originalPrice && product.originalPrice > product.price ? (
                           <>

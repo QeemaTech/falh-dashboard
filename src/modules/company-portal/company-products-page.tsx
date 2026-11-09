@@ -143,7 +143,7 @@ export function CompanyProductsPage() {
             key: "price",
             label: t("company.products.col.price"),
             render: (row) =>
-              row.price !== undefined ? (
+              row.price != null ? (
                 <Stack direction="row" spacing={0.75} sx={{ alignItems: "center", flexWrap: "wrap" }}>
                   {row.originalPrice && row.originalPrice > row.price ? (
                     <>
