@@ -78,7 +78,6 @@ export function ProviderFormBuilderPage() {
     queryClient.invalidateQueries({ queryKey: ["provider-form-versions", typeId] });
     queryClient.invalidateQueries({ queryKey: ["provider-form-version", activeId] });
     queryClient.invalidateQueries({ queryKey: ["provider-types"] });
-    queryClient.invalidateQueries({ queryKey: ["provider-cutover"] });
     setPreview(null);
   };
   const onError = (err: unknown) => toast.error(err instanceof Error ? err.message : t("providerForms.saveFailed"));

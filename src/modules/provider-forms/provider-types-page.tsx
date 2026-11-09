@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Alert, Button, Chip, CircularProgress, Paper, Stack, TextField, Typography } from "@mui/material";
+import { Alert, Button, Chip, CircularProgress, Stack, TextField, Typography } from "@mui/material";
 import { Add } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { DataTable, EmptyState, PageHeader } from "../../components/layout";
@@ -11,12 +11,9 @@ import { useI18n } from "../../hooks/use-i18n";
 import {
   activateProviderType,
   archiveProviderType,
-  completeCutoverApi,
   createProviderType,
   deactivateProviderType,
-  fetchCutoverReadiness,
   fetchProviderTypes,
-  revertCutoverApi,
   unarchiveProviderType,
   updateProviderType,
   type ProviderType,
@@ -41,7 +38,6 @@ export function ProviderTypesPage() {
   const [formError, setFormError] = useState("");
 
   const typesQuery = useQuery({ queryKey: ["provider-types"], queryFn: fetchProviderTypes });
-  const readinessQuery = useQuery({ queryKey: ["provider-cutover"], queryFn: fetchCutoverReadiness });
 
   // COMPANY is fixed and has its own flow: it is never listed or editable here.
   const providerTypes = (typesQuery.data || []).filter((type) => type.managed && type.category === "PROVIDER");
@@ -49,7 +45,6 @@ export function ProviderTypesPage() {
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["provider-types"] });
-    queryClient.invalidateQueries({ queryKey: ["provider-cutover"] });
     queryClient.invalidateQueries({ queryKey: ["provider-filter-types"] });
     queryClient.invalidateQueries({ queryKey: ["application-filter-types"] });
   };
@@ -91,20 +86,6 @@ export function ProviderTypesPage() {
     onError: onError,
   });
 
-  const cutoverMutation = useMutation({
-    mutationFn: async (action: "complete" | "revert") => {
-      if (!window.confirm(t(action === "complete" ? "providerTypes.confirmCutover" : "providerTypes.confirmRevert"))) return null;
-      return action === "complete" ? completeCutoverApi() : revertCutoverApi();
-    },
-    onSuccess: (result) => {
-      if (result) {
-        refresh();
-        toast.success(t("providerTypes.cutoverUpdated"));
-      }
-    },
-    onError: onError,
-  });
-
   function openCreate() {
     setEditing(null);
     setForm(emptyForm);
@@ -129,8 +110,6 @@ export function ProviderTypesPage() {
     return <EmptyState title={t("providerTypes.loadFailed")} description={(typesQuery.error as Error).message} />;
   }
 
-  const readiness = readinessQuery.data;
-
   return (
     <Stack spacing={2.5}>
       <PageHeader
@@ -146,48 +125,7 @@ export function ProviderTypesPage() {
       />
 
       <Alert severity="info">{t("providerTypes.companyFixed")}</Alert>
-
-      {readiness ? (
-        <Paper variant="outlined" sx={{ p: 2 }}>
-          <Stack spacing={1}>
-            <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap" }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                {t("providerTypes.rollout")}
-              </Typography>
-              <Chip
-                size="small"
-                color={readiness.mode === "DYNAMIC" ? "success" : "warning"}
-                label={t(readiness.mode === "DYNAMIC" ? "providerTypes.modeDynamic" : "providerTypes.modeLegacy")}
-              />
-            </Stack>
-            <Typography variant="body2" color="text.secondary">
-              {t(readiness.mode === "DYNAMIC" ? "providerTypes.rolloutDynamicHint" : "providerTypes.rolloutLegacyHint")}
-            </Typography>
-            {readiness.mode === "LEGACY" && readiness.blockers.length ? (
-              <Typography variant="body2">
-                {t("providerTypes.blockers")}: {readiness.blockers.map((b) => (language === "ar" ? b.nameAr || b.nameEn : b.nameEn || b.nameAr)).join("، ")}
-              </Typography>
-            ) : null}
-            <PermissionGate permission="provider_forms.publish">
-              <Stack direction="row" spacing={1}>
-                {readiness.mode === "LEGACY" ? (
-                  <Button
-                    variant="contained"
-                    disabled={!readiness.ready || cutoverMutation.isPending}
-                    onClick={() => cutoverMutation.mutate("complete")}
-                  >
-                    {t("providerTypes.completeCutover")}
-                  </Button>
-                ) : (
-                  <Button variant="outlined" color="warning" disabled={cutoverMutation.isPending} onClick={() => cutoverMutation.mutate("revert")}>
-                    {t("providerTypes.revertCutover")}
-                  </Button>
-                )}
-              </Stack>
-            </PermissionGate>
-          </Stack>
-        </Paper>
-      ) : null}
+      <Alert severity="info">{t("providerTypes.dynamicOnly")}</Alert>
 
       {typesQuery.isLoading ? (
         <Stack sx={{ py: 4, alignItems: "center" }}>
@@ -210,7 +148,6 @@ export function ProviderTypesPage() {
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
                     {row.code}
-                    {row.isSystem ? ` · ${t("providerTypes.system")}` : ""}
                   </Typography>
                 </Stack>
               ),
@@ -256,7 +193,7 @@ export function ProviderTypesPage() {
                             {t("providerTypes.deactivate")}
                           </Button>
                         ) : (
-                          <Button size="small" onClick={() => actionMutation.mutate({ action: "activate", type: row })}>
+                          <Button size="small" disabled={!row.hasPublishedForm} title={row.hasPublishedForm ? undefined : t("providerTypes.activateNeedsForm")} onClick={() => actionMutation.mutate({ action: "activate", type: row })}>
                             {t("providerTypes.activate")}
                           </Button>
                         )}

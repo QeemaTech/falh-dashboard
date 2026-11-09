@@ -102,14 +102,6 @@ export type FormPreview = FormVersionDetail & {
   sample: null | { valid: true; answers: Record<string, unknown> } | { valid: false; errors: FormProblem[] };
 };
 
-export type CutoverReadiness = {
-  mode: "LEGACY" | "DYNAMIC";
-  ready: boolean;
-  activeProviderTypes: number;
-  blockers: { id: string; code: string; nameAr: string; nameEn: string }[];
-  items: { id: string; code: string; nameAr: string; nameEn: string; hasPublishedForm: boolean }[];
-};
-
 export type FilterType = {
   id: string;
   code: string;
@@ -181,11 +173,6 @@ export const reorderQuestionsApi = (versionId: string, orderedIds: string[]) =>
 export const previewFormApi = (versionId: string, sampleAnswers?: Record<string, unknown>) =>
   call<FormPreview>(http.post(`/admin/join-us/forms/${versionId}/preview`, { sampleAnswers }));
 export const publishFormApi = (versionId: string) => call<{ id: string; version: number }>(http.post(`/admin/join-us/forms/${versionId}/publish`));
-
-// ---- safe rollout ----
-export const fetchCutoverReadiness = () => call<CutoverReadiness>(http.get("/admin/join-us/cutover"));
-export const completeCutoverApi = () => call<CutoverReadiness>(http.post("/admin/join-us/cutover/complete"));
-export const revertCutoverApi = () => call<CutoverReadiness>(http.post("/admin/join-us/cutover/revert"));
 
 // ---- unified filter sources (always from the backend, never hardcoded) ----
 export const fetchProviderFilterTypes = () => call<FilterType[]>(http.get("/service-providers/filter-types"));
