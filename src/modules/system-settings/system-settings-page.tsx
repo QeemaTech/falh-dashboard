@@ -56,6 +56,7 @@ const initialSettings: SystemSettings = {
     currency: "EGP",
     language: "ar",
     timezone: "Africa/Cairo",
+    userMonthlyAdLimit: 5,
     splashScreen: "",
     appIcon: "",
     loginBackground: "",
@@ -211,6 +212,7 @@ export function SystemSettingsPage() {
           currency: form.application.currency,
           language: form.application.language,
           timezone: form.application.timezone,
+          userMonthlyAdLimit: Number(form.application.userMonthlyAdLimit) || 0,
         },
       });
     },
@@ -425,6 +427,24 @@ export function SystemSettingsPage() {
                 label={t("systemSettings.application.timezone")}
                 value={form.application.timezone}
                 onChange={(e) => setValue("application", "timezone", e.target.value)}
+              />
+              <TextField
+                size="small"
+                fullWidth
+                type="number"
+                label={t("systemSettings.application.userMonthlyAdLimit")}
+                helperText={t("systemSettings.application.userMonthlyAdLimitHint")}
+                value={form.application.userMonthlyAdLimit ?? 5}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    application: {
+                      ...prev.application,
+                      userMonthlyAdLimit: Math.max(0, Number.parseInt(e.target.value, 10) || 0),
+                    },
+                  }))
+                }
+                slotProps={{ htmlInput: { min: 0, step: 1 } }}
               />
             </Stack>
           </SettingsSection>

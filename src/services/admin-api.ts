@@ -1185,6 +1185,7 @@ export type SystemSettings = {
     currency: string;
     language: string;
     timezone: string;
+    userMonthlyAdLimit?: number;
     splashScreen: string;
     appIcon: string;
     loginBackground: string;
