@@ -148,8 +148,12 @@ export function ProductDetailPage({ backTo = "/products", allowModerate = true }
           <Stack direction="row" spacing={2} useFlexGap sx={{ flexWrap: "wrap", rowGap: 0.75 }}>
             <MetaItem icon={<Inventory2Outlined sx={{ fontSize: 16 }} />}>{category}</MetaItem>
             <MetaItem icon={<BusinessOutlined sx={{ fontSize: 16 }} />}>{owner}</MetaItem>
-            {product.city ? (
-              <MetaItem icon={<LocationOnOutlined sx={{ fontSize: 16 }} />}>{product.city}</MetaItem>
+            {product.locationCity || product.locationCenter || product.city ? (
+              <MetaItem icon={<LocationOnOutlined sx={{ fontSize: 16 }} />}>
+                {[product.locationCity?.name || product.locationCity?.nameAr, product.locationCenter?.name || product.locationCenter?.nameAr]
+                  .filter(Boolean)
+                  .join(" — ") || product.city}
+              </MetaItem>
             ) : null}
           </Stack>
         }

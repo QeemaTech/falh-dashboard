@@ -44,6 +44,8 @@ import {
 } from "../../services/admin-api";
 import {
   createCompanyProductApi,
+  fetchActiveCenters,
+  fetchActiveCities,
   fetchCategoryFormFields,
   fetchProductById,
   fetchProductCategories,
@@ -101,6 +103,8 @@ export function ProductForm({
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [city, setCity] = useState("");
+  const [cityId, setCityId] = useState("");
+  const [centerId, setCenterId] = useState("");
   const [latInput, setLatInput] = useState("");
   const [lngInput, setLngInput] = useState("");
   const [imageItems, setImageItems] = useState<ProductImageItem[]>([]);
@@ -164,6 +168,8 @@ export function ProductForm({
       setWhatsappNumber(source.whatsappNumber || "");
       setCategoryId(source.category?.id || "");
       setCity(source.city || "");
+      setCityId(source.cityId || source.locationCity?.id || "");
+      setCenterId(source.centerId || source.locationCenter?.id || "");
       setLatInput(source.lat !== undefined && source.lat !== null ? String(source.lat) : "");
       setLngInput(source.lng !== undefined && source.lng !== null ? String(source.lng) : "");
       setImageItems(productImagesToItems(source));
@@ -179,6 +185,8 @@ export function ProductForm({
       setWhatsappNumber("");
       setCategoryId("");
       setCity("");
+      setCityId("");
+      setCenterId("");
       setLatInput("");
       setLngInput("");
       setImageItems([]);
@@ -216,7 +224,20 @@ export function ProductForm({
     () => categoryOptions.find((cat) => cat.id === categoryId) || categories.find((cat) => cat.id === categoryId),
     [categoryOptions, categories, categoryId]
   );
-  const requiresGovernorate = selectedCategory?.requiresGovernorate === true;
+  const requiresCityAndCenter = selectedCategory?.requiresCityAndCenter === true;
+  const requiresGovernorate = selectedCategory?.requiresGovernorate === true && !requiresCityAndCenter;
+
+  const { data: locationCities = [] } = useQuery({
+    queryKey: ["active-cities", language],
+    queryFn: () => fetchActiveCities(),
+    enabled: active && requiresCityAndCenter,
+  });
+
+  const { data: locationCenters = [] } = useQuery({
+    queryKey: ["active-centers", cityId, language],
+    queryFn: () => fetchActiveCenters(cityId),
+    enabled: active && requiresCityAndCenter && Boolean(cityId),
+  });
 
   const governorateOpts = useMemo(() => governorateOptions(language), [language]);
   const citySelectValue = requiresGovernorate
@@ -233,6 +254,8 @@ export function ProductForm({
         throw new Error(t("products.form.errorDescription"));
       }
       if (!categoryId) throw new Error(t("products.form.errorCategory"));
+      if (requiresCityAndCenter && !cityId) throw new Error(t("products.form.errorCity"));
+      if (requiresCityAndCenter && !centerId) throw new Error(t("products.form.errorCenter"));
       if (contactPhone.trim().length < 8) throw new Error(t("products.form.errorContactPhone"));
       if (whatsappNumber.trim().length < 8) throw new Error(t("products.form.errorWhatsappNumber"));
 
@@ -257,7 +280,12 @@ export function ProductForm({
         contactPhone: contactPhone.trim(),
         whatsappNumber: whatsappNumber.trim(),
         categoryId,
-        city: requiresGovernorate ? (city || undefined) : undefined,
+        city: requiresCityAndCenter
+          ? locationCities.find((item) => item.id === cityId)?.nameAr || city || undefined
+          : requiresGovernorate
+            ? city || undefined
+            : undefined,
+        ...(requiresCityAndCenter ? { cityId, centerId } : {}),
         ...(parsedLat !== undefined && parsedLng !== undefined ? { lat: parsedLat, lng: parsedLng } : {}),
         images,
         dynamicFields: buildDynamicFieldsPayload(categoryFields, dynamicValues),
@@ -384,7 +412,11 @@ export function ProductForm({
           fullWidth
           label={t("products.form.category")}
           value={categoryId}
-          onChange={(e) => setCategoryId(e.target.value)}
+          onChange={(e) => {
+            setCategoryId(e.target.value);
+            setCityId("");
+            setCenterId("");
+          }}
           helperText={
             !categoryId
               ? isArabic
@@ -582,13 +614,66 @@ export function ProductForm({
             {t("products.form.locationTitle")}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            {isArabic ? "المحافظة وتحديد الموقع على الخريطة" : "Governorate and interactive map position"}
+            {requiresCityAndCenter
+              ? isArabic
+                ? "المدينة والمركز وتحديد الموقع على الخريطة"
+                : "City, center, and optional map position"
+              : isArabic
+                ? "المحافظة وتحديد الموقع على الخريطة"
+                : "Governorate and interactive map position"}
           </Typography>
         </Box>
       </Stack>
 
       <Stack spacing={2}>
-        {requiresGovernorate ? (
+        {requiresCityAndCenter ? (
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+              gap: 2,
+            }}
+          >
+            <TextField
+              select
+              size="small"
+              fullWidth
+              required
+              label={t("products.form.city")}
+              value={cityId}
+              onChange={(e) => {
+                setCityId(e.target.value);
+                setCenterId("");
+                const selected = locationCities.find((item) => item.id === e.target.value);
+                setCity(selected?.nameAr || selected?.name || "");
+              }}
+            >
+              <MenuItem value="">{t("categories.fields.select")}</MenuItem>
+              {locationCities.map((option) => (
+                <MenuItem key={option.id} value={option.id}>
+                  {language === "ar" ? option.nameAr || option.nameEn || option.name : option.nameEn || option.nameAr || option.name}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              size="small"
+              fullWidth
+              required
+              label={t("products.form.center")}
+              value={centerId}
+              disabled={!cityId}
+              onChange={(e) => setCenterId(e.target.value)}
+            >
+              <MenuItem value="">{t("categories.fields.select")}</MenuItem>
+              {locationCenters.map((option) => (
+                <MenuItem key={option.id} value={option.id}>
+                  {language === "ar" ? option.nameAr || option.nameEn || option.name : option.nameEn || option.nameAr || option.name}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Box>
+        ) : requiresGovernorate ? (
           <TextField
             select
             size="small"

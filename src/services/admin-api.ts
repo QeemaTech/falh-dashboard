@@ -135,6 +135,10 @@ export type AdminProduct = {
   unit?: string;
   target?: string;
   city?: string;
+  cityId?: string | null;
+  centerId?: string | null;
+  locationCity?: { id: string; nameAr?: string; nameEn?: string | null; name?: string; isActive?: boolean } | null;
+  locationCenter?: { id: string; cityId?: string; nameAr?: string; nameEn?: string | null; name?: string; isActive?: boolean } | null;
   lat?: number | null;
   lng?: number | null;
   createdAt: string;
@@ -248,6 +252,8 @@ export type ProductFormPayload = {
   quantity?: number;
   unit?: string;
   city?: string;
+  cityId?: string;
+  centerId?: string;
   lat?: number;
   lng?: number;
   target?: "LOCAL" | "EXPORT" | null;
@@ -633,6 +639,7 @@ export type AdminCategory = {
   sortOrder?: number;
   allowsAdvertisement?: boolean;
   requiresGovernorate?: boolean;
+  requiresCityAndCenter?: boolean;
   isActive?: boolean;
   units?: AdminUnit[];
   unitIds?: string[];
@@ -706,6 +713,7 @@ export async function createAdminCategoryApi(payload: {
   sortOrder?: number;
   allowsAdvertisement: boolean;
   requiresGovernorate?: boolean;
+  requiresCityAndCenter?: boolean;
   isActive?: boolean;
   unitIds?: string[];
 }) {
@@ -722,6 +730,7 @@ export async function updateAdminCategoryApi(
     sortOrder: number;
     allowsAdvertisement: boolean;
     requiresGovernorate: boolean;
+    requiresCityAndCenter: boolean;
     isActive: boolean;
     unitIds: string[];
   }>
@@ -777,6 +786,85 @@ export async function updateAdminUnitApi(
 
 export async function deleteAdminUnitApi(unitId: string) {
   await http.delete(`/admin/units/${unitId}`);
+}
+
+export type AdminCityCenter = {
+  id: string;
+  cityId: string;
+  nameAr: string;
+  nameEn?: string | null;
+  name?: string;
+  sortOrder?: number;
+  isActive?: boolean;
+};
+
+export type AdminCity = {
+  id: string;
+  nameAr: string;
+  nameEn?: string | null;
+  name?: string;
+  sortOrder?: number;
+  isActive?: boolean;
+  centers?: AdminCityCenter[];
+};
+
+export async function fetchAdminCities(params?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  isActive?: boolean;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+}) {
+  const { data } = await http.get<ApiResponse<AdminCity[]>>("/admin/cities", {
+    params: { page: 1, limit: 50, sortBy: "sortOrder", sortOrder: "asc", ...(params || {}) },
+  });
+  return {
+    items: Array.isArray(data.data) ? data.data : [],
+    meta: data.meta as { page?: number; limit?: number; total?: number; totalPages?: number },
+  };
+}
+
+export async function createAdminCityApi(payload: {
+  nameAr: string;
+  nameEn?: string;
+  sortOrder?: number;
+  isActive?: boolean;
+}) {
+  const { data } = await http.post<ApiResponse<AdminCity>>("/admin/cities", payload);
+  return data.data;
+}
+
+export async function updateAdminCityApi(
+  cityId: string,
+  payload: Partial<{ nameAr: string; nameEn: string | null; sortOrder: number; isActive: boolean }>
+) {
+  const { data } = await http.patch<ApiResponse<AdminCity>>(`/admin/cities/${cityId}`, payload);
+  return data.data;
+}
+
+export async function deleteAdminCityApi(cityId: string) {
+  await http.delete(`/admin/cities/${cityId}`);
+}
+
+export async function createAdminCenterApi(
+  cityId: string,
+  payload: { nameAr: string; nameEn?: string; sortOrder?: number; isActive?: boolean }
+) {
+  const { data } = await http.post<ApiResponse<AdminCityCenter>>(`/admin/cities/${cityId}/centers`, payload);
+  return data.data;
+}
+
+export async function updateAdminCenterApi(
+  centerId: string,
+  payload: Partial<{ nameAr: string; nameEn: string | null; sortOrder: number; isActive: boolean }>
+) {
+  const { data } = await http.patch<ApiResponse<AdminCityCenter>>(`/admin/centers/${centerId}`, payload);
+  return data.data;
+}
+
+export async function deleteAdminCenterApi(centerId: string) {
+  await http.delete(`/admin/centers/${centerId}`);
 }
 
 export type { MarketItem, MarketTrend, LatestMarketData, LivestockCategory, MarketPagination } from "../types/market";

@@ -17,6 +17,7 @@ import { AppearanceSettingsPage } from "../modules/appearance/appearance-setting
 import { OrdersPage } from "../modules/orders/orders-page";
 import { OrderDetailPage } from "../modules/orders/order-detail-page";
 import { CategoriesPage } from "../modules/categories/categories-page";
+import { CitiesPage } from "../modules/locations/cities-page";
 import { BannersPage } from "../modules/banners/banners-page";
 import { BannerCreatePage } from "../modules/banners/banner-form-page";
 import { NotificationsPage } from "../modules/notifications/notifications-page";
@@ -108,6 +109,7 @@ export const router = createBrowserRouter([
           { path: "finance", element: <FinancePage /> },
           { path: "finance/:companyId", element: <FinanceDetailPage /> },
           { path: "categories", element: <CategoriesPage /> },
+          { path: "cities", element: <CitiesPage /> },
           { path: "units", element: <Navigate to="/categories" replace /> },
           { path: "banners", element: <BannersPage /> },
           { path: "banners/new", element: <BannerCreatePage /> },

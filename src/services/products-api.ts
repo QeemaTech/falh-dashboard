@@ -31,6 +31,7 @@ export type ProductCategory = {
   nameEn?: string;
   image?: string | null;
   requiresGovernorate?: boolean;
+  requiresCityAndCenter?: boolean;
   units?: Array<{
     id: string;
     nameAr?: string;
@@ -45,6 +46,27 @@ export type ProductCategory = {
 export async function fetchProductCategories() {
   const { data } = await http.get<ApiResponse<ProductCategory[]>>("/products/categories");
   return data.data;
+}
+
+export type LocationOption = {
+  id: string;
+  nameAr?: string;
+  nameEn?: string | null;
+  name?: string;
+  isActive?: boolean;
+  cityId?: string;
+};
+
+export async function fetchActiveCities(search?: string) {
+  const { data } = await http.get<ApiResponse<LocationOption[]>>("/locations/cities", {
+    params: { page: 1, limit: 200, ...(search ? { search } : {}) },
+  });
+  return Array.isArray(data.data) ? data.data : [];
+}
+
+export async function fetchActiveCenters(cityId: string) {
+  const { data } = await http.get<ApiResponse<LocationOption[]>>(`/locations/cities/${cityId}/centers`);
+  return Array.isArray(data.data) ? data.data : [];
 }
 
 export async function fetchCompanyQuota() {

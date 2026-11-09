@@ -8,6 +8,7 @@ export const ROUTE_PERMISSIONS: Record<string, string | string[]> = {
   "/products": "products.view",
   "/pending-products": "products.view",
   "/categories": "categories.view",
+  "/cities": "categories.view",
   "/orders": "orders.view",
   "/finance": "finance.view",
   "/banners": "banners.view",
