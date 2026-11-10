@@ -173,7 +173,7 @@ export function ProductForm({
         setPrice(String(listed));
         setDiscountPrice(String(selling));
       } else {
-        setPrice(selling != null && selling !== "" ? String(selling) : "");
+        setPrice(selling != null ? String(selling) : "");
         setDiscountPrice(
           source.discountPrice != null && source.discountPrice !== selling
             ? String(source.discountPrice)
@@ -518,7 +518,7 @@ export function ProductForm({
             size="small"
             fullWidth
             type="number"
-            inputProps={{ min: 0, step: "0.01" }}
+            slotProps={{ htmlInput: { min: 0, step: "0.01" } }}
             label={t("products.form.price")}
             value={price}
             onChange={(e) => setPrice(e.target.value)}
@@ -527,7 +527,7 @@ export function ProductForm({
             size="small"
             fullWidth
             type="number"
-            inputProps={{ min: 0, step: "0.01" }}
+            slotProps={{ htmlInput: { min: 0, step: "0.01" } }}
             label={t("products.form.discountPrice")}
             value={discountPrice}
             onChange={(e) => setDiscountPrice(e.target.value)}
