@@ -344,6 +344,7 @@ export type AdminServiceProvider = {
   whatsappNumber?: string | null;
   whatsappLink?: string | null;
   callLink?: string | null;
+  showContact?: boolean;
   specializations?: string[];
   yearsOfExperience?: number | null;
   rating?: number;
@@ -387,6 +388,14 @@ export async function fetchAdminServiceProviders(params: {
 
 export async function fetchServiceProviderById(providerId: string) {
   const { data } = await http.get<ApiResponse<AdminServiceProvider>>(`/service-providers/${providerId}`);
+  return data.data;
+}
+
+export async function setServiceProviderShowContactApi(providerId: string, showContact: boolean) {
+  const { data } = await http.patch<ApiResponse<AdminServiceProvider>>(
+    `/admin/service-providers/${providerId}/show-contact`,
+    { showContact }
+  );
   return data.data;
 }
 

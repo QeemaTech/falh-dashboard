@@ -1,14 +1,30 @@
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
-import { Chip, CircularProgress, Link, Stack } from "@mui/material";
+import {
+  Box,
+  Checkbox,
+  Chip,
+  CircularProgress,
+  FormControlLabel,
+  Link,
+  Stack,
+  Typography,
+} from "@mui/material";
 import { DetailField, DetailGrid, DetailPageShell, EmptyState } from "../../components/layout";
+import { toast } from "../../components/ui/sonner";
 import { useI18n } from "../../hooks/use-i18n";
-import { fetchServiceProviderById, type AdminServiceProvider } from "../../services/admin-api";
+import { usePermission } from "../../store/permission-context";
+import {
+  fetchServiceProviderById,
+  setServiceProviderShowContactApi,
+  type AdminServiceProvider,
+} from "../../services/admin-api";
 import { fetchProviderFilterTypes } from "../../services/provider-forms-api";
 import { PrivateFileLink } from "../../components/private-file-link";
 import { DynamicAnswers } from "../provider-forms/dynamic-answers";
 import { buildTypeFilterOptions } from "../provider-forms/form-logic";
+import { getApiErrorMessage } from "../../utils/api-error";
 
 function providerName(provider: AdminServiceProvider) {
   return provider.name || provider.displayName || provider.user?.name || "-";
@@ -24,11 +40,24 @@ function statusChipColor(status: string): "success" | "warning" | "error" | "def
 export function ConsultantDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t, language } = useI18n();
+  const queryClient = useQueryClient();
+  const { hasPermission } = usePermission();
+  const canToggleContact = hasPermission(["provider_listings.update", "consultants.update"]);
 
   const { data: detail, isLoading, isError, error } = useQuery({
     queryKey: ["admin-consultant", id],
     queryFn: () => fetchServiceProviderById(id!),
     enabled: Boolean(id),
+  });
+
+  const showContactMutation = useMutation({
+    mutationFn: (showContact: boolean) => setServiceProviderShowContactApi(id!, showContact),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["admin-consultant", id], updated);
+      queryClient.invalidateQueries({ queryKey: ["admin-consultants"] });
+      toast.success(t("consultants.contactUpdated"));
+    },
+    onError: (err: unknown) => toast.error(getApiErrorMessage(err, t("consultants.loadFailed"))),
   });
 
   const { data: filterTypes = [] } = useQuery({
@@ -96,23 +125,77 @@ export function ConsultantDetailPage() {
                   label={t("consultants.col.rating")}
                   value={Number(detail.rating || 0).toFixed(1)}
                 />
-                <DetailField label={t("consultants.phone")} value={detail.contactNumber} />
-                <DetailField
-                  label={t("consultants.whatsapp")}
-                  value={
-                    detail.whatsappNumber ? (
-                      detail.whatsappLink ? (
-                        <Link href={detail.whatsappLink} target="_blank" rel="noreferrer">
-                          {detail.whatsappNumber}
-                        </Link>
+                <Box
+                  sx={{
+                    gridColumn: { xs: "span 1", sm: "span 2" },
+                    border: 1,
+                    borderColor: "divider",
+                    borderRadius: "8px",
+                    px: 1.5,
+                    py: 1.25,
+                    bgcolor: "background.paper",
+                  }}
+                >
+                  <FormControlLabel
+                    sx={{ alignItems: "flex-start", ml: 0, mb: 1 }}
+                    control={
+                      <Checkbox
+                        size="small"
+                        checked={detail.showContact !== false}
+                        disabled={!canToggleContact || showContactMutation.isPending}
+                        onChange={(e) => showContactMutation.mutate(e.target.checked)}
+                      />
+                    }
+                    label={
+                      <Box>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          {t("consultants.showContact")}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {t("consultants.showContactHint")}
+                        </Typography>
+                      </Box>
+                    }
+                  />
+                  <Stack spacing={1.25} sx={{ pl: 4.5 }}>
+                    <Box>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ display: "block", fontWeight: 700, fontSize: "0.65rem", textTransform: "uppercase" }}
+                      >
+                        {t("consultants.phone")}
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {detail.contactNumber || "—"}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ display: "block", fontWeight: 700, fontSize: "0.65rem", textTransform: "uppercase" }}
+                      >
+                        {t("consultants.whatsapp")}
+                      </Typography>
+                      {detail.whatsappNumber ? (
+                        detail.whatsappLink ? (
+                          <Link href={detail.whatsappLink} target="_blank" rel="noreferrer" variant="body2" sx={{ fontWeight: 500 }}>
+                            {detail.whatsappNumber}
+                          </Link>
+                        ) : (
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {detail.whatsappNumber}
+                          </Typography>
+                        )
                       ) : (
-                        detail.whatsappNumber
-                      )
-                    ) : (
-                      "—"
-                    )
-                  }
-                />
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          —
+                        </Typography>
+                      )}
+                    </Box>
+                  </Stack>
+                </Box>
                 {detail.yearsOfExperience != null ? (
                   <DetailField
                     label={t("consultants.experience")}
