@@ -136,9 +136,11 @@ export type AdminProduct = {
   unit?: string;
   target?: string;
   city?: string;
+  governorateId?: string | null;
   cityId?: string | null;
   centerId?: string | null;
-  locationCity?: { id: string; nameAr?: string; nameEn?: string | null; name?: string; isActive?: boolean } | null;
+  locationGovernorate?: { id: string; nameAr?: string; nameEn?: string | null; name?: string; isActive?: boolean } | null;
+  locationCity?: { id: string; nameAr?: string; nameEn?: string | null; name?: string; isActive?: boolean; governorateId?: string | null } | null;
   locationCenter?: { id: string; cityId?: string; nameAr?: string; nameEn?: string | null; name?: string; isActive?: boolean } | null;
   lat?: number | null;
   lng?: number | null;
@@ -256,6 +258,7 @@ export type ProductFormPayload = {
   discountPrice?: number | null;
   originalPrice?: number | null;
   city?: string;
+  governorateId?: string;
   cityId?: string;
   centerId?: string;
   lat?: number;
@@ -811,15 +814,66 @@ export type AdminCityCenter = {
   isActive?: boolean;
 };
 
-export type AdminCity = {
+export type AdminGovernorate = {
   id: string;
   nameAr: string;
   nameEn?: string | null;
   name?: string;
   sortOrder?: number;
   isActive?: boolean;
+  cities?: AdminCity[];
+};
+
+export type AdminCity = {
+  id: string;
+  governorateId?: string | null;
+  nameAr: string;
+  nameEn?: string | null;
+  name?: string;
+  sortOrder?: number;
+  isActive?: boolean;
+  governorate?: AdminGovernorate | null;
   centers?: AdminCityCenter[];
 };
+
+export async function fetchAdminGovernorates(params?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  isActive?: boolean;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+}) {
+  const { data } = await http.get<ApiResponse<AdminGovernorate[]>>("/admin/governorates", {
+    params: { page: 1, limit: 50, sortBy: "sortOrder", sortOrder: "asc", ...(params || {}) },
+  });
+  return {
+    items: Array.isArray(data.data) ? data.data : [],
+    meta: data.meta as { page?: number; limit?: number; total?: number; totalPages?: number },
+  };
+}
+
+export async function createAdminGovernorateApi(payload: {
+  nameAr: string;
+  nameEn?: string;
+  sortOrder?: number;
+  isActive?: boolean;
+}) {
+  const { data } = await http.post<ApiResponse<AdminGovernorate>>("/admin/governorates", payload);
+  return data.data;
+}
+
+export async function updateAdminGovernorateApi(
+  governorateId: string,
+  payload: Partial<{ nameAr: string; nameEn: string | null; sortOrder: number; isActive: boolean }>
+) {
+  const { data } = await http.patch<ApiResponse<AdminGovernorate>>(`/admin/governorates/${governorateId}`, payload);
+  return data.data;
+}
+
+export async function deleteAdminGovernorateApi(governorateId: string) {
+  await http.delete(`/admin/governorates/${governorateId}`);
+}
 
 export async function fetchAdminCities(params?: {
   page?: number;
@@ -828,6 +882,8 @@ export async function fetchAdminCities(params?: {
   isActive?: boolean;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
+  governorateId?: string;
+  unassigned?: boolean;
 }) {
   const { data } = await http.get<ApiResponse<AdminCity[]>>("/admin/cities", {
     params: { page: 1, limit: 50, sortBy: "sortOrder", sortOrder: "asc", ...(params || {}) },
@@ -839,6 +895,7 @@ export async function fetchAdminCities(params?: {
 }
 
 export async function createAdminCityApi(payload: {
+  governorateId: string;
   nameAr: string;
   nameEn?: string;
   sortOrder?: number;
@@ -850,7 +907,7 @@ export async function createAdminCityApi(payload: {
 
 export async function updateAdminCityApi(
   cityId: string,
-  payload: Partial<{ nameAr: string; nameEn: string | null; sortOrder: number; isActive: boolean }>
+  payload: Partial<{ governorateId: string; nameAr: string; nameEn: string | null; sortOrder: number; isActive: boolean }>
 ) {
   const { data } = await http.patch<ApiResponse<AdminCity>>(`/admin/cities/${cityId}`, payload);
   return data.data;

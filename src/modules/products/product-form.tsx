@@ -46,6 +46,7 @@ import {
   createCompanyProductApi,
   fetchActiveCenters,
   fetchActiveCities,
+  fetchActiveGovernorates,
   fetchCategoryFormFields,
   fetchProductById,
   fetchProductCategories,
@@ -105,6 +106,7 @@ export function ProductForm({
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [city, setCity] = useState("");
+  const [governorateId, setGovernorateId] = useState("");
   const [cityId, setCityId] = useState("");
   const [centerId, setCenterId] = useState("");
   const [latInput, setLatInput] = useState("");
@@ -183,6 +185,9 @@ export function ProductForm({
       setWhatsappNumber(source.whatsappNumber || "");
       setCategoryId(source.category?.id || "");
       setCity(source.city || "");
+      setGovernorateId(
+        source.governorateId || source.locationGovernorate?.id || source.locationCity?.governorateId || ""
+      );
       setCityId(source.cityId || source.locationCity?.id || "");
       setCenterId(source.centerId || source.locationCenter?.id || "");
       setLatInput(source.lat !== undefined && source.lat !== null ? String(source.lat) : "");
@@ -202,6 +207,7 @@ export function ProductForm({
       setWhatsappNumber("");
       setCategoryId("");
       setCity("");
+      setGovernorateId("");
       setCityId("");
       setCenterId("");
       setLatInput("");
@@ -244,10 +250,16 @@ export function ProductForm({
   const requiresCityAndCenter = selectedCategory?.requiresCityAndCenter === true;
   const requiresGovernorate = selectedCategory?.requiresGovernorate === true && !requiresCityAndCenter;
 
-  const { data: locationCities = [] } = useQuery({
-    queryKey: ["active-cities", language],
-    queryFn: () => fetchActiveCities(),
+  const { data: locationGovernorates = [] } = useQuery({
+    queryKey: ["active-governorates", language],
+    queryFn: () => fetchActiveGovernorates(),
     enabled: active && requiresCityAndCenter,
+  });
+
+  const { data: locationCities = [] } = useQuery({
+    queryKey: ["active-cities", language, governorateId],
+    queryFn: () => fetchActiveCities(undefined, governorateId),
+    enabled: active && requiresCityAndCenter && Boolean(governorateId),
   });
 
   const { data: locationCenters = [] } = useQuery({
@@ -271,6 +283,7 @@ export function ProductForm({
         throw new Error(t("products.form.errorDescription"));
       }
       if (!categoryId) throw new Error(t("products.form.errorCategory"));
+      if (requiresCityAndCenter && !governorateId) throw new Error(t("products.form.errorGovernorate"));
       if (requiresCityAndCenter && !cityId) throw new Error(t("products.form.errorCity"));
       if (requiresCityAndCenter && !centerId) throw new Error(t("products.form.errorCenter"));
       if (contactPhone.trim().length < 8) throw new Error(t("products.form.errorContactPhone"));
@@ -302,7 +315,7 @@ export function ProductForm({
           : requiresGovernorate
             ? city || undefined
             : undefined,
-        ...(requiresCityAndCenter ? { cityId, centerId } : {}),
+        ...(requiresCityAndCenter ? { governorateId, cityId, centerId } : {}),
         ...(parsedLat !== undefined && parsedLng !== undefined ? { lat: parsedLat, lng: parsedLng } : {}),
         price: price.trim() === "" ? null : Number(price),
         discountPrice: discountPrice.trim() === "" ? null : Number(discountPrice),
@@ -662,8 +675,8 @@ export function ProductForm({
           <Typography variant="caption" color="text.secondary">
             {requiresCityAndCenter
               ? isArabic
-                ? "المدينة والمركز وتحديد الموقع على الخريطة"
-                : "City, center, and optional map position"
+                ? "المحافظة والمدينة والمركز وتحديد الموقع على الخريطة"
+                : "Governorate, city, center, and optional map position"
               : isArabic
                 ? "المحافظة وتحديد الموقع على الخريطة"
                 : "Governorate and interactive map position"}
@@ -685,8 +698,30 @@ export function ProductForm({
               size="small"
               fullWidth
               required
+              label={t("products.form.governorate")}
+              value={governorateId}
+              onChange={(e) => {
+                setGovernorateId(e.target.value);
+                setCityId("");
+                setCenterId("");
+                setCity("");
+              }}
+            >
+              <MenuItem value="">{t("categories.fields.select")}</MenuItem>
+              {locationGovernorates.map((option) => (
+                <MenuItem key={option.id} value={option.id}>
+                  {language === "ar" ? option.nameAr || option.nameEn || option.name : option.nameEn || option.nameAr || option.name}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              size="small"
+              fullWidth
+              required
               label={t("products.form.city")}
               value={cityId}
+              disabled={!governorateId}
               onChange={(e) => {
                 setCityId(e.target.value);
                 setCenterId("");

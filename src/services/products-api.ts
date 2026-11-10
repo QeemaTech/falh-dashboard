@@ -55,11 +55,20 @@ export type LocationOption = {
   name?: string;
   isActive?: boolean;
   cityId?: string;
+  governorateId?: string | null;
 };
 
-export async function fetchActiveCities(search?: string) {
-  const { data } = await http.get<ApiResponse<LocationOption[]>>("/locations/cities", {
+export async function fetchActiveGovernorates(search?: string) {
+  const { data } = await http.get<ApiResponse<LocationOption[]>>("/locations/governorates", {
     params: { page: 1, limit: 200, ...(search ? { search } : {}) },
+  });
+  return Array.isArray(data.data) ? data.data : [];
+}
+
+export async function fetchActiveCities(search?: string, governorateId?: string) {
+  const path = governorateId ? `/locations/governorates/${governorateId}/cities` : "/locations/cities";
+  const { data } = await http.get<ApiResponse<LocationOption[]>>(path, {
+    params: governorateId ? undefined : { page: 1, limit: 200, ...(search ? { search } : {}) },
   });
   return Array.isArray(data.data) ? data.data : [];
 }
