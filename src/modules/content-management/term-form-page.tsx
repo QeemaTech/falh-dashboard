@@ -78,6 +78,7 @@ function TermFormFields({
         size="small"
         label={isArabic ? "عنوان البند (عربي) *" : "Title (Arabic) *"}
         value={titleAr}
+        slotProps={{ htmlInput: { dir: "rtl" } }}
         onChange={(e) => setTitleAr(e.target.value)}
       />
       <TextField
@@ -85,6 +86,7 @@ function TermFormFields({
         size="small"
         label={isArabic ? "عنوان البند (إنجليزي)" : "Title (English)"}
         value={titleEn}
+        slotProps={{ htmlInput: { dir: "ltr" } }}
         onChange={(e) => setTitleEn(e.target.value)}
       />
       <TextField
@@ -93,6 +95,7 @@ function TermFormFields({
         minRows={4}
         label={isArabic ? "نص البند (عربي) *" : "Content (Arabic) *"}
         value={contentAr}
+        slotProps={{ htmlInput: { dir: "rtl" } }}
         onChange={(e) => setContentAr(e.target.value)}
       />
       <TextField
@@ -101,6 +104,7 @@ function TermFormFields({
         minRows={4}
         label={isArabic ? "نص البند (إنجليزي)" : "Content (English)"}
         value={contentEn}
+        slotProps={{ htmlInput: { dir: "ltr" } }}
         onChange={(e) => setContentEn(e.target.value)}
       />
       <TextField

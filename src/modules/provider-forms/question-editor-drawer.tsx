@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert, Button, Checkbox, FormControlLabel, IconButton, MenuItem, Stack, TextField, Typography } from "@mui/material";
+import { Alert, Box, Button, Checkbox, FormControlLabel, IconButton, MenuItem, Stack, TextField, Typography } from "@mui/material";
 import { Add, Delete } from "@mui/icons-material";
 import { AppDrawer } from "../../components/design-system";
 import { useI18n } from "../../hooks/use-i18n";
@@ -29,7 +29,7 @@ export function QuestionEditorDrawer(props: Props) {
 }
 
 function QuestionEditorForm({ open, question, allQuestions, onClose, onSave }: Props) {
-  const { t } = useI18n();
+  const { t, isArabic } = useI18n();
   const isNew = !question?.id;
   const [draft, setDraft] = useState<FormQuestion>(() =>
     question ? { ...question, options: [...question.options] } : emptyQuestion()
@@ -102,7 +102,7 @@ function QuestionEditorForm({ open, question, allQuestions, onClose, onSave }: P
         </Stack>
       }
     >
-      <Stack spacing={2}>
+      <Stack spacing={2} sx={{ pb: 5 }}>
         {generalError ? <Alert severity="error">{generalError}</Alert> : null}
 
         <TextField size="small" fullWidth label={`${t("providerForms.labelAr")} *`} value={draft.labelAr} error={Boolean(err("labelAr"))} helperText={err("labelAr")} onChange={(e) => set({ labelAr: e.target.value })} />
@@ -205,6 +205,16 @@ function QuestionEditorForm({ open, question, allQuestions, onClose, onSave }: P
           helperText={err("mapsTo") || t("providerForms.mapsToHint")}
           error={Boolean(err("mapsTo"))}
           value={draft.mapsTo || ""}
+          slotProps={{
+            select: {
+              displayEmpty: true,
+              renderValue: (selected: unknown) => {
+                const val = String(selected || "");
+                if (!val) return t("providerForms.mapsToNone");
+                return t(`providerForms.target.${val}`, val);
+              },
+            },
+          }}
           onChange={(e) => set({ mapsTo: (e.target.value || null) as MappingTarget | null })}
         >
           <MenuItem value="">{t("providerForms.mapsToNone")}</MenuItem>
@@ -223,52 +233,102 @@ function QuestionEditorForm({ open, question, allQuestions, onClose, onSave }: P
           label={t("providerForms.isPublic")}
         />
 
-        <Stack spacing={1}>
-          <Typography variant="subtitle2">{t("providerForms.visibleWhen")}</Typography>
-          <TextField
-            select
-            size="small"
-            fullWidth
-            label={t("providerForms.dependsOn")}
-            value={draft.visibleWhen?.questionKey || ""}
-            onChange={(e) => {
-              const key = e.target.value;
-              set({ visibleWhen: key ? { questionKey: key, operator: "equals", value: "" } : null });
-            }}
-          >
-            <MenuItem value="">{t("providerForms.always")}</MenuItem>
-            {dependencyCandidates.map((q) => (
-              <MenuItem key={q.key} value={q.key}>
-                {q.labelEn || q.key}
-              </MenuItem>
-            ))}
-          </TextField>
-          {draft.visibleWhen && dependency ? (
+        <Box
+          sx={{
+            p: 2,
+            borderRadius: 1.5,
+            border: 1,
+            borderColor: "divider",
+            backgroundColor: (theme) =>
+              theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.03)" : "rgba(0, 0, 0, 0.015)",
+          }}
+        >
+          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5 }}>
+            {t("providerForms.visibleWhen")}
+          </Typography>
+          <Stack spacing={1.5}>
             <TextField
               select
               size="small"
               fullWidth
-              label={t("providerForms.whenAnswerIs")}
-              value={String(draft.visibleWhen.value ?? "")}
-              onChange={(e) => set({ visibleWhen: { ...draft.visibleWhen!, operator: "equals", value: dependency.fieldType === "CHECKBOX" ? e.target.value === "true" : e.target.value } })}
+              label={t("providerForms.dependsOn")}
+              value={draft.visibleWhen?.questionKey || ""}
+              slotProps={{
+                select: {
+                  displayEmpty: true,
+                  renderValue: (selected: unknown) => {
+                    const val = String(selected || "");
+                    if (!val) return t("providerForms.always");
+                    const found = dependencyCandidates.find((q) => q.key === val);
+                    if (found) {
+                      return (isArabic ? found.labelAr || found.labelEn : found.labelEn || found.labelAr) || found.key;
+                    }
+                    return val;
+                  },
+                },
+              }}
+              helperText={
+                dependencyCandidates.length === 0
+                  ? isArabic
+                    ? "يظهر هذا السؤال دائمًا (لا توجد أسئلة سابقة ذات خيارات للاعتماد عليها)"
+                    : "This question always appears (no preceding multiple-choice questions to depend on)"
+                  : undefined
+              }
+              onChange={(e) => {
+                const key = e.target.value;
+                set({ visibleWhen: key ? { questionKey: key, operator: "equals", value: "" } : null });
+              }}
             >
-              {dependency.fieldType === "CHECKBOX"
-                ? [
-                    <MenuItem key="t" value="true">
-                      {t("providerForms.checked")}
-                    </MenuItem>,
-                    <MenuItem key="f" value="false">
-                      {t("providerForms.unchecked")}
-                    </MenuItem>,
-                  ]
-                : dependency.options.map((o) => (
-                    <MenuItem key={o.value} value={o.value}>
-                      {o.labelEn || o.value}
-                    </MenuItem>
-                  ))}
+              <MenuItem value="">{t("providerForms.always")}</MenuItem>
+              {dependencyCandidates.map((q) => {
+                const label = (isArabic ? q.labelAr || q.labelEn : q.labelEn || q.labelAr) || q.key;
+                return (
+                  <MenuItem key={q.key} value={q.key}>
+                    {label}
+                  </MenuItem>
+                );
+              })}
             </TextField>
-          ) : null}
-        </Stack>
+
+            {draft.visibleWhen && dependency ? (
+              <TextField
+                select
+                size="small"
+                fullWidth
+                slotProps={{ select: { displayEmpty: true } }}
+                label={t("providerForms.whenAnswerIs")}
+                value={String(draft.visibleWhen.value ?? "")}
+                onChange={(e) =>
+                  set({
+                    visibleWhen: {
+                      ...draft.visibleWhen!,
+                      operator: "equals",
+                      value: dependency.fieldType === "CHECKBOX" ? e.target.value === "true" : e.target.value,
+                    },
+                  })
+                }
+              >
+                {dependency.fieldType === "CHECKBOX"
+                  ? [
+                      <MenuItem key="t" value="true">
+                        {t("providerForms.checked")}
+                      </MenuItem>,
+                      <MenuItem key="f" value="false">
+                        {t("providerForms.unchecked")}
+                      </MenuItem>,
+                    ]
+                  : dependency.options.map((o) => {
+                      const optLabel = (isArabic ? o.labelAr || o.labelEn : o.labelEn || o.labelAr) || o.value;
+                      return (
+                        <MenuItem key={o.value} value={o.value}>
+                          {optLabel}
+                        </MenuItem>
+                      );
+                    })}
+              </TextField>
+            ) : null}
+          </Stack>
+        </Box>
       </Stack>
     </AppDrawer>
   );

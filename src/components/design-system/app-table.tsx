@@ -9,6 +9,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  type TableRowProps,
   Typography,
 } from "@mui/material";
 
@@ -72,9 +73,10 @@ export function AppTableRow({
   children,
   className,
   hover = true,
-}: PropsWithChildren<{ className?: string; hover?: boolean }>) {
+  sx,
+}: PropsWithChildren<{ className?: string; hover?: boolean; sx?: TableRowProps["sx"] }>) {
   return (
-    <TableRow hover={hover} className={className}>
+    <TableRow hover={hover} className={className} sx={sx}>
       {children}
     </TableRow>
   );

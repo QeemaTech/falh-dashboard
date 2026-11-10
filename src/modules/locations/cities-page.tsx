@@ -1,15 +1,26 @@
 import { Fragment, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Add, ExpandLess, ExpandMore, Place } from "@mui/icons-material";
+import {
+  Add,
+  Apartment,
+  ExpandMore,
+  LocationCity,
+  Place,
+  Search,
+  SubdirectoryArrowRight,
+} from "@mui/icons-material";
 import {
   Box,
   Button,
+  Chip,
   CircularProgress,
   Collapse,
   IconButton,
+  InputAdornment,
   MenuItem,
   Stack,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import {
@@ -344,48 +355,130 @@ export function CitiesPage() {
   function renderCityBlock(city: AdminCity, governorateId?: string) {
     const open = Boolean(expandedCity[city.id]);
     const centers = city.centers || [];
+    const isInactive = city.isActive === false;
+
     return (
       <Box
         key={city.id}
         sx={{
-          py: 1,
-          borderBottom: "1px solid",
+          borderRadius: "8px",
+          border: "1px solid",
           borderColor: "divider",
+          backgroundColor: (theme) =>
+            theme.palette.mode === "dark" ? "#16201A" : "#FFFFFF",
+          overflow: "hidden",
+          transition: "border-color 0.15s ease",
+          "&:hover": {
+            borderColor: (theme) =>
+              theme.palette.mode === "dark" ? "rgba(77, 154, 91, 0.4)" : "rgba(35, 103, 58, 0.3)",
+          },
         }}
       >
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ alignItems: { sm: "center" }, justifyContent: "space-between" }}>
-          <Stack direction="row" spacing={1} sx={{ alignItems: "center", minWidth: 0 }}>
-            <IconButton
-              size="small"
-              onClick={() => setExpandedCity((prev) => ({ ...prev, [city.id]: !open }))}
-              aria-label={open ? t("cities.collapse") : t("cities.expand")}
-            >
-              {open ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
-            </IconButton>
-            <Box>
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                {displayName(city, language)}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {t("cities.col.centers")}: {centers.length}
-              </Typography>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={1.5}
+          sx={{
+            p: 1.5,
+            alignItems: { sm: "center" },
+            justifyContent: "space-between",
+          }}
+        >
+          <Stack direction="row" spacing={1.25} sx={{ alignItems: "center", minWidth: 0, flex: 1 }}>
+            <Tooltip title={open ? t("cities.collapse") : t("cities.expand")}>
+              <IconButton
+                size="small"
+                onClick={() => setExpandedCity((prev) => ({ ...prev, [city.id]: !open }))}
+                aria-label={open ? t("cities.collapse") : t("cities.expand")}
+                sx={{
+                  color: "text.secondary",
+                  transition: "transform 0.2s ease",
+                  transform: open ? "rotate(180deg)" : "rotate(0deg)",
+                }}
+              >
+                <ExpandMore fontSize="small" />
+              </IconButton>
+            </Tooltip>
+
+            <Apartment fontSize="small" sx={{ color: "primary.main", flexShrink: 0 }} />
+
+            <Box sx={{ minWidth: 0 }}>
+              <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary" }}>
+                  {displayName(city, language)}
+                </Typography>
+                {language === "ar" && city.nameEn ? (
+                  <Typography variant="caption" color="text.secondary">
+                    ({city.nameEn})
+                  </Typography>
+                ) : null}
+              </Stack>
             </Box>
-          </Stack>
-          <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap" }}>
-            <AppBadge variant={city.isActive === false ? "neutral" : "success"}>
-              {city.isActive === false ? t("cities.inactive") : t("cities.active")}
+
+            <Chip
+              size="small"
+              variant="outlined"
+              label={`${t("cities.col.centers")}: ${centers.length}`}
+              sx={{
+                height: 22,
+                fontSize: "0.75rem",
+                borderRadius: "6px",
+                borderColor: "divider",
+                color: "text.secondary",
+              }}
+            />
+
+            <AppBadge variant={isInactive ? "neutral" : "success"}>
+              {isInactive ? t("cities.inactive") : t("cities.active")}
             </AppBadge>
-            <Button size="small" onClick={() => openCreateCenter(city.id, governorateId)} sx={{ borderRadius: "8px" }}>
+          </Stack>
+
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: "center",
+              justifyContent: { xs: "flex-start", sm: "flex-end" },
+              flexWrap: "nowrap",
+            }}
+          >
+            <Button
+              size="small"
+              variant="text"
+              startIcon={<Add fontSize="small" />}
+              onClick={() => openCreateCenter(city.id, governorateId)}
+              sx={{
+                borderRadius: "6px",
+                fontSize: "0.8125rem",
+                fontWeight: 600,
+                color: "primary.main",
+                px: 1,
+                minHeight: 30,
+              }}
+            >
               {t("cities.addCenter")}
             </Button>
+
             <Button
               size="small"
               variant="outlined"
-              onClick={() => toggleActiveCity.mutate({ id: city.id, isActive: city.isActive === false })}
-              sx={{ borderRadius: "8px" }}
+              onClick={() => toggleActiveCity.mutate({ id: city.id, isActive: isInactive })}
+              sx={{
+                borderRadius: "6px",
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                minHeight: 30,
+                px: 1.25,
+                borderColor: isInactive ? "success.main" : "divider",
+                color: isInactive ? "success.main" : "text.secondary",
+                "&:hover": {
+                  borderColor: isInactive ? "success.dark" : "error.main",
+                  color: isInactive ? "success.dark" : "error.main",
+                },
+              }}
             >
-              {city.isActive === false ? t("cities.activate") : t("cities.deactivate")}
+              {isInactive ? t("cities.activate") : t("cities.deactivate")}
             </Button>
+
             <TableRowActions
               onEdit={() => openEditCity(city)}
               onDelete={() => {
@@ -396,44 +489,135 @@ export function CitiesPage() {
             />
           </Stack>
         </Stack>
+
         <Collapse in={open} timeout="auto" unmountOnExit>
-          <Box sx={{ pl: 6, pt: 1 }}>
+          <Box
+            sx={{
+              p: 1.5,
+              pt: 1,
+              borderTop: "1px dashed",
+              borderColor: "divider",
+              backgroundColor: (theme) =>
+                theme.palette.mode === "dark" ? "rgba(0, 0, 0, 0.2)" : "rgba(0, 0, 0, 0.02)",
+            }}
+          >
             {centers.length ? (
-              centers.map((center) => (
-                <Stack
-                  key={center.id}
-                  direction={{ xs: "column", sm: "row" }}
-                  spacing={1}
-                  sx={{ py: 0.75, alignItems: { sm: "center" }, justifyContent: "space-between" }}
-                >
-                  <Typography variant="body2">{displayName(center, language)}</Typography>
-                  <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap" }}>
-                    <AppBadge variant={center.isActive === false ? "neutral" : "success"}>
-                      {center.isActive === false ? t("cities.inactive") : t("cities.active")}
-                    </AppBadge>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      onClick={() => toggleActiveCenter.mutate({ id: center.id, isActive: center.isActive === false })}
-                      sx={{ borderRadius: "8px" }}
-                    >
-                      {center.isActive === false ? t("cities.activate") : t("cities.deactivate")}
-                    </Button>
-                    <TableRowActions
-                      onEdit={() => openEditCenter(center)}
-                      onDelete={() => {
-                        if (window.confirm(t("cities.deleteCenterConfirm").replace("{{name}}", displayName(center, language)))) {
-                          deleteCenter.mutate(center.id);
-                        }
+              <Stack
+                spacing={0.75}
+                sx={{
+                  marginInlineStart: { xs: 1, sm: 3 },
+                  paddingInlineStart: 2,
+                  borderInlineStart: "2px solid",
+                  borderColor: (theme) =>
+                    theme.palette.mode === "dark" ? "rgba(77, 154, 91, 0.4)" : "rgba(35, 103, 58, 0.3)",
+                }}
+              >
+                {centers.map((center) => {
+                  const centerInactive = center.isActive === false;
+                  return (
+                    <Stack
+                      key={center.id}
+                      direction={{ xs: "column", sm: "row" }}
+                      spacing={1}
+                      sx={{
+                        py: 0.75,
+                        px: 1.25,
+                        borderRadius: "6px",
+                        alignItems: { sm: "center" },
+                        justifyContent: "space-between",
+                        backgroundColor: (theme) =>
+                          theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.02)" : "rgba(255, 255, 255, 0.6)",
+                        border: "1px solid",
+                        borderColor: (theme) =>
+                          theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.04)" : "rgba(0, 0, 0, 0.04)",
+                        "&:hover": {
+                          borderColor: "divider",
+                          backgroundColor: (theme) =>
+                            theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.04)" : "#FFFFFF",
+                        },
                       }}
-                    />
-                  </Stack>
-                </Stack>
-              ))
+                    >
+                      <Stack direction="row" spacing={1} sx={{ alignItems: "center", minWidth: 0 }}>
+                        <SubdirectoryArrowRight
+                          fontSize="small"
+                          sx={{
+                            color: "text.disabled",
+                            fontSize: 16,
+                            transform: language === "ar" ? "scaleX(-1)" : "none",
+                          }}
+                        />
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {displayName(center, language)}
+                        </Typography>
+                        {language === "ar" && center.nameEn ? (
+                          <Typography variant="caption" color="text.secondary">
+                            ({center.nameEn})
+                          </Typography>
+                        ) : null}
+                        <AppBadge variant={centerInactive ? "neutral" : "success"}>
+                          {centerInactive ? t("cities.inactive") : t("cities.active")}
+                        </AppBadge>
+                      </Stack>
+
+                      <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "nowrap" }}>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => toggleActiveCenter.mutate({ id: center.id, isActive: centerInactive })}
+                          sx={{
+                            borderRadius: "6px",
+                            fontSize: "0.75rem",
+                            fontWeight: 600,
+                            minHeight: 28,
+                            px: 1,
+                            borderColor: centerInactive ? "success.main" : "divider",
+                            color: centerInactive ? "success.main" : "text.secondary",
+                            "&:hover": {
+                              borderColor: centerInactive ? "success.dark" : "error.main",
+                              color: centerInactive ? "success.dark" : "error.main",
+                            },
+                          }}
+                        >
+                          {centerInactive ? t("cities.activate") : t("cities.deactivate")}
+                        </Button>
+                        <TableRowActions
+                          onEdit={() => openEditCenter(center)}
+                          onDelete={() => {
+                            if (window.confirm(t("cities.deleteCenterConfirm").replace("{{name}}", displayName(center, language)))) {
+                              deleteCenter.mutate(center.id);
+                            }
+                          }}
+                        />
+                      </Stack>
+                    </Stack>
+                  );
+                })}
+              </Stack>
             ) : (
-              <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
-                {t("cities.noCenters")}
-              </Typography>
+              <Stack
+                direction="row"
+                spacing={1.5}
+                sx={{
+                  py: 1,
+                  px: 2,
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginInlineStart: { xs: 1, sm: 3 },
+                }}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  {t("cities.noCenters")}
+                </Typography>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<Add fontSize="small" />}
+                  onClick={() => openCreateCenter(city.id, governorateId)}
+                  sx={{ borderRadius: "6px", fontSize: "0.75rem" }}
+                >
+                  {t("cities.addCenter")}
+                </Button>
+              </Stack>
             )}
           </Box>
         </Collapse>
@@ -448,10 +632,20 @@ export function CitiesPage() {
         subtitle={t("cities.subtitle")}
         action={
           <Stack direction="row" spacing={1}>
-            <Button variant="outlined" startIcon={<Add />} onClick={openCreateGovernorate} sx={{ borderRadius: "8px" }}>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={openCreateGovernorate}
+              sx={{ borderRadius: "8px" }}
+            >
               {t("cities.addGovernorate")}
             </Button>
-            <Button variant="contained" startIcon={<Add />} onClick={() => openCreateCity()} sx={{ borderRadius: "8px" }}>
+            <Button
+              variant="outlined"
+              startIcon={<Add />}
+              onClick={() => openCreateCity()}
+              sx={{ borderRadius: "8px" }}
+            >
               {t("cities.add")}
             </Button>
           </Stack>
@@ -463,7 +657,17 @@ export function CitiesPage() {
           size="small"
           fullWidth
           label={t("cities.search")}
+          placeholder={t("cities.search")}
           value={search}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search fontSize="small" sx={{ color: "text.secondary" }} />
+                </InputAdornment>
+              ),
+            },
+          }}
           onChange={(e) => {
             setSearch(e.target.value);
             setPage(1);
@@ -475,6 +679,7 @@ export function CitiesPage() {
           size="small"
           label={t("cities.status")}
           value={statusFilter}
+          slotProps={{ select: { displayEmpty: true } }}
           onChange={(e) => {
             setStatusFilter(e.target.value as "all" | "true" | "false");
             setPage(1);
@@ -514,23 +719,47 @@ export function CitiesPage() {
               governorates.map((gov) => {
                 const open = Boolean(expandedGov[gov.id]);
                 const cities = gov.cities || [];
+                const isGovInactive = gov.isActive === false;
                 return (
                   <Fragment key={gov.id}>
-                    <AppTableRow>
-                      <AppTableCell>
-                        <IconButton
-                          size="small"
-                          onClick={() => setExpandedGov((prev) => ({ ...prev, [gov.id]: !open }))}
-                          aria-label={open ? t("cities.collapse") : t("cities.expand")}
-                        >
-                          {open ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
-                        </IconButton>
+                    <AppTableRow
+                      sx={{ bgcolor: open ? "action.selected" : undefined }}
+                    >
+                      <AppTableCell width={56}>
+                        <Tooltip title={open ? t("cities.collapse") : t("cities.expand")}>
+                          <IconButton
+                            size="small"
+                            onClick={() => setExpandedGov((prev) => ({ ...prev, [gov.id]: !open }))}
+                            aria-label={open ? t("cities.collapse") : t("cities.expand")}
+                            sx={{
+                              transition: "transform 0.2s ease",
+                              transform: open ? "rotate(180deg)" : "rotate(0deg)",
+                            }}
+                          >
+                            <ExpandMore fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
                       </AppTableCell>
                       <AppTableCell>
-                        <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-                          <Place fontSize="small" color="primary" />
+                        <Stack direction="row" spacing={1.25} sx={{ alignItems: "center" }}>
+                          <Box
+                            sx={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: "8px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              bgcolor: (theme) =>
+                                theme.palette.mode === "dark" ? "rgba(77, 154, 91, 0.15)" : "rgba(35, 103, 58, 0.08)",
+                              color: "primary.main",
+                              flexShrink: 0,
+                            }}
+                          >
+                            <Place fontSize="small" />
+                          </Box>
                           <Box>
-                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 700 }}>
                               {displayName(gov, language)}
                             </Typography>
                             {language === "ar" && gov.nameEn ? (
@@ -541,25 +770,66 @@ export function CitiesPage() {
                           </Box>
                         </Stack>
                       </AppTableCell>
-                      <AppTableCell>{cities.length}</AppTableCell>
-                      <AppTableCell>{gov.sortOrder ?? 0}</AppTableCell>
-                      <AppTableCell>
-                        <AppBadge variant={gov.isActive === false ? "neutral" : "success"}>
-                          {gov.isActive === false ? t("cities.inactive") : t("cities.active")}
+                      <AppTableCell width={120}>
+                        <Chip
+                          size="small"
+                          label={`${cities.length} ${t("cities.col.cities")}`}
+                          variant="outlined"
+                          sx={{
+                            borderRadius: "6px",
+                            fontWeight: 600,
+                            fontSize: "0.75rem",
+                            borderColor: "divider",
+                          }}
+                        />
+                      </AppTableCell>
+                      <AppTableCell width={80}>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                          {gov.sortOrder ?? 0}
+                        </Typography>
+                      </AppTableCell>
+                      <AppTableCell width={120}>
+                        <AppBadge variant={isGovInactive ? "neutral" : "success"}>
+                          {isGovInactive ? t("cities.inactive") : t("cities.active")}
                         </AppBadge>
                       </AppTableCell>
-                      <AppTableCell align="right">
-                        <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end", flexWrap: "wrap" }}>
-                          <Button size="small" onClick={() => openCreateCity(gov.id)} sx={{ borderRadius: "8px" }}>
+                      <AppTableCell align="right" width={260}>
+                        <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end", flexWrap: "nowrap" }}>
+                          <Button
+                            size="small"
+                            variant="text"
+                            startIcon={<Add fontSize="small" />}
+                            onClick={() => openCreateCity(gov.id)}
+                            sx={{
+                              borderRadius: "6px",
+                              fontWeight: 600,
+                              fontSize: "0.8125rem",
+                              color: "primary.main",
+                              px: 1,
+                              minHeight: 30,
+                            }}
+                          >
                             {t("cities.addCityIn")}
                           </Button>
                           <Button
                             size="small"
                             variant="outlined"
-                            onClick={() => toggleActiveGovernorate.mutate({ id: gov.id, isActive: gov.isActive === false })}
-                            sx={{ borderRadius: "8px" }}
+                            onClick={() => toggleActiveGovernorate.mutate({ id: gov.id, isActive: isGovInactive })}
+                            sx={{
+                              borderRadius: "6px",
+                              fontSize: "0.75rem",
+                              fontWeight: 600,
+                              minHeight: 30,
+                              px: 1.25,
+                              borderColor: isGovInactive ? "success.main" : "divider",
+                              color: isGovInactive ? "success.main" : "text.secondary",
+                              "&:hover": {
+                                borderColor: isGovInactive ? "success.dark" : "error.main",
+                                color: isGovInactive ? "success.dark" : "error.main",
+                              },
+                            }}
                           >
-                            {gov.isActive === false ? t("cities.activate") : t("cities.deactivate")}
+                            {isGovInactive ? t("cities.activate") : t("cities.deactivate")}
                           </Button>
                           <TableRowActions
                             onEdit={() => openEditGovernorate(gov)}
@@ -575,11 +845,73 @@ export function CitiesPage() {
                     <AppTableRow hover={false}>
                       <AppTableCell colSpan={6} sx={{ p: 0, borderBottom: open ? undefined : 0 }}>
                         <Collapse in={open} timeout="auto" unmountOnExit>
-                          <Box sx={{ px: 3, py: 1.5, bgcolor: "action.hover" }}>
-                            {cities.length ? cities.map((city) => renderCityBlock(city, gov.id)) : (
-                              <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
-                                {t("cities.noCities")}
-                              </Typography>
+                          <Box
+                            sx={{
+                              p: 2,
+                              backgroundColor: (theme) =>
+                                theme.palette.mode === "dark" ? "#0D140F" : "#F4F6F5",
+                              borderTop: "1px solid",
+                              borderBottom: "1px solid",
+                              borderColor: "divider",
+                            }}
+                          >
+                            <Stack
+                              direction="row"
+                              sx={{
+                                pb: 1.5,
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                              }}
+                            >
+                              <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                                <LocationCity fontSize="small" color="primary" />
+                                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                                  {t("cities.col.cities")} {displayName(gov, language)} ({cities.length})
+                                </Typography>
+                              </Stack>
+                              <Button
+                                size="small"
+                                variant="contained"
+                                startIcon={<Add fontSize="small" />}
+                                onClick={() => openCreateCity(gov.id)}
+                                sx={{ borderRadius: "6px", fontSize: "0.8125rem" }}
+                              >
+                                {t("cities.addCityIn")}
+                              </Button>
+                            </Stack>
+
+                            {cities.length ? (
+                              <Stack spacing={1.25}>
+                                {cities.map((city) => renderCityBlock(city, gov.id))}
+                              </Stack>
+                            ) : (
+                              <Stack
+                                spacing={1.5}
+                                sx={{
+                                  py: 3,
+                                  px: 2,
+                                  textAlign: "center",
+                                  alignItems: "center",
+                                  backgroundColor: (theme) =>
+                                    theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.02)" : "#FFFFFF",
+                                  borderRadius: "8px",
+                                  border: "1px dashed",
+                                  borderColor: "divider",
+                                }}
+                              >
+                                <Typography variant="body2" color="text.secondary">
+                                  {t("cities.noCities")}
+                                </Typography>
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  startIcon={<Add />}
+                                  onClick={() => openCreateCity(gov.id)}
+                                  sx={{ borderRadius: "8px" }}
+                                >
+                                  {t("cities.addCityIn")}
+                                </Button>
+                              </Stack>
                             )}
                           </Box>
                         </Collapse>
@@ -597,11 +929,13 @@ export function CitiesPage() {
             )}
             {unassignedCities.length ? (
               <AppTableRow hover={false}>
-                <AppTableCell colSpan={6} sx={{ bgcolor: "action.hover" }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700, py: 1 }}>
-                    {t("cities.ungrouped")}
+                <AppTableCell colSpan={6} sx={{ p: 2, bgcolor: "action.hover" }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: "warning.main" }}>
+                    ⚠️ {t("cities.ungrouped")} ({unassignedCities.length})
                   </Typography>
-                  {unassignedCities.map((city) => renderCityBlock(city))}
+                  <Stack spacing={1.25}>
+                    {unassignedCities.map((city) => renderCityBlock(city))}
+                  </Stack>
                 </AppTableCell>
               </AppTableRow>
             ) : null}

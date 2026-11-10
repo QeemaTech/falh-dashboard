@@ -1020,7 +1020,7 @@ const en = {
   "weather.gpsNoteBody": "Mobile clients send lat & lng. City is used only when GPS is unavailable. You cannot set user location from admin.",
   "weather.defaultCityHint": "Used when the app has no GPS and no city is sent.",
   "weather.previewFallback": "Preview (fallback city)",
-  "weather.forecastTitle": "5-day forecast",
+  "weather.forecastTitle": "10-day forecast",
   "weather.forecastHint": "Same layout as the mobile app. Users see GPS-based forecast; preview uses fallback city.",
   "weather.adminSettings": "Alert settings",
   "weather.source.coordinates": "GPS",

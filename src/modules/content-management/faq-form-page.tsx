@@ -80,6 +80,7 @@ function FaqFormFields({
         size="small"
         label={isArabic ? "السؤال (عربي) *" : "Question (Arabic) *"}
         value={questionAr}
+        slotProps={{ htmlInput: { dir: "rtl" } }}
         onChange={(e) => setQuestionAr(e.target.value)}
       />
       <TextField
@@ -87,6 +88,7 @@ function FaqFormFields({
         size="small"
         label={isArabic ? "السؤال (إنجليزي)" : "Question (English)"}
         value={questionEn}
+        slotProps={{ htmlInput: { dir: "ltr" } }}
         onChange={(e) => setQuestionEn(e.target.value)}
       />
       <TextField
@@ -95,6 +97,7 @@ function FaqFormFields({
         minRows={3}
         label={isArabic ? "الإجابة (عربي) *" : "Answer (Arabic) *"}
         value={answerAr}
+        slotProps={{ htmlInput: { dir: "rtl" } }}
         onChange={(e) => setAnswerAr(e.target.value)}
       />
       <TextField
@@ -103,6 +106,7 @@ function FaqFormFields({
         minRows={3}
         label={isArabic ? "الإجابة (إنجليزي)" : "Answer (English)"}
         value={answerEn}
+        slotProps={{ htmlInput: { dir: "ltr" } }}
         onChange={(e) => setAnswerEn(e.target.value)}
       />
       <TextField

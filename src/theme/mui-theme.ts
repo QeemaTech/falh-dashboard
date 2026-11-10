@@ -237,8 +237,32 @@ export function createAppTheme(mode: PaletteMode, direction: "ltr" | "rtl" = "lt
           paper: {
             borderRadius: 8,
             border: "1px solid",
-            borderColor: mode === "light" ? "#E8EFEA" : "#1D2A22",
-            boxShadow: "0 4px 16px -4px rgba(15, 23, 42, 0.12)",
+            borderColor: mode === "light" ? "#E8EFEA" : "rgba(255, 255, 255, 0.12)",
+            backgroundColor: mode === "light" ? "#FFFFFF" : "#1B261F",
+            boxShadow:
+              mode === "light"
+                ? "0 4px 16px -4px rgba(15, 23, 42, 0.12)"
+                : "0 10px 28px rgba(0, 0, 0, 0.55)",
+          },
+        },
+      },
+      MuiMenuItem: {
+        styleOverrides: {
+          root: {
+            borderRadius: 6,
+            margin: "2px 6px",
+            padding: "8px 12px",
+            fontSize: "0.875rem",
+            "&.Mui-selected": {
+              backgroundColor: mode === "light" ? "rgba(35, 103, 58, 0.12)" : "rgba(77, 154, 91, 0.22)",
+              fontWeight: 600,
+              "&:hover": {
+                backgroundColor: mode === "light" ? "rgba(35, 103, 58, 0.18)" : "rgba(77, 154, 91, 0.3)",
+              },
+            },
+            "&:hover": {
+              backgroundColor: mode === "light" ? "rgba(35, 103, 58, 0.06)" : "rgba(255, 255, 255, 0.06)",
+            },
           },
         },
       },

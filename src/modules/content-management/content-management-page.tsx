@@ -256,10 +256,18 @@ export function ContentManagementPage() {
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell width="60">{isArabic ? "الترتيب" : "Sort"}</TableCell>
-                    <TableCell width="240" style={{ textAlign: "right" }}>{isArabic ? "عنوان البند" : "Title"}</TableCell>
-                    <TableCell align="center">{isArabic ? "المحتوى" : "Content"}</TableCell>
-                    <TableCell width="150">{isArabic ? "الحالة" : "Status"}</TableCell>
+                    <TableCell width="60" align={isArabic ? "right" : "left"}>
+                      {isArabic ? "الترتيب" : "Sort"}
+                    </TableCell>
+                    <TableCell width="240" align={isArabic ? "right" : "left"}>
+                      {isArabic ? "عنوان البند" : "Title"}
+                    </TableCell>
+                    <TableCell align={isArabic ? "right" : "left"}>
+                      {isArabic ? "المحتوى" : "Content"}
+                    </TableCell>
+                    <TableCell width="150" align={isArabic ? "right" : "left"}>
+                      {isArabic ? "الحالة" : "Status"}
+                    </TableCell>
                     <TableCell width="100" align="center">
                       {isArabic ? "إجراءات" : "Actions"}
                     </TableCell>
@@ -279,72 +287,90 @@ export function ContentManagementPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    terms.map((item) => (
-                      <TableRow key={item.id} hover>
-                        <TableCell>{item.sortOrder}</TableCell>
-                        <TableCell style={{ textAlign: "right" }}>
-                          <Typography variant="body2" style={{ textAlign: "right" }} sx={{ fontWeight: "bold" }}>
-                            {item.titleAr}
-                          </Typography>
-                          {item.titleEn && (
-                            <Typography variant="caption" color="text.secondary" style={{ textAlign: "right" }} sx={{ display: "block" }}>
-                              {item.titleEn}
+                    terms.map((item) => {
+                      const primaryTitle = isArabic
+                        ? item.titleAr
+                        : item.titleEn || item.titleAr;
+                      const secondaryTitle = isArabic
+                        ? item.titleEn
+                        : item.titleEn
+                        ? item.titleAr
+                        : null;
+                      const contentText = isArabic
+                        ? item.contentAr
+                        : item.contentEn || item.contentAr;
+
+                      return (
+                        <TableRow key={item.id} hover>
+                          <TableCell align={isArabic ? "right" : "left"}>{item.sortOrder}</TableCell>
+                          <TableCell align={isArabic ? "right" : "left"}>
+                            <Typography variant="body2" sx={{ fontWeight: "bold" }}>
+                              {primaryTitle}
                             </Typography>
-                          )}
-                        </TableCell>
-                        <TableCell align="center">
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{
-                              textAlign: "center",
-                              display: "-webkit-box",
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: "vertical",
-                              overflow: "hidden",
-                            }}
-                          >
-                            {item.contentAr}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "nowrap" }}>
-                            <Chip
+                            {secondaryTitle && (
+                              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.25 }}>
+                                {secondaryTitle}
+                              </Typography>
+                            )}
+                          </TableCell>
+                          <TableCell align={isArabic ? "right" : "left"}>
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              dir="auto"
+                              sx={{
+                                textAlign: "start",
+                                display: "-webkit-box",
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                                lineHeight: 1.6,
+                              }}
+                            >
+                              {contentText || "-"}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align={isArabic ? "right" : "left"}>
+                            <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "nowrap" }}>
+                              <Chip
+                                size="small"
+                                label={item.isActive ? (isArabic ? "نشط" : "Active") : isArabic ? "مُعطل" : "Disabled"}
+                                color={item.isActive ? "success" : "default"}
+                                variant="outlined"
+                              />
+                              <Switch
+                                size="small"
+                                checked={item.isActive}
+                                onChange={(e) =>
+                                  toggleTermActiveMutation.mutate({
+                                    id: item.id,
+                                    isActive: e.target.checked,
+                                  })
+                                }
+                              />
+                            </Stack>
+                          </TableCell>
+                          <TableCell align="center">
+                            <IconButton
                               size="small"
-                              label={item.isActive ? (isArabic ? "نشط" : "Active") : isArabic ? "مُعطل" : "Disabled"}
-                              color={item.isActive ? "success" : "default"}
-                              variant="outlined"
-                            />
-                            <Switch
+                              color="primary"
+                              onClick={() => navigate(`/content-management/terms/${item.id}/edit`)}
+                              aria-label={isArabic ? "تعديل" : "Edit"}
+                            >
+                              <Edit fontSize="small" />
+                            </IconButton>
+                            <IconButton
                               size="small"
-                              checked={item.isActive}
-                              onChange={(e) =>
-                                toggleTermActiveMutation.mutate({
-                                  id: item.id,
-                                  isActive: e.target.checked,
-                                })
-                              }
-                            />
-                          </Stack>
-                        </TableCell>
-                        <TableCell align="center">
-                          <IconButton
-                            size="small"
-                            color="primary"
-                            onClick={() => navigate(`/content-management/terms/${item.id}/edit`)}
-                          >
-                            <Edit fontSize="small" />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => setConfirmDeleteTermId(item.id)}
-                          >
-                            <Delete fontSize="small" />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                              color="error"
+                              onClick={() => setConfirmDeleteTermId(item.id)}
+                              aria-label={isArabic ? "حذف" : "Delete"}
+                            >
+                              <Delete fontSize="small" />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>
@@ -372,10 +398,18 @@ export function ContentManagementPage() {
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell width="60">{isArabic ? "الترتيب" : "Sort"}</TableCell>
-                    <TableCell width="240" style={{ textAlign: "right" }}>{isArabic ? "السؤال" : "Question"}</TableCell>
-                    <TableCell align="center">{isArabic ? "الإجابة" : "Answer"}</TableCell>
-                    <TableCell width="150">{isArabic ? "الحالة" : "Status"}</TableCell>
+                    <TableCell width="60" align={isArabic ? "right" : "left"}>
+                      {isArabic ? "الترتيب" : "Sort"}
+                    </TableCell>
+                    <TableCell width="240" align={isArabic ? "right" : "left"}>
+                      {isArabic ? "السؤال" : "Question"}
+                    </TableCell>
+                    <TableCell align={isArabic ? "right" : "left"}>
+                      {isArabic ? "الإجابة" : "Answer"}
+                    </TableCell>
+                    <TableCell width="150" align={isArabic ? "right" : "left"}>
+                      {isArabic ? "الحالة" : "Status"}
+                    </TableCell>
                     <TableCell width="100" align="center">
                       {isArabic ? "إجراءات" : "Actions"}
                     </TableCell>
@@ -395,72 +429,90 @@ export function ContentManagementPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    faqs.map((item) => (
-                      <TableRow key={item.id} hover>
-                        <TableCell>{item.sortOrder}</TableCell>
-                        <TableCell style={{ textAlign: "right" }}>
-                          <Typography variant="body2" style={{ textAlign: "right" }} sx={{ fontWeight: "bold" }}>
-                            {item.questionAr}
-                          </Typography>
-                          {item.questionEn && (
-                            <Typography variant="caption" color="text.secondary" style={{ textAlign: "right" }} sx={{ display: "block" }}>
-                              {item.questionEn}
+                    faqs.map((item) => {
+                      const primaryQuestion = isArabic
+                        ? item.questionAr
+                        : item.questionEn || item.questionAr;
+                      const secondaryQuestion = isArabic
+                        ? item.questionEn
+                        : item.questionEn
+                        ? item.questionAr
+                        : null;
+                      const answerText = isArabic
+                        ? item.answerAr
+                        : item.answerEn || item.answerAr;
+
+                      return (
+                        <TableRow key={item.id} hover>
+                          <TableCell align={isArabic ? "right" : "left"}>{item.sortOrder}</TableCell>
+                          <TableCell align={isArabic ? "right" : "left"}>
+                            <Typography variant="body2" sx={{ fontWeight: "bold" }}>
+                              {primaryQuestion}
                             </Typography>
-                          )}
-                        </TableCell>
-                        <TableCell align="center">
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{
-                              textAlign: "center",
-                              display: "-webkit-box",
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: "vertical",
-                              overflow: "hidden",
-                            }}
-                          >
-                            {item.answerAr}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "nowrap" }}>
-                            <Chip
+                            {secondaryQuestion && (
+                              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.25 }}>
+                                {secondaryQuestion}
+                              </Typography>
+                            )}
+                          </TableCell>
+                          <TableCell align={isArabic ? "right" : "left"}>
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              dir="auto"
+                              sx={{
+                                textAlign: "start",
+                                display: "-webkit-box",
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                                lineHeight: 1.6,
+                              }}
+                            >
+                              {answerText || "-"}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align={isArabic ? "right" : "left"}>
+                            <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "nowrap" }}>
+                              <Chip
+                                size="small"
+                                label={item.isActive ? (isArabic ? "نشط" : "Active") : isArabic ? "مُعطل" : "Disabled"}
+                                color={item.isActive ? "success" : "default"}
+                                variant="outlined"
+                              />
+                              <Switch
+                                size="small"
+                                checked={item.isActive}
+                                onChange={(e) =>
+                                  toggleFaqActiveMutation.mutate({
+                                    id: item.id,
+                                    isActive: e.target.checked,
+                                  })
+                                }
+                              />
+                            </Stack>
+                          </TableCell>
+                          <TableCell align="center">
+                            <IconButton
                               size="small"
-                              label={item.isActive ? (isArabic ? "نشط" : "Active") : isArabic ? "مُعطل" : "Disabled"}
-                              color={item.isActive ? "success" : "default"}
-                              variant="outlined"
-                            />
-                            <Switch
+                              color="primary"
+                              onClick={() => navigate(`/content-management/faq/${item.id}/edit`)}
+                              aria-label={isArabic ? "تعديل" : "Edit"}
+                            >
+                              <Edit fontSize="small" />
+                            </IconButton>
+                            <IconButton
                               size="small"
-                              checked={item.isActive}
-                              onChange={(e) =>
-                                toggleFaqActiveMutation.mutate({
-                                  id: item.id,
-                                  isActive: e.target.checked,
-                                })
-                              }
-                            />
-                          </Stack>
-                        </TableCell>
-                        <TableCell align="center">
-                          <IconButton
-                            size="small"
-                            color="primary"
-                            onClick={() => navigate(`/content-management/faq/${item.id}/edit`)}
-                          >
-                            <Edit fontSize="small" />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => setConfirmDeleteFaqId(item.id)}
-                          >
-                            <Delete fontSize="small" />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                              color="error"
+                              onClick={() => setConfirmDeleteFaqId(item.id)}
+                              aria-label={isArabic ? "حذف" : "Delete"}
+                            >
+                              <Delete fontSize="small" />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>
@@ -485,6 +537,7 @@ export function ContentManagementPage() {
                   size="small"
                   label={isArabic ? "العنوان بالعربية *" : "Arabic Title *"}
                   value={privacyForm.titleAr || ""}
+                  slotProps={{ htmlInput: { dir: "rtl" } }}
                   onChange={(e) => setPrivacyForm({ ...privacyForm, titleAr: e.target.value })}
                 />
               </Grid>
@@ -494,6 +547,7 @@ export function ContentManagementPage() {
                   size="small"
                   label={isArabic ? "العنوان بالإنجليزية" : "English Title"}
                   value={privacyForm.titleEn || ""}
+                  slotProps={{ htmlInput: { dir: "ltr" } }}
                   onChange={(e) => setPrivacyForm({ ...privacyForm, titleEn: e.target.value })}
                 />
               </Grid>
@@ -504,6 +558,7 @@ export function ContentManagementPage() {
                   minRows={6}
                   label={isArabic ? "المحتوى بالعربية *" : "Arabic Content *"}
                   value={privacyForm.contentAr || ""}
+                  slotProps={{ htmlInput: { dir: "rtl" } }}
                   onChange={(e) => setPrivacyForm({ ...privacyForm, contentAr: e.target.value })}
                 />
               </Grid>
@@ -514,6 +569,7 @@ export function ContentManagementPage() {
                   minRows={6}
                   label={isArabic ? "المحتوى بالإنجليزية" : "English Content"}
                   value={privacyForm.contentEn || ""}
+                  slotProps={{ htmlInput: { dir: "ltr" } }}
                   onChange={(e) => setPrivacyForm({ ...privacyForm, contentEn: e.target.value })}
                 />
               </Grid>
