@@ -36,6 +36,7 @@ import {
   ProductImageThumb,
   ProductRowActions,
 } from "./product-shared";
+import { formatCurrency, formatProductPrice, sellingPriceOf } from "../../utils/format";
 
 function formatSelectedLabel(template: string, count: number) {
   return template.replace("{{count}}", String(count));
@@ -290,30 +291,30 @@ export function PendingProductsPage() {
                       </AppTableCell>
                       <AppTableCell>{categoryLabel(product, language)}</AppTableCell>
                       <AppTableCell>
-                        {product.price != null ? (
+                        {sellingPriceOf(product) != null ? (
                           <Stack direction="row" spacing={0.75} sx={{ alignItems: "center", flexWrap: "wrap" }}>
-                            {product.originalPrice && product.originalPrice > product.price ? (
+                            {product.originalPrice && sellingPriceOf(product)! < product.originalPrice ? (
                               <>
                                 <Typography
                                   variant="caption"
                                   sx={{ textDecoration: "line-through", color: "text.secondary" }}
                                 >
-                                  {product.originalPrice}
+                                  {formatCurrency(product.originalPrice, language, t("market.currency"))}
                                 </Typography>
                                 <Typography variant="body2" sx={{ fontWeight: 600, color: "success.main" }}>
-                                  {product.price} {t("market.currency")}
+                                  {formatProductPrice(product, language, t("market.currency"))}
                                 </Typography>
                                 <Chip
                                   size="small"
                                   color="error"
                                   variant="outlined"
-                                  label={`-${Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%`}
+                                  label={`-${Math.round(((product.originalPrice - sellingPriceOf(product)!) / product.originalPrice) * 100)}%`}
                                   sx={{ height: 20, fontSize: "0.7rem", px: 0.25 }}
                                 />
                               </>
                             ) : (
                               <Typography variant="body2">
-                                {product.price ? `${t("market.currency")} ${product.price}` : "-"}
+                                {formatProductPrice(product, language, t("market.currency"))}
                               </Typography>
                             )}
                           </Stack>

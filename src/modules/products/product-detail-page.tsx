@@ -27,6 +27,7 @@ import { useI18n } from "../../hooks/use-i18n";
 import { reviewProductApi } from "../../services/admin-api";
 import { fetchProductById } from "../../services/products-api";
 import { resolveAssetUrl } from "../../utils/asset-url";
+import { formatCurrency, formatProductPrice, sellingPriceOf } from "../../utils/format";
 import {
   categoryLabel,
   invalidateProductQueries,
@@ -110,9 +111,13 @@ export function ProductDetailPage({ backTo = "/products", allowModerate = true }
   const coverPath = primaryProductImagePath(product);
   const owner = product.company?.name || product.user?.name || t("products.globalOwner");
   const category = categoryLabel(product, language);
-  const priceLabel = product.price != null
-    ? `${t("market.currency")} ${Number(product.price).toLocaleString(locale)}`
-    : "—";
+  const currency = t("market.currency");
+  const sellingPrice = sellingPriceOf(product);
+  const priceLabel = formatProductPrice(product, language, currency);
+  const hasDiscount =
+    sellingPrice != null &&
+    product.originalPrice != null &&
+    Number(product.originalPrice) > sellingPrice;
 
   return (
     <Stack spacing={2.5} sx={{ width: "100%", pb: 2 }}>
@@ -227,15 +232,15 @@ export function ProductDetailPage({ backTo = "/products", allowModerate = true }
               <InfoRow label={t("products.field.owner")} value={owner} />
               <InfoRow label={t("products.field.status")} value={statusLabel} />
               <InfoRow label={t("products.field.price")} value={priceLabel} />
-              {product.originalPrice && product.originalPrice > (product.price || 0) ? (
+              {hasDiscount ? (
                 <>
                   <InfoRow
                     label={t("products.field.originalPrice")}
-                    value={`${t("market.currency")} ${Number(product.originalPrice).toLocaleString(locale)}`}
+                    value={formatCurrency(product.originalPrice, language, currency)}
                   />
                   <InfoRow
                     label={t("products.field.discount")}
-                    value={`-${Math.round(((product.originalPrice - (product.price || 0)) / product.originalPrice) * 100)}%`}
+                    value={`-${Math.round(((Number(product.originalPrice) - sellingPrice) / Number(product.originalPrice)) * 100)}%`}
                   />
                 </>
               ) : null}

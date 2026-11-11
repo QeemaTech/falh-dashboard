@@ -44,7 +44,7 @@ import {
   ProductRowActions,
   statusChipColor,
 } from "./product-shared";
-import { formatCurrency, formatDate } from "../../utils/format";
+import { formatCurrency, formatDate, formatProductPrice, sellingPriceOf } from "../../utils/format";
 
 type ProductStatus = AdminProduct["status"];
 
@@ -408,9 +408,9 @@ export function ProductManagementPage() {
                     />
                   </AppTableCell>
                   <AppTableCell>
-                    {product.price != null ? (
+                    {sellingPriceOf(product) != null ? (
                       <Stack direction="row" spacing={0.75} sx={{ alignItems: "center", flexWrap: "wrap" }}>
-                        {product.originalPrice && product.originalPrice > product.price ? (
+                        {product.originalPrice && sellingPriceOf(product)! < product.originalPrice ? (
                           <>
                             <Typography
                               variant="caption"
@@ -419,19 +419,19 @@ export function ProductManagementPage() {
                               {formatCurrency(product.originalPrice, language, t("market.currency"))}
                             </Typography>
                             <Typography variant="body2" sx={{ fontWeight: 600, color: "success.main" }}>
-                              {formatCurrency(product.price, language, t("market.currency"))}
+                              {formatProductPrice(product, language, t("market.currency"))}
                             </Typography>
                             <Chip
                               size="small"
                               color="error"
                               variant="outlined"
-                              label={`-${Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%`}
+                              label={`-${Math.round(((product.originalPrice - sellingPriceOf(product)!) / product.originalPrice) * 100)}%`}
                               sx={{ height: 20, fontSize: "0.7rem", px: 0.25 }}
                             />
                           </>
                         ) : (
                           <Typography variant="body2">
-                            {product.price ? formatCurrency(product.price, language, t("market.currency")) : "-"}
+                            {formatProductPrice(product, language, t("market.currency"))}
                           </Typography>
                         )}
                       </Stack>

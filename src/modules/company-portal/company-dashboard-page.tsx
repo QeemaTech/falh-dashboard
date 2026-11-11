@@ -38,6 +38,7 @@ import { EmptyState } from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
 import { fetchCompanyDashboard } from "../../services/company-api";
 import { resolveAssetUrl } from "../../utils/asset-url";
+import { formatProductPrice } from "../../utils/format";
 
 type DashboardPeriod = "today" | "week" | "month";
 
@@ -567,7 +568,7 @@ export function CompanyDashboardPage() {
                           />
                         </TableCell>
                         <TableCell sx={{ color: "primary.main" }}>
-                          {product.price ? `EGP ${Number(product.price).toLocaleString(locale)}` : "-"}
+                          {formatProductPrice(product, language, t("market.currency"))}
                         </TableCell>
                       </TableRow>
                     ))}

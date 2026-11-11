@@ -27,6 +27,7 @@ import {
   fetchMyProducts,
 } from "../../services/products-api";
 import { resolveAssetUrl } from "../../utils/asset-url";
+import { formatCurrency, formatProductPrice, sellingPriceOf } from "../../utils/format";
 import type { AdminProduct } from "../../services/admin-api";
 
 type ProductRow = AdminProduct & Record<string, unknown>;
@@ -39,7 +40,7 @@ function statusChipColor(status: string): "success" | "warning" | "error" | "def
 }
 
 export function CompanyProductsPage() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const queryClient = useQueryClient();
   const [formOpen, setFormOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<AdminProduct | null>(null);
@@ -143,29 +144,31 @@ export function CompanyProductsPage() {
             key: "price",
             label: t("company.products.col.price"),
             render: (row) =>
-              row.price != null ? (
+              sellingPriceOf(row) != null ? (
                 <Stack direction="row" spacing={0.75} sx={{ alignItems: "center", flexWrap: "wrap" }}>
-                  {row.originalPrice && row.originalPrice > row.price ? (
+                  {row.originalPrice && sellingPriceOf(row)! < row.originalPrice ? (
                     <>
                       <Typography
                         variant="caption"
                         sx={{ textDecoration: "line-through", color: "text.secondary" }}
                       >
-                        {row.originalPrice}
+                        {formatCurrency(row.originalPrice, language, t("market.currency"))}
                       </Typography>
                       <Typography variant="body2" sx={{ fontWeight: 600, color: "success.main" }}>
-                        EGP {row.price}
+                        {formatProductPrice(row, language, t("market.currency"))}
                       </Typography>
                       <Chip
                         size="small"
                         color="error"
                         variant="outlined"
-                        label={`-${Math.round(((row.originalPrice - row.price) / row.originalPrice) * 100)}%`}
+                        label={`-${Math.round(((row.originalPrice - sellingPriceOf(row)!) / row.originalPrice) * 100)}%`}
                         sx={{ height: 20, fontSize: "0.7rem", px: 0.25 }}
                       />
                     </>
                   ) : (
-                    <Typography variant="body2">{row.price ? `EGP ${row.price}` : "-"}</Typography>
+                    <Typography variant="body2">
+                      {formatProductPrice(row, language, t("market.currency"))}
+                    </Typography>
                   )}
                 </Stack>
               ) : (
@@ -247,9 +250,11 @@ export function CompanyProductsPage() {
               <Box component="span" sx={{ fontWeight: 600 }}>
                 {t("company.products.col.price")}:
               </Box>{" "}
-              {viewProduct.price ? `EGP ${viewProduct.price}` : "-"}
+              {formatProductPrice(viewProduct, language, t("market.currency"))}
             </Typography>
-            {viewProduct.originalPrice && viewProduct.originalPrice > (viewProduct.price || 0) ? (
+            {viewProduct.originalPrice &&
+            sellingPriceOf(viewProduct) != null &&
+            viewProduct.originalPrice > sellingPriceOf(viewProduct)! ? (
               <>
                 <Typography variant="body2">
                   <Box component="span" sx={{ fontWeight: 600 }}>
@@ -260,7 +265,7 @@ export function CompanyProductsPage() {
                     variant="body2"
                     sx={{ textDecoration: "line-through", color: "text.secondary" }}
                   >
-                    EGP {viewProduct.originalPrice}
+                    {formatCurrency(viewProduct.originalPrice, language, t("market.currency"))}
                   </Typography>
                 </Typography>
                 <Typography variant="body2">
@@ -271,7 +276,7 @@ export function CompanyProductsPage() {
                     size="small"
                     color="error"
                     variant="outlined"
-                    label={`-${Math.round((((viewProduct.originalPrice - (viewProduct.price || 0))) / viewProduct.originalPrice) * 100)}%`}
+                    label={`-${Math.round((((viewProduct.originalPrice - sellingPriceOf(viewProduct)!) / viewProduct.originalPrice) * 100))}%`}
                     sx={{ height: 20, fontSize: "0.75rem" }}
                   />
                 </Typography>
