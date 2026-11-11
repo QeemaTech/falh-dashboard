@@ -9,12 +9,30 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { createAdminBannerApi, fetchAdminCompanies, fetchAdminProducts } from "../../services/admin-api";
+import {
+  createAdminBannerApi,
+  fetchAdminCompanies,
+  fetchAdminProducts,
+  updateAdminBannerApi,
+  type AdminBanner,
+} from "../../services/admin-api";
 import { getApiErrorMessage } from "../../utils/api-error";
+import { resolveAssetUrl } from "../../utils/asset-url";
 import { useI18n } from "../../hooks/use-i18n";
 import { BannerTargetFields, type BannerTargetType } from "./banner-target-fields";
 
+function targetsFromBanner(banner?: AdminBanner | null): BannerTargetType[] {
+  if (!banner) return ["company"];
+  const next: BannerTargetType[] = [];
+  if (banner.companyId || banner.company) next.push("company");
+  if (banner.productId || banner.product) next.push("product");
+  const url = banner.externalUrl || banner.navigation?.url;
+  if (url) next.push("url");
+  return next;
+}
+
 export type BannerFormProps = {
+  banner?: AdminBanner | null;
   onSuccess: () => void;
   onCancel: () => void;
   showActions?: boolean;
@@ -26,23 +44,25 @@ export type BannerFormProps = {
 };
 
 export function BannerForm({
+  banner,
   onSuccess,
   onCancel,
   showActions = true,
   actionsSlot,
 }: BannerFormProps) {
   const { t } = useI18n();
-  const [titleAr, setTitleAr] = useState("");
-  const [titleEn, setTitleEn] = useState("");
-  const [badgeTextAr, setBadgeTextAr] = useState("");
-  const [badgeTextEn, setBadgeTextEn] = useState("");
-  const [selectedTargets, setSelectedTargets] = useState<BannerTargetType[]>(["company"]);
-  const [companyId, setCompanyId] = useState("");
-  const [productId, setProductId] = useState("");
-  const [externalUrl, setExternalUrl] = useState("");
-  const [sortOrder, setSortOrder] = useState(0);
-  const [displayDays, setDisplayDays] = useState<number | "">(7);
-  const [isActive, setIsActive] = useState(true);
+  const isEdit = Boolean(banner?.id);
+  const [titleAr, setTitleAr] = useState(banner?.titleAr || banner?.title || "");
+  const [titleEn, setTitleEn] = useState(banner?.titleEn || "");
+  const [badgeTextAr, setBadgeTextAr] = useState(banner?.badgeTextAr || banner?.badgeText || "");
+  const [badgeTextEn, setBadgeTextEn] = useState(banner?.badgeTextEn || "");
+  const [selectedTargets, setSelectedTargets] = useState<BannerTargetType[]>(() => targetsFromBanner(banner));
+  const [companyId, setCompanyId] = useState(banner?.companyId || banner?.company?.id || "");
+  const [productId, setProductId] = useState(banner?.productId || banner?.product?.id || "");
+  const [externalUrl, setExternalUrl] = useState(banner?.externalUrl || banner?.navigation?.url || "");
+  const [sortOrder, setSortOrder] = useState(banner?.sortOrder ?? 0);
+  const [displayDays, setDisplayDays] = useState<number | "">(banner ? banner.displayDays ?? "" : 7);
+  const [isActive, setIsActive] = useState(banner?.isActive ?? true);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -60,19 +80,19 @@ export function BannerForm({
 
   useEffect(() => {
     if (!imageFile) {
-      setPreviewUrl(null);
+      setPreviewUrl(banner?.imagePath ? resolveAssetUrl(banner.imagePath) : null);
       return;
     }
     const url = URL.createObjectURL(imageFile);
     setPreviewUrl(url);
     return () => URL.revokeObjectURL(url);
-  }, [imageFile]);
+  }, [imageFile, banner?.imagePath]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!titleAr.trim()) throw new Error(t("banners.titleRequired"));
       if (!titleEn.trim()) throw new Error(t("banners.errorTitleEn"));
-      if (!imageFile) throw new Error(t("banners.imageRequired"));
+      if (!imageFile && !isEdit) throw new Error(t("banners.imageRequired"));
       if (displayDays !== "" && (Number.isNaN(Number(displayDays)) || Number(displayDays) < 1)) {
         throw new Error(t("banners.errorDisplayDays"));
       }
@@ -85,13 +105,13 @@ export function BannerForm({
       if (selectedTargets.includes("url") && !externalUrl.trim()) {
         throw new Error(t("banners.urlRequired"));
       }
-      return createAdminBannerApi({
+      const payload = {
         titleAr: titleAr.trim(),
         titleEn: titleEn.trim(),
         badgeTextAr: badgeTextAr.trim() || undefined,
         badgeTextEn: badgeTextEn.trim() || undefined,
         badgeText: badgeTextAr.trim() || badgeTextEn.trim() || undefined,
-        image: imageFile,
+        image: imageFile || undefined,
         linkType: selectedTargets.length > 1 ? "multi" : (selectedTargets[0] || undefined),
         companyId: selectedTargets.includes("company") ? companyId : undefined,
         productId: selectedTargets.includes("product") ? productId : undefined,
@@ -100,7 +120,10 @@ export function BannerForm({
         sortOrder: Number(sortOrder),
         displayDays: displayDays === "" ? null : Number(displayDays),
         isActive,
-      });
+      };
+      return isEdit && banner
+        ? updateAdminBannerApi(banner.id, payload)
+        : createAdminBannerApi({ ...payload, image: imageFile as File });
     },
     onSuccess: () => onSuccess(),
     onError: (err: unknown) => setError(getApiErrorMessage(err, t("banners.saveFailed"))),
@@ -158,6 +181,11 @@ export function BannerForm({
         {t("banners.fieldImage")}
         <input hidden type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
       </Button>
+      {isEdit && !imageFile ? (
+        <Typography variant="caption" color="text.secondary">
+          {t("banners.imageKeep")}
+        </Typography>
+      ) : null}
       {previewUrl ? (
         <Box
           component="img"

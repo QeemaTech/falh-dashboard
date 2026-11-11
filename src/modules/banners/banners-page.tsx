@@ -198,7 +198,11 @@ export function BannersPage() {
                   </AppBadge>
                 </AppTableCell>
                 <AppTableCell>
-                  <TableRowActions onDelete={() => setConfirmDeleteId(banner.id)} disableDelete={deleteMutation.isPending} />
+                  <TableRowActions
+                    onEdit={() => navigate(`/banners/${banner.id}/edit`)}
+                    onDelete={() => setConfirmDeleteId(banner.id)}
+                    disableDelete={deleteMutation.isPending}
+                  />
                 </AppTableCell>
               </AppTableRow>
             ))}

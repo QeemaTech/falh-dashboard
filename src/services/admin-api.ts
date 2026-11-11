@@ -1075,7 +1075,7 @@ export type BannerFormPayload = {
   badgeTextAr?: string | null;
   badgeTextEn?: string | null;
   badgeText?: string | null;
-  image: File;
+  image?: File;
   linkType?: "company" | "product" | "url" | "multi" | string;
   companyId?: string | null;
   productId?: string | null;
@@ -1086,11 +1086,13 @@ export type BannerFormPayload = {
   displayDays?: number | null;
 };
 
-export async function createAdminBannerApi(payload: BannerFormPayload) {
+function appendBannerFormData(payload: BannerFormPayload) {
   const formData = new FormData();
   formData.append("titleAr", payload.titleAr);
   formData.append("titleEn", payload.titleEn);
-  formData.append("image", payload.image);
+  if (payload.image) {
+    formData.append("image", payload.image);
+  }
   if (payload.badgeTextAr) {
     formData.append("badgeTextAr", payload.badgeTextAr);
   }
@@ -1103,27 +1105,35 @@ export async function createAdminBannerApi(payload: BannerFormPayload) {
   if (payload.linkType) {
     formData.append("linkType", payload.linkType);
   }
-  if (payload.companyId) {
-    formData.append("companyId", payload.companyId);
-  }
-  if (payload.productId) {
-    formData.append("productId", payload.productId);
-  }
-  if (payload.externalUrl) {
-    formData.append("externalUrl", payload.externalUrl);
-  }
+  formData.append("companyId", payload.companyId || "");
+  formData.append("productId", payload.productId || "");
+  formData.append("externalUrl", payload.externalUrl || "");
   if (payload.linkValue) {
     formData.append("linkValue", payload.linkValue);
   }
   formData.append("sortOrder", String(payload.sortOrder ?? 0));
   if (payload.displayDays != null && payload.displayDays > 0) {
     formData.append("displayDays", String(payload.displayDays));
+  } else if (payload.displayDays === null) {
+    formData.append("displayDays", "");
   }
   formData.append("isActive", String(payload.isActive ?? true));
+  return formData;
+}
 
-  const { data } = await http.post<ApiResponse<AdminBanner>>("/admin/banners", formData, {
+export async function createAdminBannerApi(payload: BannerFormPayload) {
+  const { data } = await http.post<ApiResponse<AdminBanner>>("/admin/banners", appendBannerFormData(payload), {
     headers: { "Content-Type": "multipart/form-data" },
   });
+  return data.data;
+}
+
+export async function updateAdminBannerApi(bannerId: string, payload: BannerFormPayload) {
+  const { data } = await http.patch<ApiResponse<AdminBanner>>(
+    `/admin/banners/${bannerId}`,
+    appendBannerFormData(payload),
+    { headers: { "Content-Type": "multipart/form-data" } }
+  );
   return data.data;
 }
 

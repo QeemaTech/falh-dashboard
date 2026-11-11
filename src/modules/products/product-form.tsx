@@ -100,7 +100,7 @@ export function ProductForm({
   const [titleEn, setTitleEn] = useState("");
   const [descriptionAr, setDescriptionAr] = useState("");
   const [price, setPrice] = useState("");
-  const [discountPrice, setDiscountPrice] = useState("");
+  const [originalPrice, setOriginalPrice] = useState("");
   const [advertiserName, setAdvertiserName] = useState("");
   const [contactPhone, setContactPhone] = useState("");
   const [whatsappNumber, setWhatsappNumber] = useState("");
@@ -167,19 +167,8 @@ export function ProductForm({
       setTitleAr(source.titleAr || source.title);
       setTitleEn(source.titleEn || "");
       setDescriptionAr(source.descriptionAr || source.description || "");
-      const selling = source.price;
-      const listed = source.originalPrice;
-      if (listed != null && selling != null && listed > selling) {
-        setPrice(String(listed));
-        setDiscountPrice(String(selling));
-      } else {
-        setPrice(selling != null ? String(selling) : "");
-        setDiscountPrice(
-          source.discountPrice != null && source.discountPrice !== selling
-            ? String(source.discountPrice)
-            : ""
-        );
-      }
+      setPrice(source.price != null ? String(source.price) : "");
+      setOriginalPrice(source.originalPrice != null ? String(source.originalPrice) : "");
       setAdvertiserName(source.advertiserName || "");
       setContactPhone(source.contactPhone || "");
       setWhatsappNumber(source.whatsappNumber || "");
@@ -201,7 +190,7 @@ export function ProductForm({
       setTitleEn("");
       setDescriptionAr("");
       setPrice("");
-      setDiscountPrice("");
+      setOriginalPrice("");
       setAdvertiserName("");
       setContactPhone("");
       setWhatsappNumber("");
@@ -318,7 +307,7 @@ export function ProductForm({
         ...(requiresCityAndCenter ? { governorateId, cityId, centerId } : {}),
         ...(parsedLat !== undefined && parsedLng !== undefined ? { lat: parsedLat, lng: parsedLng } : {}),
         price: price.trim() === "" ? null : Number(price),
-        discountPrice: discountPrice.trim() === "" ? null : Number(discountPrice),
+        originalPrice: originalPrice.trim() === "" ? null : Number(originalPrice),
         images,
         dynamicFields: buildDynamicFieldsPayload(categoryFields, dynamicValues),
       };
@@ -528,9 +517,9 @@ export function ProductForm({
             fullWidth
             type="number"
             slotProps={{ htmlInput: { min: 0, step: "0.01" } }}
-            label={t("products.form.discountPrice")}
-            value={discountPrice}
-            onChange={(e) => setDiscountPrice(e.target.value)}
+            label={t("products.form.originalPrice")}
+            value={originalPrice}
+            onChange={(e) => setOriginalPrice(e.target.value)}
           />
         </Box>
 
