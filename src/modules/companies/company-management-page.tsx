@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { Add, Business, ContentCopy, Key, Search, Tune } from "@mui/icons-material";
 import {
+  Avatar,
   Box,
   Button,
   Chip,
@@ -44,6 +45,7 @@ import { generatePassword } from "../../utils/generate-password";
 import { prefillCompanyLoginEmail } from "../../utils/company-approval-email";
 import { formatCurrency, formatDate } from "../../utils/format";
 import { toast } from "../../components/ui/sonner";
+import { resolveAssetUrl } from "../../utils/asset-url";
 
 type CompanyStatus = AdminCompany["status"];
 
@@ -468,18 +470,13 @@ export function CompanyManagementPage() {
               <AppTableRow key={company.id}>
                 <AppTableCell>
                   <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
-                    <Box
-                      sx={{
-                        p: 1,
-                        borderRadius: 1,
-                        bgcolor: "primary.main",
-                        color: "primary.contrastText",
-                        display: "grid",
-                        placeItems: "center",
-                      }}
+                    <Avatar
+                      variant="rounded"
+                      src={company.logo ? resolveAssetUrl(company.logo) : undefined}
+                      sx={{ width: 40, height: 40, bgcolor: "primary.main", borderRadius: "8px" }}
                     >
                       <Business fontSize="small" />
-                    </Box>
+                    </Avatar>
                     <Box>
                       <Typography variant="body2" sx={{ fontWeight: 600 }}>
                         {company.name}

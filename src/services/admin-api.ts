@@ -370,6 +370,7 @@ export type AdminServiceProvider = {
       value: unknown;
     }>;
   } | null;
+  profileImage?: string | null;
   user?: { id: string; name?: string; profileImage?: string | null };
 };
 
@@ -402,9 +403,21 @@ export async function setServiceProviderShowContactApi(providerId: string, showC
   return data.data;
 }
 
+export async function uploadServiceProviderProfileImageApi(providerId: string, file: File) {
+  const formData = new FormData();
+  formData.append("profileImage", file);
+  const { data } = await http.post<ApiResponse<AdminServiceProvider>>(
+    `/admin/service-providers/${providerId}/profile-image`,
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } }
+  );
+  return data.data;
+}
+
 export type AdminCompany = {
   id: string;
   name: string;
+  logo?: string | null;
   city: string;
   phone: string;
   status: "PENDING" | "APPROVED" | "REJECTED" | "SUSPENDED";
@@ -434,6 +447,17 @@ export type AdminCompany = {
     businessLicense?: string;
   } | null;
 };
+
+export async function uploadAdminCompanyLogoApi(companyId: string, file: File) {
+  const formData = new FormData();
+  formData.append("logo", file);
+  const { data } = await http.post<ApiResponse<AdminCompany>>(
+    `/admin/companies/${companyId}/logo`,
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } }
+  );
+  return data.data;
+}
 
 export async function fetchAdminCompanyDetails(companyId: string) {
   const { data } = await http.get<ApiResponse<AdminCompany>>(`/admin/companies/${companyId}`);

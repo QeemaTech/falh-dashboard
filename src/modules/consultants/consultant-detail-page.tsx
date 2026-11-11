@@ -1,8 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import {
+  Avatar,
   Box,
+  Button,
   Checkbox,
   Chip,
   CircularProgress,
@@ -11,6 +13,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import { PhotoCamera } from "@mui/icons-material";
 import { DetailField, DetailGrid, DetailPageShell, EmptyState } from "../../components/layout";
 import { toast } from "../../components/ui/sonner";
 import { useI18n } from "../../hooks/use-i18n";
@@ -18,8 +21,10 @@ import { usePermission } from "../../store/permission-context";
 import {
   fetchServiceProviderById,
   setServiceProviderShowContactApi,
+  uploadServiceProviderProfileImageApi,
   type AdminServiceProvider,
 } from "../../services/admin-api";
+import { resolveAssetUrl } from "../../utils/asset-url";
 import { fetchProviderFilterTypes } from "../../services/provider-forms-api";
 import { PrivateFileLink } from "../../components/private-file-link";
 import { DynamicAnswers } from "../provider-forms/dynamic-answers";
@@ -43,11 +48,24 @@ export function ConsultantDetailPage() {
   const queryClient = useQueryClient();
   const { hasPermission } = usePermission();
   const canToggleContact = hasPermission(["provider_listings.update", "consultants.update"]);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const photoUrl = (provider: AdminServiceProvider) =>
+    provider.profileImage || provider.user?.profileImage || null;
 
   const { data: detail, isLoading, isError, error } = useQuery({
     queryKey: ["admin-consultant", id],
     queryFn: () => fetchServiceProviderById(id!),
     enabled: Boolean(id),
+  });
+
+  const photoMutation = useMutation({
+    mutationFn: (file: File) => uploadServiceProviderProfileImageApi(id!, file),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["admin-consultant", id], updated);
+      queryClient.invalidateQueries({ queryKey: ["admin-consultants"] });
+      toast.success(t("consultants.photoUpdated"));
+    },
+    onError: (err: unknown) => toast.error(getApiErrorMessage(err, t("consultants.photoFailed"))),
   });
 
   const showContactMutation = useMutation({
@@ -115,6 +133,44 @@ export function ConsultantDetailPage() {
           title: t("consultants.detailsTitle"),
           content: (
             <Stack spacing={2}>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ alignItems: { sm: "center" } }}>
+                <Avatar
+                  src={photoUrl(detail) ? resolveAssetUrl(photoUrl(detail)) : undefined}
+                  alt={providerName(detail)}
+                  sx={{ width: 88, height: 88, borderRadius: "8px" }}
+                />
+                <Stack spacing={0.75}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<PhotoCamera />}
+                    disabled={!canToggleContact || photoMutation.isPending}
+                    onClick={() => photoInputRef.current?.click()}
+                    sx={{ borderRadius: "8px", alignSelf: "flex-start" }}
+                  >
+                    {photoUrl(detail) ? t("consultants.changePhoto") : t("consultants.uploadPhoto")}
+                  </Button>
+                  <Typography variant="caption" color="text.secondary">
+                    {t("consultants.photoHint")}
+                  </Typography>
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    hidden
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      event.target.value = "";
+                      if (!file) return;
+                      if (file.size > 5 * 1024 * 1024) {
+                        toast.error(t("consultants.photoTooLarge"));
+                        return;
+                      }
+                      photoMutation.mutate(file);
+                    }}
+                  />
+                </Stack>
+              </Stack>
               <DetailGrid>
                 <DetailField
                   label={t("consultants.col.type")}

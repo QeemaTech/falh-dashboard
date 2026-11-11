@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
@@ -20,6 +20,7 @@ import {
   MailOutlined,
   OpenInNew,
   PhoneOutlined,
+  PhotoCamera,
   StarOutlined,
   VerifiedOutlined,
 } from "@mui/icons-material";
@@ -43,6 +44,7 @@ import {
   fetchAdminCompanyDetails,
   setCompanyPartnerApi,
   setCompanyStatusApi,
+  uploadAdminCompanyLogoApi,
   type AdminCompany,
 } from "../../services/admin-api";
 import { openStoredFile } from "../../utils/open-stored-file";
@@ -50,6 +52,7 @@ import { resolveAssetUrl } from "../../utils/asset-url";
 import { generatePassword } from "../../utils/generate-password";
 import { prefillCompanyLoginEmail } from "../../utils/company-approval-email";
 import { toast } from "../../components/ui/sonner";
+import { getApiErrorMessage } from "../../utils/api-error";
 
 type CompanyStatus = AdminCompany["status"];
 
@@ -145,11 +148,22 @@ export function CompanyDetailPage() {
   const [adminNote, setAdminNote] = useState("");
   const [formError, setFormError] = useState("");
   const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const { data: company, isLoading, isError, error } = useQuery({
     queryKey: ["admin-company-details", id],
     queryFn: () => fetchAdminCompanyDetails(id!),
     enabled: Boolean(id),
+  });
+
+  const logoMutation = useMutation({
+    mutationFn: (file: File) => uploadAdminCompanyLogoApi(id!, file),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["admin-company-details", id], updated);
+      queryClient.invalidateQueries({ queryKey: ["admin-companies"] });
+      toast.success(t("companies.logoUpdated"));
+    },
+    onError: (err: unknown) => toast.error(getApiErrorMessage(err, t("companies.logoFailed"))),
   });
 
   const invalidate = () => {
@@ -300,37 +314,78 @@ export function CompanyDetailPage() {
   const licensePath = company.businessLicense || company.joinApplication?.businessLicense;
   const commercialPath = company.commercialReg || company.joinApplication?.commercialReg;
 
-  const heroActions =
-    canApprove && !credentials ? (
-      <>
-        <Button
-          variant="contained"
-          disabled={approveMutation.isPending}
-          onClick={handleApprove}
-          sx={{ borderRadius: "8px", px: 2.5 }}
-        >
-          {isRejected ? t("companies.reapprove") : t("companies.approve")}
-        </Button>
-        {isPending ? (
-        <Button
-          variant="outlined"
-          color="error"
-          disabled={rejectMutation.isPending}
-          onClick={() => rejectMutation.mutate(adminNote.trim() || undefined)}
-          sx={{ borderRadius: "8px" }}
-        >
-          {t("companies.reject")}
-        </Button>
-        ) : null}
-      </>
-    ) : undefined;
+  const heroActions = (
+    <>
+      <Button
+        variant="outlined"
+        startIcon={<PhotoCamera />}
+        disabled={logoMutation.isPending}
+        onClick={() => logoInputRef.current?.click()}
+        sx={{ borderRadius: "8px" }}
+      >
+        {company.logo ? t("companies.changeLogo") : t("companies.uploadLogo")}
+      </Button>
+      <input
+        ref={logoInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif"
+        hidden
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = "";
+          if (!file) return;
+          if (file.size > 5 * 1024 * 1024) {
+            toast.error(t("companies.logoTooLarge"));
+            return;
+          }
+          logoMutation.mutate(file);
+        }}
+      />
+      {canApprove && !credentials ? (
+        <>
+          <Button
+            variant="contained"
+            disabled={approveMutation.isPending}
+            onClick={handleApprove}
+            sx={{ borderRadius: "8px", px: 2.5 }}
+          >
+            {isRejected ? t("companies.reapprove") : t("companies.approve")}
+          </Button>
+          {isPending ? (
+            <Button
+              variant="outlined"
+              color="error"
+              disabled={rejectMutation.isPending}
+              onClick={() => rejectMutation.mutate(adminNote.trim() || undefined)}
+              sx={{ borderRadius: "8px" }}
+            >
+              {t("companies.reject")}
+            </Button>
+          ) : null}
+        </>
+      ) : null}
+    </>
+  );
 
   return (
     <Stack spacing={2.5} sx={{ width: "100%", pb: 2 }}>
       <DetailBackButton to="/companies" />
 
       <DetailHero
-        media={<DetailMediaFrame>{companyInitials(company.name)}</DetailMediaFrame>}
+        media={
+          <DetailMediaFrame>
+            {company.logo ? (
+              <Box
+                component="img"
+                src={resolveAssetUrl(company.logo)}
+                alt={company.name}
+                sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+              />
+            ) : (
+              companyInitials(company.name)
+            )}
+          </DetailMediaFrame>
+        }
         title={company.name}
         status={
           <>

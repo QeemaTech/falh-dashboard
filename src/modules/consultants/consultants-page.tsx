@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Chip, Paper, Stack, Typography } from "@mui/material";
+import { Avatar, Chip, Paper, Stack, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import {
   DataTable,
@@ -12,6 +12,7 @@ import {
 } from "../../components/layout";
 import { useI18n } from "../../hooks/use-i18n";
 import { fetchAdminServiceProviders, type AdminServiceProvider } from "../../services/admin-api";
+import { resolveAssetUrl } from "../../utils/asset-url";
 import { fetchProviderFilterTypes } from "../../services/provider-forms-api";
 import { buildTypeFilterOptions, filterOptionLabel } from "../provider-forms/form-logic";
 
@@ -21,6 +22,7 @@ type ConsultantTab = typeof TAB_ALL | string;
 type ConsultantRow = {
   id: string;
   name: string;
+  photo: string | null;
   typeKey: string;
   city: string;
   status: string;
@@ -95,6 +97,7 @@ export function ConsultantsPage() {
     return (data?.items || []).map((provider) => ({
       id: provider.id,
       name: providerName(provider),
+      photo: provider.profileImage || provider.user?.profileImage || null,
       typeKey: resolveTypeKey(provider),
       city: provider.city || "-",
       status: provider.status,
@@ -136,9 +139,16 @@ export function ConsultantsPage() {
             key: "name",
             label: t("consultants.col.name"),
             render: (row) => (
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                {row.name}
-              </Typography>
+              <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+                <Avatar
+                  src={row.photo ? resolveAssetUrl(row.photo) : undefined}
+                  alt={row.name}
+                  sx={{ width: 40, height: 40, borderRadius: "8px" }}
+                />
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  {row.name}
+                </Typography>
+              </Stack>
             ),
           },
           {
