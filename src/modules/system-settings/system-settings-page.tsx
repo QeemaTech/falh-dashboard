@@ -4,6 +4,7 @@ import {
   ContactMail,
   Image,
   Language,
+  LocalShipping,
   Public,
   Save,
   Settings,
@@ -11,8 +12,10 @@ import {
 import {
   Box,
   Button,
+  Checkbox,
   CircularProgress,
   Divider,
+  FormControlLabel,
   Grid,
   MenuItem,
   Paper,
@@ -60,6 +63,10 @@ const initialSettings: SystemSettings = {
     splashScreen: "",
     appIcon: "",
     loginBackground: "",
+  },
+  delivery: {
+    deliveryEnabled: false,
+    deliveryFee: 0,
   },
 };
 
@@ -190,6 +197,11 @@ export function SystemSettingsPage() {
       contact: { ...initialSettings.contact, ...data.contact },
       social: { ...initialSettings.social, ...data.social },
       application: { ...initialSettings.application, ...data.application },
+      delivery: {
+        deliveryEnabled:
+          data.delivery?.deliveryEnabled ?? initialSettings.delivery!.deliveryEnabled,
+        deliveryFee: data.delivery?.deliveryFee ?? initialSettings.delivery!.deliveryFee,
+      },
     });
   }, [settingsQuery.data]);
 
@@ -213,6 +225,10 @@ export function SystemSettingsPage() {
           language: form.application.language,
           timezone: form.application.timezone,
           userMonthlyAdLimit: Number(form.application.userMonthlyAdLimit) || 0,
+        },
+        delivery: {
+          deliveryEnabled: Boolean(form.delivery?.deliveryEnabled),
+          deliveryFee: Math.max(0, Number(form.delivery?.deliveryFee) || 0),
         },
       });
     },
@@ -445,6 +461,46 @@ export function SystemSettingsPage() {
                   }))
                 }
                 slotProps={{ htmlInput: { min: 0, step: 1 } }}
+              />
+            </Stack>
+          </SettingsSection>
+        </Grid>
+
+        <Grid size={{ xs: 12, lg: 6 }}>
+          <SettingsSection title={t("systemSettings.delivery.title")} icon={<LocalShipping sx={{ fontSize: 20 }} />}>
+            <Stack spacing={2}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={Boolean(form.delivery?.deliveryEnabled)}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        delivery: { ...prev.delivery!, deliveryEnabled: e.target.checked },
+                      }))
+                    }
+                  />
+                }
+                label={t("systemSettings.delivery.enabled")}
+              />
+              <TextField
+                size="small"
+                fullWidth
+                type="number"
+                label={t("systemSettings.delivery.fee")}
+                value={form.delivery?.deliveryFee ?? 0}
+                disabled={!form.delivery?.deliveryEnabled}
+                helperText={t("systemSettings.delivery.feeHint")}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  const fee = raw === "" ? 0 : Number(raw);
+                  if (Number.isNaN(fee)) return;
+                  setForm((prev) => ({
+                    ...prev,
+                    delivery: { ...prev.delivery!, deliveryFee: Math.max(0, fee) },
+                  }));
+                }}
+                slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
               />
             </Stack>
           </SettingsSection>

@@ -123,6 +123,10 @@ export function OrderDetailPage() {
                 />
               ) : null}
               <DetailField
+                label={t("orders.detail.deliveryFee")}
+                value={formatMoney(orderDetail.deliveryFee ?? 0, locale, currency)}
+              />
+              <DetailField
                 label={t("orders.col.total")}
                 value={formatMoney(orderDetail.total, locale, currency)}
               />

@@ -71,6 +71,7 @@ export type AdminOrder = {
   status: AdminOrderStatus;
   subtotal?: number;
   discount?: number;
+  deliveryFee?: number;
   total: number;
   paymentMethod?: AdminPaymentMethod;
   isPaid?: boolean;
@@ -1303,7 +1304,26 @@ export type SystemSettings = {
     darkModeEnabled: boolean;
     lightModeEnabled: boolean;
   };
+  delivery?: {
+    deliveryEnabled: boolean;
+    deliveryFee: number;
+  };
 };
+
+export type DeliverySettings = {
+  deliveryEnabled: boolean;
+  deliveryFee: number;
+};
+
+export async function fetchDeliverySettings() {
+  const { data } = await http.get<ApiResponse<DeliverySettings>>("/admin/settings/delivery");
+  return data.data;
+}
+
+export async function updateDeliverySettingsApi(payload: DeliverySettings) {
+  const { data } = await http.put<ApiResponse<DeliverySettings>>("/admin/settings/delivery", payload);
+  return data.data;
+}
 
 export async function fetchSystemSettings() {
   const { data } = await http.get<ApiResponse<SystemSettings>>("/admin/system-settings");
