@@ -209,8 +209,8 @@ export function JoinRequestDetailPage() {
     );
   }
 
-  const isCompanyRejected = isCompanyReview && detail.status === "REJECTED";
-  const showReviewForm = (detail.status === "PENDING" || isCompanyRejected) && !credentials;
+  const isRejected = detail.status === "REJECTED";
+  const showReviewForm = (detail.status === "PENDING" || isRejected) && !credentials;
 
   return (
     <DetailPageShell
@@ -229,7 +229,7 @@ export function JoinRequestDetailPage() {
         showReviewForm ? (
           <>
             <Button variant="contained" disabled={reviewMutation.isPending} onClick={handleApprove}>
-              {isCompanyRejected
+              {isRejected
                 ? t("companies.reapprove")
                 : detail.applicationType === "COMPANY"
                   ? t("joinUs.approveCompany")

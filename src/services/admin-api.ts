@@ -396,6 +396,18 @@ export async function fetchServiceProviderById(providerId: string) {
   return data.data;
 }
 
+export async function reviewServiceProviderApi(
+  providerId: string,
+  action: "APPROVE" | "REJECT" | "SUSPEND",
+  adminNote?: string
+) {
+  const { data } = await http.patch<ApiResponse<AdminServiceProvider>>(
+    `/admin/service-providers/${providerId}/review`,
+    { action, adminNote }
+  );
+  return data.data;
+}
+
 export async function setServiceProviderShowContactApi(providerId: string, showContact: boolean) {
   const { data } = await http.patch<ApiResponse<AdminServiceProvider>>(
     `/admin/service-providers/${providerId}/show-contact`,

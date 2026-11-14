@@ -18,8 +18,10 @@ import { DetailField, DetailGrid, DetailPageShell, EmptyState } from "../../comp
 import { toast } from "../../components/ui/sonner";
 import { useI18n } from "../../hooks/use-i18n";
 import { usePermission } from "../../store/permission-context";
+import { PermissionGate } from "../../components/permission-gate";
 import {
   fetchServiceProviderById,
+  reviewServiceProviderApi,
   setServiceProviderShowContactApi,
   uploadServiceProviderProfileImageApi,
   type AdminServiceProvider,
@@ -66,6 +68,16 @@ export function ConsultantDetailPage() {
       toast.success(t("consultants.photoUpdated"));
     },
     onError: (err: unknown) => toast.error(getApiErrorMessage(err, t("consultants.photoFailed"))),
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: (action: "APPROVE" | "SUSPEND") => reviewServiceProviderApi(id!, action),
+    onSuccess: (updated, action) => {
+      queryClient.setQueryData(["admin-consultant", id], updated);
+      queryClient.invalidateQueries({ queryKey: ["admin-consultants"] });
+      toast.success(action === "SUSPEND" ? t("consultants.suspendSuccess") : t("consultants.unsuspendSuccess"));
+    },
+    onError: (err: unknown) => toast.error(getApiErrorMessage(err, t("consultants.reviewFailed"))),
   });
 
   const showContactMutation = useMutation({
@@ -127,6 +139,31 @@ export function ConsultantDetailPage() {
           size="small"
           variant="outlined"
         />
+      }
+      actions={
+        <PermissionGate permission={["provider_listings.update", "consultants.update"]}>
+          {detail.status === "APPROVED" ? (
+            <Button
+              variant="outlined"
+              color="warning"
+              disabled={statusMutation.isPending}
+              onClick={() => statusMutation.mutate("SUSPEND")}
+              sx={{ borderRadius: "8px" }}
+            >
+              {t("consultants.suspend")}
+            </Button>
+          ) : null}
+          {detail.status === "SUSPENDED" || detail.status === "REJECTED" ? (
+            <Button
+              variant="contained"
+              disabled={statusMutation.isPending}
+              onClick={() => statusMutation.mutate("APPROVE")}
+              sx={{ borderRadius: "8px" }}
+            >
+              {t("consultants.unsuspend")}
+            </Button>
+          ) : null}
+        </PermissionGate>
       }
       sections={[
         {

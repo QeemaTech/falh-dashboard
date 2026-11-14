@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Avatar, Chip, Paper, Stack, Typography } from "@mui/material";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Avatar, Button, Chip, Paper, Stack, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import {
   DataTable,
@@ -10,9 +10,16 @@ import {
   TableRowActions,
   resolveTotalPages,
 } from "../../components/layout";
+import { PermissionGate } from "../../components/permission-gate";
+import { toast } from "../../components/ui/sonner";
 import { useI18n } from "../../hooks/use-i18n";
-import { fetchAdminServiceProviders, type AdminServiceProvider } from "../../services/admin-api";
+import {
+  fetchAdminServiceProviders,
+  reviewServiceProviderApi,
+  type AdminServiceProvider,
+} from "../../services/admin-api";
 import { resolveAssetUrl } from "../../utils/asset-url";
+import { getApiErrorMessage } from "../../utils/api-error";
 import { fetchProviderFilterTypes } from "../../services/provider-forms-api";
 import { buildTypeFilterOptions, filterOptionLabel } from "../provider-forms/form-logic";
 
@@ -43,9 +50,27 @@ function statusChipColor(status: string): "success" | "warning" | "error" | "def
 export function ConsultantsPage() {
   const { t, language } = useI18n();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [tab, setTab] = useState<ConsultantTab>(TAB_ALL);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+
+  const statusMutation = useMutation({
+    mutationFn: ({
+      providerId,
+      action,
+    }: {
+      providerId: string;
+      action: "APPROVE" | "SUSPEND";
+    }) => reviewServiceProviderApi(providerId, action),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-consultants"] });
+      toast.success(
+        variables.action === "SUSPEND" ? t("consultants.suspendSuccess") : t("consultants.unsuspendSuccess")
+      );
+    },
+    onError: (err: unknown) => toast.error(getApiErrorMessage(err, t("consultants.reviewFailed"))),
+  });
 
   useEffect(() => {
     setPage(1);
@@ -101,7 +126,9 @@ export function ConsultantsPage() {
       typeKey: resolveTypeKey(provider),
       city: provider.city || "-",
       status: provider.status,
-      rating: provider.rating != null ? String(provider.rating) : "-",
+      rating: provider.rating != null && Number.isFinite(Number(provider.rating))
+        ? Number(provider.rating).toFixed(1)
+        : "-",
     }));
   }, [data?.items]);
 
@@ -171,7 +198,34 @@ export function ConsultantsPage() {
             render: (row) => (
               <TableRowActions
                 onView={() => navigate(`/consultants/${row.id}`)}
-                onEdit={() => navigate(`/consultants/${row.id}`)}
+                extra={
+                  <PermissionGate permission={["provider_listings.update", "consultants.update"]}>
+                    {row.status === "APPROVED" ? (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="warning"
+                        disabled={statusMutation.isPending}
+                        onClick={() => statusMutation.mutate({ providerId: row.id, action: "SUSPEND" })}
+                        sx={{ borderRadius: "8px" }}
+                      >
+                        {t("consultants.suspend")}
+                      </Button>
+                    ) : null}
+                    {row.status === "SUSPENDED" || row.status === "REJECTED" ? (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="success"
+                        disabled={statusMutation.isPending}
+                        onClick={() => statusMutation.mutate({ providerId: row.id, action: "APPROVE" })}
+                        sx={{ borderRadius: "8px" }}
+                      >
+                        {t("consultants.unsuspend")}
+                      </Button>
+                    ) : null}
+                  </PermissionGate>
+                }
               />
             ),
           },

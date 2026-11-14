@@ -128,9 +128,15 @@ export type UserAdminDetails = User & {
   serviceProvider?: {
     id: string;
     displayName?: string | null;
-    type: string;
+    type?: string | null;
     city?: string;
     status: string;
     rating?: number;
+    joinApplicationType?: {
+      id: string;
+      code: string;
+      nameAr: string;
+      nameEn: string;
+    } | null;
   } | null;
 };
