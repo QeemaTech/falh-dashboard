@@ -193,7 +193,11 @@ export function ProviderTypesPage() {
                             {t("providerTypes.deactivate")}
                           </Button>
                         ) : (
-                          <Button size="small" disabled={!row.hasPublishedForm} title={row.hasPublishedForm ? undefined : t("providerTypes.activateNeedsForm")} onClick={() => actionMutation.mutate({ action: "activate", type: row })}>
+                          <Button
+                            size="small"
+                            title={row.hasPublishedForm ? undefined : t("providerTypes.activateNeedsForm")}
+                            onClick={() => actionMutation.mutate({ action: "activate", type: row })}
+                          >
                             {t("providerTypes.activate")}
                           </Button>
                         )}
