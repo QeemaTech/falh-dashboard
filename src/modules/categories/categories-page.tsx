@@ -47,7 +47,6 @@ const emptyForm = {
   nameEn: "",
   sortOrder: "0",
   allowsAdvertisement: false,
-  requiresGovernorate: false,
   requiresCityAndCenter: false,
   isActive: true,
 };
@@ -92,7 +91,7 @@ export function CategoriesPage() {
         nameEn: form.nameEn.trim(),
         sortOrder: Number(form.sortOrder) || 0,
         allowsAdvertisement: form.allowsAdvertisement,
-        requiresGovernorate: form.requiresGovernorate,
+        requiresGovernorate: false,
         requiresCityAndCenter: form.requiresCityAndCenter,
         isActive: form.isActive,
         ...(image !== null ? { image } : editingId ? { image: null } : {}),
@@ -142,7 +141,6 @@ export function CategoriesPage() {
       nameEn: category.nameEn || "",
       sortOrder: String(category.sortOrder ?? 0),
       allowsAdvertisement: category.allowsAdvertisement === true,
-      requiresGovernorate: category.requiresGovernorate === true,
       requiresCityAndCenter: category.requiresCityAndCenter === true,
       isActive: category.isActive !== false,
     });
@@ -418,26 +416,6 @@ export function CategoriesPage() {
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
                     {t("categories.allowsAdvertisementHint")}
-                  </Typography>
-                </Box>
-              }
-              sx={{ alignItems: "flex-start", ml: 0, mr: 0 }}
-            />
-            <FormControlLabel
-              control={
-                <Checkbox
-                  size="small"
-                  checked={form.requiresGovernorate}
-                  onChange={(e) => setForm((f) => ({ ...f, requiresGovernorate: e.target.checked }))}
-                />
-              }
-              label={
-                <Box>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {t("categories.requiresGovernorate")}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {t("categories.requiresGovernorateHint")}
                   </Typography>
                 </Box>
               }
