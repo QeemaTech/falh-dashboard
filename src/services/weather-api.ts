@@ -1,3 +1,4 @@
+import { resolveAssetUrl } from "../utils/asset-url";
 import { http } from "./http";
 
 type ApiResponse<T> = { success: boolean; data: T; message?: string };
@@ -69,9 +70,49 @@ export type WeatherForecastDay = {
   condition: string;
   conditionCode?: string | null;
   icon?: string | null;
+  iconUrl?: string | null;
   isRain?: boolean;
   isStorm?: boolean;
 };
+
+/** PNG from Falh `/api/weather/icons/:code` — never OpenWeatherMap. */
+export function resolveWeatherIconUrl(icon?: string | null, iconUrl?: string | null) {
+  const blocked = /openweathermap\.org|%7Bicon%7D|\{icon\}/i;
+  if (iconUrl && !blocked.test(iconUrl)) return resolveAssetUrl(iconUrl);
+  const code = String(icon || "").trim();
+  if (/^\d{2}[dn]$/i.test(code)) return resolveAssetUrl(`/api/weather/icons/${code.toLowerCase()}`);
+  return resolveAssetUrl("/api/weather/icons/01d");
+}
+
+type ForecastDayPayload = WeatherForecastDay & {
+  weekday?: string;
+  tempMaxC?: number | null;
+  tempMinC?: number | null;
+  conditionText?: string;
+  condition?: string | { text?: string; icon?: string; iconUrl?: string; code?: number | string };
+};
+
+function mapForecastDay(raw: ForecastDayPayload): WeatherForecastDay {
+  const conditionObj = raw.condition && typeof raw.condition === "object" ? raw.condition : null;
+  const icon = raw.icon || conditionObj?.icon || null;
+  const iconUrl = raw.iconUrl || conditionObj?.iconUrl || null;
+  const conditionText =
+    conditionObj?.text ||
+    raw.conditionText ||
+    (typeof raw.condition === "string" ? raw.condition : "");
+  return {
+    date: raw.date,
+    dayName: raw.dayName || raw.weekday || raw.date,
+    tempMax: Number(raw.tempMax ?? raw.tempMaxC ?? 0),
+    tempMin: Number(raw.tempMin ?? raw.tempMinC ?? 0),
+    condition: conditionText,
+    conditionCode: raw.conditionCode != null ? String(raw.conditionCode) : conditionObj?.code != null ? String(conditionObj.code) : null,
+    icon,
+    iconUrl,
+    isRain: raw.isRain,
+    isStorm: raw.isStorm,
+  };
+}
 
 export type WeatherForecastResult = {
   location?: WeatherLocationMeta;
@@ -82,8 +123,13 @@ export type WeatherForecastResult = {
 };
 
 export async function fetchWeatherForecastApi(params: WeatherQueryParams = {}) {
-  const { data } = await http.get<ApiResponse<WeatherForecastResult>>("/weather/forecast", {
-    params: buildParams(params),
-  });
-  return data.data;
+  const { data } = await http.get<ApiResponse<WeatherForecastResult & { days: ForecastDayPayload[] }>>(
+    "/weather/forecast",
+    { params: buildParams(params) }
+  );
+  const payload = data.data;
+  return {
+    ...payload,
+    days: (payload.days || []).map(mapForecastDay),
+  };
 }

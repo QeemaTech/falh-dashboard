@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Cloud,
   CloudQueue,
@@ -14,6 +15,7 @@ import {
   type SxProps,
   type Theme,
 } from "@mui/material";
+import { resolveWeatherIconUrl } from "../services/weather-api";
 
 export type ForecastDay = {
   date: string;
@@ -23,6 +25,7 @@ export type ForecastDay = {
   condition: string;
   conditionCode?: string | null;
   icon?: string | null;
+  iconUrl?: string | null;
   isRain?: boolean;
   isStorm?: boolean;
 };
@@ -34,8 +37,8 @@ type Props = {
   sx?: SxProps<Theme>;
 };
 
-function WeatherIcon({ day }: { day: ForecastDay }) {
-  const code = String(day.conditionCode || "").toLowerCase();
+function FallbackIcon({ day }: { day: ForecastDay }) {
+  const code = String(day.conditionCode || day.condition || "").toLowerCase();
   const iconSx = { fontSize: 36 };
 
   if (day.isRain || day.isStorm || code.includes("rain") || code.includes("drizzle") || code.includes("thunder")) {
@@ -51,6 +54,25 @@ function WeatherIcon({ day }: { day: ForecastDay }) {
     return <Cloud sx={{ ...iconSx, color: "text.disabled" }} />;
   }
   return <WbSunny sx={{ ...iconSx, color: "warning.main" }} />;
+}
+
+function WeatherIcon({ day }: { day: ForecastDay }) {
+  const [failed, setFailed] = useState(false);
+  const src = resolveWeatherIconUrl(day.icon, day.iconUrl);
+
+  if (!failed && src) {
+    return (
+      <Box
+        component="img"
+        src={src}
+        alt={day.condition || ""}
+        sx={{ width: 36, height: 36, borderRadius: "8px", objectFit: "contain", display: "block" }}
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+
+  return <FallbackIcon day={day} />;
 }
 
 export function WeatherForecastStrip({ days, loading, error, sx }: Props) {
