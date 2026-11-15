@@ -42,7 +42,8 @@ export async function submitCompanyJoinApplicationApi(payload: CompanyJoinApplic
 
   const { data } = await http.post<{ success: boolean; message: string; data: unknown }>(
     "/join-us/company",
-    formData
+    formData,
+    { timeout: 60_000 }
   );
   return data;
 }

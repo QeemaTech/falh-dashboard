@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, type RefObject } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,7 +19,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { Business, CheckCircle, ChevronRight, Visibility, VisibilityOff } from "@mui/icons-material";
+import { AttachFile, Business, CheckCircle, ChevronRight, Visibility, VisibilityOff } from "@mui/icons-material";
 import { AppLogo, AuthChrome } from "../../components/branding";
 import { AppModal } from "../../components/design-system";
 import { governorateOptions } from "../../constants/egypt-governorates";
@@ -35,6 +35,80 @@ type FormValues = {
   password: string;
   rememberMe: boolean;
 };
+
+const JOIN_FILE_ACCEPT = "image/jpeg,image/png,image/webp,application/pdf";
+const JOIN_FILE_MAX_BYTES = 10 * 1024 * 1024;
+
+function isAllowedJoinFile(file: File) {
+  const byMime = ["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(file.type);
+  const byName = /\.(jpe?g|png|webp|pdf)$/i.test(file.name);
+  return byMime || byName;
+}
+
+const emptyJoinForm = {
+  companyName: "",
+  fullName: "",
+  phone: "",
+  email: "",
+  city: "",
+  whatsappNumber: "",
+  description: "",
+};
+
+function JoinFileField({
+  label,
+  file,
+  hint,
+  chooseLabel,
+  inputRef,
+  onPick,
+}: {
+  label: string;
+  file: File | null;
+  hint: string;
+  chooseLabel: string;
+  inputRef: RefObject<HTMLInputElement | null>;
+  onPick: (file: File) => void;
+}) {
+  return (
+    <Box
+      sx={{
+        flex: 1,
+        p: 1.5,
+        border: 1,
+        borderColor: "divider",
+        borderRadius: "8px",
+      }}
+    >
+      <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+        {label}
+      </Typography>
+      <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
+        {hint}
+      </Typography>
+      <Button
+        size="small"
+        variant="outlined"
+        startIcon={<AttachFile />}
+        onClick={() => inputRef.current?.click()}
+        sx={{ borderRadius: "8px", textTransform: "none" }}
+      >
+        {file ? file.name : chooseLabel}
+      </Button>
+      <input
+        ref={inputRef}
+        type="file"
+        accept={JOIN_FILE_ACCEPT}
+        hidden
+        onChange={(event) => {
+          const picked = event.target.files?.[0];
+          event.target.value = "";
+          if (picked) onPick(picked);
+        }}
+      />
+    </Box>
+  );
+}
 
 export function LoginPage() {
   const [serverError, setServerError] = useState<string | null>(null);
@@ -59,15 +133,13 @@ export function LoginPage() {
   const [joinSubmitted, setJoinSubmitted] = useState(false);
   const [joinLoading, setJoinLoading] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
-  const [joinForm, setJoinForm] = useState({
-    companyName: "",
-    fullName: "",
-    phone: "",
-    email: "",
-    city: "",
-    whatsappNumber: "",
-    description: "",
-  });
+  const [joinForm, setJoinForm] = useState(emptyJoinForm);
+  const [joinFiles, setJoinFiles] = useState<{
+    businessLicense: File | null;
+    commercialReg: File | null;
+  }>({ businessLicense: null, commercialReg: null });
+  const businessLicenseInputRef = useRef<HTMLInputElement>(null);
+  const commercialRegInputRef = useRef<HTMLInputElement>(null);
 
   const governorates = useMemo(() => governorateOptions(language), [language]);
 
@@ -122,17 +194,12 @@ export function LoginPage() {
         city: joinForm.city,
         whatsappNumber: joinForm.whatsappNumber,
         description: joinForm.description,
+        businessLicenseFile: joinFiles.businessLicense,
+        commercialRegFile: joinFiles.commercialReg,
       });
       setJoinSubmitted(true);
-      setJoinForm({
-        companyName: "",
-        fullName: "",
-        phone: "",
-        email: "",
-        city: "",
-        whatsappNumber: "",
-        description: "",
-      });
+      setJoinForm(emptyJoinForm);
+      setJoinFiles({ businessLicense: null, commercialReg: null });
     } catch (err) {
       setJoinError(
         getApiErrorMessage(
@@ -452,6 +519,47 @@ export function LoginPage() {
                   : "Brief overview of company activity..."
               }
             />
+
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+              <JoinFileField
+                label={t("login.companyJoin.businessLicense")}
+                file={joinFiles.businessLicense}
+                inputRef={businessLicenseInputRef}
+                chooseLabel={t("login.companyJoin.chooseFile")}
+                hint={t("login.companyJoin.fileHint")}
+                onPick={(file) => {
+                  if (file.size > JOIN_FILE_MAX_BYTES) {
+                    setJoinError(t("login.companyJoin.fileTooLarge"));
+                    return;
+                  }
+                  if (!isAllowedJoinFile(file)) {
+                    setJoinError(t("login.companyJoin.fileType"));
+                    return;
+                  }
+                  setJoinError(null);
+                  setJoinFiles((prev) => ({ ...prev, businessLicense: file }));
+                }}
+              />
+              <JoinFileField
+                label={t("login.companyJoin.commercialReg")}
+                file={joinFiles.commercialReg}
+                inputRef={commercialRegInputRef}
+                chooseLabel={t("login.companyJoin.chooseFile")}
+                hint={t("login.companyJoin.fileHint")}
+                onPick={(file) => {
+                  if (file.size > JOIN_FILE_MAX_BYTES) {
+                    setJoinError(t("login.companyJoin.fileTooLarge"));
+                    return;
+                  }
+                  if (!isAllowedJoinFile(file)) {
+                    setJoinError(t("login.companyJoin.fileType"));
+                    return;
+                  }
+                  setJoinError(null);
+                  setJoinFiles((prev) => ({ ...prev, commercialReg: file }));
+                }}
+              />
+            </Stack>
           </Stack>
         )}
       </AppModal>
