@@ -189,6 +189,7 @@ type SettingsFormState = Omit<SystemSettings, "application" | "delivery"> & {
 export function SystemSettingsPage() {
   const { t } = useI18n();
   const queryClient = useQueryClient();
+  const [form, setForm] = useState<SystemSettings>(initialSettings);
   const [form, setForm] = useState<SettingsFormState>(initialSettings);
   const [files, setFiles] = useState<Partial<Record<AssetKey, File>>>({});
 
@@ -460,6 +461,8 @@ export function SystemSettingsPage() {
                 type="number"
                 label={t("systemSettings.application.userMonthlyAdLimit")}
                 helperText={t("systemSettings.application.userMonthlyAdLimitHint")}
+                value={form.application.userMonthlyAdLimit ?? 5}
+                onChange={(e) =>
                 value={form.application.userMonthlyAdLimit ?? ""}
                 onFocus={(e) => e.target.select()}
                 onBlur={() => {
@@ -491,8 +494,11 @@ export function SystemSettingsPage() {
                     ...prev,
                     application: {
                       ...prev.application,
+                      userMonthlyAdLimit: Math.max(0, Number.parseInt(e.target.value, 10) || 0),
                       userMonthlyAdLimit: parsed,
                     },
+                  }))
+                }
                   }));
                 }}
                 slotProps={{ htmlInput: { min: 0, step: 1 } }}
@@ -523,6 +529,7 @@ export function SystemSettingsPage() {
                 fullWidth
                 type="number"
                 label={t("systemSettings.delivery.fee")}
+                value={form.delivery?.deliveryFee ?? 0}
                 value={form.delivery?.deliveryFee ?? ""}
                 disabled={!form.delivery?.deliveryEnabled}
                 helperText={t("systemSettings.delivery.feeHint")}
@@ -537,6 +544,8 @@ export function SystemSettingsPage() {
                 }}
                 onChange={(e) => {
                   const raw = e.target.value;
+                  const fee = raw === "" ? 0 : Number(raw);
+                  if (Number.isNaN(fee)) return;
                   if (raw === "") {
                     setForm((prev) => ({
                       ...prev,
@@ -548,6 +557,7 @@ export function SystemSettingsPage() {
                   if (Number.isNaN(fee) || fee < 0) return;
                   setForm((prev) => ({
                     ...prev,
+                    delivery: { ...prev.delivery!, deliveryFee: Math.max(0, fee) },
                     delivery: { ...prev.delivery!, deliveryFee: fee },
                   }));
                 }}

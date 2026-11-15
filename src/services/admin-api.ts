@@ -190,6 +190,14 @@ export async function fetchAdminOrderById(orderId: string) {
   return data.data;
 }
 
+export async function updateAdminOrderStatusApi(orderId: string, status: AdminOrderStatus, note?: string) {
+  const { data } = await http.patch<ApiResponse<AdminOrder>>(`/admin/orders/${orderId}/status`, {
+    status,
+    note,
+  });
+  return data.data;
+}
+
 export async function fetchRecentProducts() {
   const { data } = await http.get<ApiResponse<AdminProduct[]>>("/admin/products", {
     params: { page: 1, limit: 5, sortBy: "createdAt", sortOrder: "desc" },

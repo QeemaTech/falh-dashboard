@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { MenuItem, Stack, TextField, Typography } from "@mui/material";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Chip, MenuItem, Stack, TextField, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import {
   DataTable,
@@ -11,19 +11,26 @@ import {
   TableRowActions,
   resolveTotalPages,
 } from "../../components/layout";
+import { PermissionGate } from "../../components/permission-gate";
+import { toast } from "../../components/ui/sonner";
 import { useI18n } from "../../hooks/use-i18n";
-import { fetchAdminOrders, type AdminOrder, type AdminOrderStatus } from "../../services/admin-api";
+import {
+  fetchAdminOrders,
+  updateAdminOrderStatusApi,
+  type AdminOrder,
+  type AdminOrderStatus,
+} from "../../services/admin-api";
+import { getApiErrorMessage } from "../../utils/api-error";
+import { ORDER_STATUSES, OrderStatusSelect } from "./order-status-select";
 
 type OrderRow = {
   id: string;
   customer: string;
-  status: string;
+  status: AdminOrderStatus;
   total: string;
   createdAt: string;
   actions: string;
 };
-
-const ORDER_STATUSES: AdminOrderStatus[] = ["PENDING", "CONFIRMED", "PREPARING", "DELIVERED", "CANCELLED"];
 
 function formatMoney(amount: number, locale: string, currency: string) {
   return `${currency} ${Number(amount || 0).toLocaleString(locale)}`;
@@ -32,6 +39,7 @@ function formatMoney(amount: number, locale: string, currency: string) {
 export function OrdersPage() {
   const { t, language } = useI18n();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const locale = language === "ar" ? "ar-EG" : "en-US";
   const currency = t("market.currency");
   const [status, setStatus] = useState("");
@@ -58,17 +66,28 @@ export function OrdersPage() {
     placeholderData: (previousData) => previousData,
   });
 
+  const statusMutation = useMutation({
+    mutationFn: ({ orderId, nextStatus }: { orderId: string; nextStatus: AdminOrderStatus }) =>
+      updateAdminOrderStatusApi(orderId, nextStatus),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-order-detail"] });
+      toast.success(t("orders.statusUpdated"));
+    },
+    onError: (err: unknown) => toast.error(getApiErrorMessage(err, t("orders.statusUpdateFailed"))),
+  });
+
   const rows = useMemo<OrderRow[]>(() => {
     const items = (data?.items || []) as AdminOrder[];
     return items.map((order) => ({
       id: order.id,
       customer: order.user?.name || "-",
-      status: statusLabel(order.status),
+      status: order.status,
       total: formatMoney(order.total, locale, currency),
       createdAt: new Date(order.createdAt).toLocaleString(locale),
       actions: "",
     }));
-  }, [currency, data?.items, locale, t, language]);
+  }, [currency, data?.items, locale]);
 
   const totalPages = resolveTotalPages(data?.meta);
 
@@ -111,7 +130,25 @@ export function OrdersPage() {
             ),
           },
           { key: "customer", label: t("orders.col.customer") },
-          { key: "status", label: t("orders.col.status") },
+          {
+            key: "status",
+            label: t("orders.col.status"),
+            render: (row) => (
+              <PermissionGate
+                permission="orders.update"
+                fallback={<Chip size="small" label={statusLabel(row.status)} variant="outlined" />}
+              >
+                <OrderStatusSelect
+                  value={row.status}
+                  disabled={statusMutation.isPending}
+                  label={statusLabel}
+                  onChange={(nextStatus) =>
+                    statusMutation.mutate({ orderId: row.id, nextStatus })
+                  }
+                />
+              </PermissionGate>
+            ),
+          },
           { key: "total", label: t("orders.col.total") },
           { key: "createdAt", label: t("orders.col.created") },
           {

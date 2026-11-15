@@ -1,14 +1,19 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { Box, Chip, CircularProgress, Stack, Typography } from "@mui/material";
 import { DetailField, DetailGrid, DetailPageShell, EmptyState } from "../../components/layout";
+import { PermissionGate } from "../../components/permission-gate";
+import { toast } from "../../components/ui/sonner";
 import { useI18n } from "../../hooks/use-i18n";
 import {
   fetchAdminOrderById,
+  updateAdminOrderStatusApi,
   type AdminOrderAddress,
   type AdminOrderStatus,
 } from "../../services/admin-api";
 import { resolveAssetUrl } from "../../utils/asset-url";
+import { getApiErrorMessage } from "../../utils/api-error";
+import { OrderStatusSelect } from "./order-status-select";
 
 const BRAND_GREEN = "#23673A";
 
@@ -26,6 +31,7 @@ function formatMoney(amount: number, locale: string, currency: string) {
 export function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t, language } = useI18n();
+  const queryClient = useQueryClient();
   const locale = language === "ar" ? "ar-EG" : "en-US";
   const currency = t("market.currency");
 
@@ -41,6 +47,16 @@ export function OrderDetailPage() {
     queryKey: ["admin-order-detail", id],
     queryFn: () => fetchAdminOrderById(id!),
     enabled: Boolean(id),
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: (nextStatus: AdminOrderStatus) => updateAdminOrderStatusApi(id!, nextStatus),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["admin-order-detail", id], updated);
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+      toast.success(t("orders.statusUpdated"));
+    },
+    onError: (err: unknown) => toast.error(getApiErrorMessage(err, t("orders.statusUpdateFailed"))),
   });
 
   if (isLoading) {
@@ -65,8 +81,18 @@ export function OrderDetailPage() {
       title={`${t("orders.detailTitle")} #${orderDetail.id.slice(0, 8)}`}
       backTo="/orders"
       status={
-        <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
-          <Chip label={statusLabel(orderDetail.status)} size="small" color="primary" variant="outlined" />
+        <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", alignItems: "center" }}>
+          <PermissionGate
+            permission="orders.update"
+            fallback={<Chip label={statusLabel(orderDetail.status)} size="small" color="primary" variant="outlined" />}
+          >
+            <OrderStatusSelect
+              value={orderDetail.status}
+              disabled={statusMutation.isPending}
+              label={statusLabel}
+              onChange={(nextStatus) => statusMutation.mutate(nextStatus)}
+            />
+          </PermissionGate>
           {orderDetail.isPaid ? (
             <Chip label={t("orders.detail.paid")} size="small" color="success" variant="outlined" />
           ) : (
