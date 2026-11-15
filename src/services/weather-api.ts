@@ -84,16 +84,27 @@ export function resolveWeatherIconUrl(icon?: string | null, iconUrl?: string | n
   return resolveAssetUrl("/api/weather/icons/01d");
 }
 
-type ForecastDayPayload = WeatherForecastDay & {
+type ForecastConditionObj = {
+  text?: string;
+  icon?: string;
+  iconUrl?: string;
+  code?: number | string;
+};
+
+type ForecastDayPayload = Omit<WeatherForecastDay, "condition" | "dayName" | "tempMax" | "tempMin"> & {
+  dayName?: string;
   weekday?: string;
+  tempMax?: number | null;
+  tempMin?: number | null;
   tempMaxC?: number | null;
   tempMinC?: number | null;
   conditionText?: string;
-  condition?: string | { text?: string; icon?: string; iconUrl?: string; code?: number | string };
+  condition?: string | ForecastConditionObj;
 };
 
 function mapForecastDay(raw: ForecastDayPayload): WeatherForecastDay {
-  const conditionObj = raw.condition && typeof raw.condition === "object" ? raw.condition : null;
+  const conditionObj =
+    raw.condition && typeof raw.condition === "object" ? (raw.condition as ForecastConditionObj) : null;
   const icon = raw.icon || conditionObj?.icon || null;
   const iconUrl = raw.iconUrl || conditionObj?.iconUrl || null;
   const conditionText =
@@ -106,7 +117,12 @@ function mapForecastDay(raw: ForecastDayPayload): WeatherForecastDay {
     tempMax: Number(raw.tempMax ?? raw.tempMaxC ?? 0),
     tempMin: Number(raw.tempMin ?? raw.tempMinC ?? 0),
     condition: conditionText,
-    conditionCode: raw.conditionCode != null ? String(raw.conditionCode) : conditionObj?.code != null ? String(conditionObj.code) : null,
+    conditionCode:
+      raw.conditionCode != null
+        ? String(raw.conditionCode)
+        : conditionObj?.code != null
+          ? String(conditionObj.code)
+          : null,
     icon,
     iconUrl,
     isRain: raw.isRain,
